@@ -3,11 +3,11 @@ import random
 from copy import deepcopy
 from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, LOADED_IN_EDITOR, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
 from Code.Editor.editor_update import update_palette, update_header, update_footer, update_separate_palette_and_add_color, update_tools, update_add_color
-from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar
+from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap
 
 
 class EditorSingleton():
-    def __init__(self, Render):
+    def __init__(self, Render, PATH):
         self.editor_enabled = True
         self.border_color = COLORS['BLACK']
         #
@@ -218,6 +218,7 @@ class EditorSingleton():
         self.image_vertical_scroll = ScrollBar(scroll_area_lt=[0, 0], is_vertical=True, scroll_thickness=22, scroll_length=50, scroll_area_border_thickness=self.image_large_border_thickness, scroll_border_thickness=5, border_color=COLORS['PINK'], background_color=COLORS['WHITE'], scroll_border_color=COLORS['RED'], unhighlighted_color=COLORS['WHITE'], shaded_color=COLORS['LIGHT_GREY'], highlighted_color=COLORS['GREY'])
         self.image_horizontal_scroll = ScrollBar(scroll_area_lt=[0, 0], is_vertical=False, scroll_thickness=22, scroll_length=50, scroll_area_border_thickness=self.image_large_border_thickness, scroll_border_thickness=5, border_color=COLORS['PINK'], background_color=COLORS['WHITE'], scroll_border_color=COLORS['RED'], unhighlighted_color=COLORS['WHITE'], shaded_color=COLORS['LIGHT_GREY'], highlighted_color=COLORS['GREY'])
         self.image_area_ltwh = [0, 0, 0, 0]
+        self.map: EditorMap = EditorMap(PATH, [128, 128])
 
     def get_color_spectrum_ltwh(self):
         return [self.palette_padding + self.add_color_spectrum_border_thickness, 
@@ -258,14 +259,15 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
     Singleton.image_area_ltwh[3] = Singleton.image_inside_border_ltwh[3] - Singleton.image_horizontal_scroll.scroll_area_ltwh[3] + Singleton.image_large_border_thickness
     #
     # update image
-    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.image_area_ltwh, COLORS['WHITE'])
+    # Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.image_area_ltwh, COLORS['WHITE'])
+    Singleton.map.update(Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh)
 
 
 def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     Cursor.add_cursor_this_frame('cursor_arrow')
     if Api.setup_required:
         loading_and_unloading_images_manager(Screen, Render, gl_context, IMAGE_PATHS, [LOADED_IN_EDITOR], [])
-        Api.api_initiated_singletons['Editor'] = Api.api_singletons['Editor'](Render)
+        Api.api_initiated_singletons['Editor'] = Api.api_singletons['Editor'](Render, PATH)
         Api.setup_required = False
     #
     Singleton = Api.api_initiated_singletons[Api.current_api]

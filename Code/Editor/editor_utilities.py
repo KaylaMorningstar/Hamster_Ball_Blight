@@ -1142,3 +1142,96 @@ class ScrollBar():
             self.pixels_scrolled = move_number_to_desired_range(0, self.pixels_scrolled, self.scroll_area_ltwh[2] - (2 * self.scroll_area_border_thickness) - self.scroll_ltwh[2])
             self.scroll_ltwh[0] = self.scroll_area_ltwh[0] + self.scroll_area_border_thickness + self.pixels_scrolled
             self.scroll_ltwh[1] = self.scroll_area_ltwh[1] + self.scroll_area_border_thickness
+
+
+class EditorMap():
+    _NOT_LOADED = 0
+    _LOADING = 1
+    _LOADED = 2
+    _UNLOADING = 3
+
+    def __init__(self,
+                 base_path: str,
+                 tile_wh: list[int, int]):
+
+        self.base_path: str = "C:\\Users\\Kayle\\Desktop\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\"
+        self.tile_wh: list[int, int] = tile_wh
+        # internal
+        self.image_space_ltwh: list[int, int, int, int] = [0, 0, 0, 0]
+        self.map_wh: list[int, int] = [12000, 6000]
+        self.tile_array_shape: list[int, int] = [math.ceil(self.map_wh[0] / self.tile_wh[0]), math.ceil(self.map_wh[1] / self.tile_wh[1])]
+        self.tile_array: list[list[EditorTile]] = []
+        self._create_editor_tiles()
+        self.map_offset_xy: list[int, int] = [0, 0]
+        self.tile_offset_xy: list[int, int] = [0, 0]
+        self.left_tile = 0
+        self.top_tile = 0
+        self.tiles_across = 0
+        self.tiles_high = 0
+
+    def update(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int]):
+        # update map area width and height in case screen size has changed
+        self.image_space_ltwh = image_space_ltwh
+
+        # get which tiles are currently showing
+        self._update_showing_tiles()
+        # print(self.image_space_ltwh[2], self.image_space_ltwh[3], self.tiles_across, self.tiles_high)
+
+        # render the tiles
+        self._update_tiles(render_instance, screen_instance, gl_context)
+
+    def _update_showing_tiles(self) -> tuple[int, int, int, int]:
+        # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
+        self.left_tile = self.map_offset_xy[0] // self.tile_wh[0]
+        self.top_tile = self.map_offset_xy[1] // self.tile_wh[1]
+        self.tile_offset_xy[0] = self.map_offset_xy[0] % self.tile_wh[0]
+        self.tile_offset_xy[1] = self.map_offset_xy[1] % self.tile_wh[1]
+        self.tiles_across = (0 if self.tile_offset_xy[0]==0 else 1) + (self.image_space_ltwh[2] // self.tile_wh[0]) + (0 if ((self.image_space_ltwh[2] - self.tile_offset_xy[0]) // self.tile_wh[0])==0 else 1)
+        self.tiles_high = (0 if self.tile_offset_xy[1]==0 else 1) + (self.image_space_ltwh[3] // self.tile_wh[1]) + (0 if ((self.image_space_ltwh[3] - self.tile_offset_xy[1]) // self.tile_wh[1])==0 else 1)
+
+    def _update_tiles(self, render_instance, screen_instance, gl_context):
+        left = self.image_space_ltwh[0] + self.map_offset_xy[0]
+        for row_index in range(self.tiles_across):
+            top = self.image_space_ltwh[1] + self.map_offset_xy[1]
+            for column_index in range(self.tiles_high):
+                tile = self.tile_array[row_index][column_index]
+                tile.update(render_instance, screen_instance, gl_context, EditorMap._LOADED, path=self.base_path, row=row_index, column=column_index, ltwh=[left, top, self.tile_wh[0], self.tile_wh[1]])
+                top += self.tile_wh[0]
+            left += self.tile_wh[0]
+
+    def _create_editor_tiles(self):
+        self.tile_array = []
+        for _ in range(self.tile_array_shape[0]):
+            self.tile_array.append([EditorTile() for _ in range(self.tile_array_shape[1])])
+
+
+
+class EditorTile():
+    _NOT_LOADED = 0
+    _LOADING = 1
+    _LOADED = 2
+    _UNLOADING = 3
+
+    def __init__(self):
+
+        self.state: int = 0  # (0 = not loaded, 1 = loading, 2 = loaded, 3 = unloading)
+        self.edited: bool = False
+
+    def update(self, render_instance, screen_instance, gl_context, desired_state, path: str | None = None, row: int | None = None, column: int | None = None, ltwh: list[int, int, int, int] | None = None):
+        match (self.state, desired_state):
+            case (0, 0):  # not loaded -> not loaded
+                pass
+            case (0, 2):  # not loaded -> loaded
+                self._load_image(render_instance, screen_instance, gl_context, path, row, column)
+                self.state = desired_state
+            case (2, 0):  # loaded -> not loaded
+                self._unload_image(render_instance, row, column)
+                self.state = desired_state
+            case (2, 2):  # loaded -> loaded
+                render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{row}_{column}", ltwh)
+
+    def _load_image(self, render_instance, screen_instance, gl_context, path: str, row: int, column: int):
+        render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{row}_{column}.png", f"{row}_{column}")
+
+    def _unload_image(self, render_instance, row: int, column: int):
+        render_instance.remove_moderngl_texture_from_renderable_objects_dict(f"{row}_{column}")

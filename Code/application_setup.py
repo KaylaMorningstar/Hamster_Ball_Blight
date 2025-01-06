@@ -42,6 +42,8 @@ class ApiObject():
 
 
 class TimingClass():
+    _TEXT_PIXEL_SIZE = 4
+
     def __init__(self):
         self.clock = pygame.time.Clock()
         self.desired_fps = 60
@@ -57,6 +59,11 @@ class TimingClass():
         self.delta_time = move_number_to_desired_range(0.001, self.delta_time, 99999999999)
         self.fps = 1 / self.delta_time
         self.clock.tick(self.desired_fps)
+    #
+    def display_fps(self, Screen, Render, gl_context, lt: list[int, int]):
+        fps = str(round(self.fps / 10) * 10)
+        Render.draw_string_of_characters(Screen, gl_context, fps, lt, self._TEXT_PIXEL_SIZE, COLORS['BLACK'])
+
 
 
 class CursorClass():
