@@ -1164,36 +1164,66 @@ class EditorMap():
         self._create_editor_tiles()
         self.map_offset_xy: list[int, int] = [0, 0]
         self.tile_offset_xy: list[int, int] = [0, 0]
-        self.left_tile = 0
-        self.top_tile = 0
+        self.left_tile    = 0
+        self.top_tile     = 0
+        self.right_tile   = 0
+        self.bottom_tile  = 0
         self.tiles_across = 0
-        self.tiles_high = 0
+        self.tiles_high   = 0
+        self.unloading_tiles: list = []
+        self.held: bool = False
 
     def update(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int]):
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
 
+        # update map scroll
+        self._scroll(keys_class_instance)
+
         # get which tiles are currently showing
         self._update_showing_tiles()
-        # print(self.image_space_ltwh[2], self.image_space_ltwh[3], self.tiles_across, self.tiles_high)
 
         # render the tiles
         self._update_tiles(render_instance, screen_instance, gl_context)
 
     def _update_showing_tiles(self) -> tuple[int, int, int, int]:
         # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
-        self.left_tile = self.map_offset_xy[0] // self.tile_wh[0]
-        self.top_tile = self.map_offset_xy[1] // self.tile_wh[1]
-        self.tile_offset_xy[0] = self.map_offset_xy[0] % self.tile_wh[0]
-        self.tile_offset_xy[1] = self.map_offset_xy[1] % self.tile_wh[1]
-        self.tiles_across = (0 if self.tile_offset_xy[0]==0 else 1) + (self.image_space_ltwh[2] // self.tile_wh[0]) + (0 if ((self.image_space_ltwh[2] - self.tile_offset_xy[0]) // self.tile_wh[0])==0 else 1)
-        self.tiles_high = (0 if self.tile_offset_xy[1]==0 else 1) + (self.image_space_ltwh[3] // self.tile_wh[1]) + (0 if ((self.image_space_ltwh[3] - self.tile_offset_xy[1]) // self.tile_wh[1])==0 else 1)
+        last_left_tile = self.left_tile
+        last_top_tile = self.top_tile
+        last_right_tile = self.right_tile
+        last_bottom_tile = self.bottom_tile
+        # update tile data
+        self.left_tile = -self.map_offset_xy[0] // self.tile_wh[0]
+        self.top_tile = -self.map_offset_xy[1] // self.tile_wh[1]
+        self.tile_offset_xy[0] = ((self.tile_wh[0] - (self.map_offset_xy[0] % self.tile_wh[0])) % self.tile_wh[0])
+        self.tile_offset_xy[1] = ((self.tile_wh[1] - (self.map_offset_xy[1] % self.tile_wh[1])) % self.tile_wh[1])
+        self.right_tile = self.left_tile + ((self.image_space_ltwh[2] + self.tile_offset_xy[0]) // self.tile_wh[0])
+        self.bottom_tile = self.top_tile + ((self.image_space_ltwh[3] + self.tile_offset_xy[1]) // self.tile_wh[1])
+        # unloading indexes
+        # unloading_x, unloading_y = [], []
+        # if (last_left_tile - self.left_tile) > 0:
+        #     unloading_x.append([x for x in range(self.left_tile, last_left_tile)])
+        # if (self.right_tile - last_right_tile) > 0:
+        #     pass
+
+    def _scroll(self, keys_class_instance):
+        if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
+            self.held = True
+            return
+
+        if self.held:
+            if keys_class_instance.editor_primary.released:
+                self.held = False
+                return
+            self.map_offset_xy[0] += keys_class_instance.cursor_x_pos.delta
+            self.map_offset_xy[1] += keys_class_instance.cursor_y_pos.delta
+            return
 
     def _update_tiles(self, render_instance, screen_instance, gl_context):
-        left = self.image_space_ltwh[0] + self.map_offset_xy[0]
-        for row_index in range(self.tiles_across):
-            top = self.image_space_ltwh[1] + self.map_offset_xy[1]
-            for column_index in range(self.tiles_high):
+        left = self.image_space_ltwh[0] - self.tile_offset_xy[0]
+        for row_index in range(self.left_tile, self.right_tile + 1):
+            top = self.image_space_ltwh[1] - self.tile_offset_xy[1]
+            for column_index in range(self.top_tile, self.bottom_tile + 1):
                 tile = self.tile_array[row_index][column_index]
                 tile.update(render_instance, screen_instance, gl_context, EditorMap._LOADED, path=self.base_path, row=row_index, column=column_index, ltwh=[left, top, self.tile_wh[0], self.tile_wh[1]])
                 top += self.tile_wh[0]
@@ -1213,7 +1243,6 @@ class EditorTile():
     _UNLOADING = 3
 
     def __init__(self):
-
         self.state: int = 0  # (0 = not loaded, 1 = loading, 2 = loaded, 3 = unloading)
         self.edited: bool = False
 
@@ -1224,6 +1253,7 @@ class EditorTile():
             case (0, 2):  # not loaded -> loaded
                 self._load_image(render_instance, screen_instance, gl_context, path, row, column)
                 self.state = desired_state
+                render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{row}_{column}", ltwh)
             case (2, 0):  # loaded -> not loaded
                 self._unload_image(render_instance, row, column)
                 self.state = desired_state
