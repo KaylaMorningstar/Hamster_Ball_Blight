@@ -1170,7 +1170,8 @@ class EditorMap():
         self.bottom_tile  = 0
         self.tiles_across = 0
         self.tiles_high   = 0
-        self.unloading_tiles: list = []
+        self.loaded_x: list[int] = []
+        self.loaded_y: list[int] = []
         self.held: bool = False
 
     def update(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int]):
@@ -1180,13 +1181,6 @@ class EditorMap():
         # update map scroll
         self._scroll(keys_class_instance)
 
-        # get which tiles are currently showing
-        self._update_showing_tiles()
-
-        # render the tiles
-        self._update_tiles(render_instance, screen_instance, gl_context)
-
-    def _update_showing_tiles(self) -> tuple[int, int, int, int]:
         # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
         last_left_tile = self.left_tile
         last_top_tile = self.top_tile
@@ -1199,12 +1193,65 @@ class EditorMap():
         self.tile_offset_xy[1] = ((self.tile_wh[1] - (self.map_offset_xy[1] % self.tile_wh[1])) % self.tile_wh[1])
         self.right_tile = self.left_tile + ((self.image_space_ltwh[2] + self.tile_offset_xy[0]) // self.tile_wh[0])
         self.bottom_tile = self.top_tile + ((self.image_space_ltwh[3] + self.tile_offset_xy[1]) // self.tile_wh[1])
-        # unloading indexes
-        # unloading_x, unloading_y = [], []
-        # if (last_left_tile - self.left_tile) > 0:
-        #     unloading_x.append([x for x in range(self.left_tile, last_left_tile)])
-        # if (self.right_tile - last_right_tile) > 0:
-        #     pass
+        # update loaded and unloaded tiles
+        load_x, load_y, unload_x, unload_y = [], [], [], []
+        change_left_tile = last_left_tile - self.left_tile
+        change_right_tile = self.right_tile - last_right_tile
+        change_top_tile = last_top_tile - self.top_tile
+        change_bottom_tile = self.bottom_tile - last_bottom_tile
+        # change in left tiles
+        if change_left_tile != 0:
+            if change_left_tile > 0:
+                load_x += [x for x in range(self.left_tile, last_left_tile)]
+            else:
+                unload_x += [x for x in range(last_left_tile, self.left_tile)]
+        # change in right tiles
+        if change_right_tile != 0:
+            if change_right_tile > 0:
+                load_x += [x for x in range(last_right_tile + 1, self.right_tile + 1)]
+            else:
+                unload_x += [x for x in range(self.right_tile + 1, last_right_tile + 1)]
+        # change in top tiles
+        if change_top_tile != 0:
+            if change_top_tile > 0:
+                load_y += [x for x in range(self.top_tile, last_top_tile)]
+            else:
+                unload_y += [x for x in range(last_top_tile, self.top_tile)]
+        # change in bottom tiles
+        if change_bottom_tile != 0:
+            if change_bottom_tile > 0:
+                load_y += [x for x in range(last_bottom_tile + 1, self.bottom_tile + 1)]
+            else:
+                unload_y += [x for x in range(self.bottom_tile + 1, last_bottom_tile + 1)]
+        # update which tiles are unloaded and perform unloading
+        if (unload_x != []):
+            for column in unload_x:
+                for row in self.loaded_y:
+                    self.tile_array[column][row].unload(render_instance, row, column)
+                self.loaded_x = sorted([tile for tile in self.loaded_x if tile not in unload_x])
+        if (unload_y != []):
+            for row in unload_y:
+                for column in self.loaded_x:
+                    self.tile_array[column][row].unload(render_instance, row, column)
+                self.loaded_y = sorted([tile for tile in self.loaded_y if tile not in unload_y])
+        # update which tiles are loaded
+        if (load_x != []):
+            self.loaded_x += load_x
+            self.loaded_x = sorted(self.loaded_x)
+        if (load_y != []):
+            self.loaded_y += load_y
+            self.loaded_y = sorted(self.loaded_y)
+        # iterate through all loaded tiles
+        load = True
+        left = self.image_space_ltwh[0] - self.tile_offset_xy[0]
+        for row in self.loaded_x:
+            top = self.image_space_ltwh[1] - self.tile_offset_xy[1]
+            for column in self.loaded_y:
+                tile = self.tile_array[row][column]
+                load = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, row, column, [left, top, self.tile_wh[0], self.tile_wh[1]], load)
+                top += self.tile_wh[1]
+            left += self.tile_wh[0]
+
 
     def _scroll(self, keys_class_instance):
         if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
@@ -1219,49 +1266,69 @@ class EditorMap():
             self.map_offset_xy[1] += keys_class_instance.cursor_y_pos.delta
             return
 
-    def _update_tiles(self, render_instance, screen_instance, gl_context):
-        left = self.image_space_ltwh[0] - self.tile_offset_xy[0]
-        for row_index in range(self.left_tile, self.right_tile + 1):
-            top = self.image_space_ltwh[1] - self.tile_offset_xy[1]
-            for column_index in range(self.top_tile, self.bottom_tile + 1):
-                tile = self.tile_array[row_index][column_index]
-                tile.update(render_instance, screen_instance, gl_context, EditorMap._LOADED, path=self.base_path, row=row_index, column=column_index, ltwh=[left, top, self.tile_wh[0], self.tile_wh[1]])
-                top += self.tile_wh[0]
-            left += self.tile_wh[0]
-
     def _create_editor_tiles(self):
         self.tile_array = []
         for _ in range(self.tile_array_shape[0]):
             self.tile_array.append([EditorTile() for _ in range(self.tile_array_shape[1])])
 
 
-
 class EditorTile():
-    _NOT_LOADED = 0
-    _LOADING = 1
-    _LOADED = 2
-    _UNLOADING = 3
 
     def __init__(self):
-        self.state: int = 0  # (0 = not loaded, 1 = loading, 2 = loaded, 3 = unloading)
-        self.edited: bool = False
+        self.loaded: bool = False
+        self.gl_image_reference: str | None = None
+        self.pg_image: None = None
 
-    def update(self, render_instance, screen_instance, gl_context, desired_state, path: str | None = None, row: int | None = None, column: int | None = None, ltwh: list[int, int, int, int] | None = None):
-        match (self.state, desired_state):
-            case (0, 0):  # not loaded -> not loaded
-                pass
-            case (0, 2):  # not loaded -> loaded
-                self._load_image(render_instance, screen_instance, gl_context, path, row, column)
-                self.state = desired_state
-                render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{row}_{column}", ltwh)
-            case (2, 0):  # loaded -> not loaded
-                self._unload_image(render_instance, row, column)
-                self.state = desired_state
-            case (2, 2):  # loaded -> loaded
-                render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{row}_{column}", ltwh)
-
-    def _load_image(self, render_instance, screen_instance, gl_context, path: str, row: int, column: int):
+    def load(self, render_instance, screen_instance, gl_context, path: str, row: int, column: int):
+        self.loaded = True
         render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{row}_{column}.png", f"{row}_{column}")
 
-    def _unload_image(self, render_instance, row: int, column: int):
+    def unload(self, render_instance, row: int, column: int):
         render_instance.remove_moderngl_texture_from_renderable_objects_dict(f"{row}_{column}")
+
+    def draw_image(self, render_instance, screen_instance, gl_context, path: str, row: int, column: int, ltwh: list[int, int, int, int], load: bool = False):
+        if load and not self.loaded:
+            self.load(render_instance, screen_instance, gl_context, path, row, column)
+            load = False
+
+        if not self.loaded:
+            return load
+
+        render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{row}_{column}", ltwh)
+        return load
+
+
+
+    def _edit_image(self):
+        pass
+
+
+# class EditorTile():
+#     _NOT_LOADED = 0
+#     _LOADING = 1
+#     _LOADED = 2
+#     _UNLOADING = 3
+
+#     def __init__(self):
+#         self.state: int = 0  # (0 = not loaded, 1 = loading, 2 = loaded, 3 = unloading)
+#         self.edited: bool = False
+
+#     def update(self, render_instance, screen_instance, gl_context, desired_state, path: str | None = None, row: int | None = None, column: int | None = None, ltwh: list[int, int, int, int] | None = None):
+#         match (self.state, desired_state):
+#             case (0, 0):  # not loaded -> not loaded
+#                 pass
+#             case (0, 2):  # not loaded -> loaded
+#                 self._load_image(render_instance, screen_instance, gl_context, path, row, column)
+#                 self.state = desired_state
+#                 render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{row}_{column}", ltwh)
+#             case (2, 0):  # loaded -> not loaded
+#                 self._unload_image(render_instance, row, column)
+#                 self.state = desired_state
+#             case (2, 2):  # loaded -> loaded
+#                 render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{row}_{column}", ltwh)
+
+#     def _load_image(self, render_instance, screen_instance, gl_context, path: str, row: int, column: int):
+#         render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{row}_{column}.png", f"{row}_{column}")
+
+#     def _unload_image(self, render_instance, row: int, column: int):
+#         render_instance.remove_moderngl_texture_from_renderable_objects_dict(f"{row}_{column}")
