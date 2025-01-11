@@ -1,6 +1,7 @@
 from Code.utilities import point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
 import pygame
 import math
+from copy import deepcopy
 
 
 class TextInput():
@@ -1151,10 +1152,12 @@ class EditorMap():
     _LOADED = 2
     _UNLOADING = 3
 
-    _STARTING_ZOOM_INDEX = 1
+    _STARTING_ZOOM_INDEX = 3
     _ZOOM = [
         # [# of pixels, resulting pixel size]
         # e.g. [2, 1] means 2x2 pixels becomes a 1x1 pixel
+        [8, 1],
+        [4, 1],
         [2, 1],
         [1, 1],
         [1, 2],
@@ -1167,12 +1170,14 @@ class EditorMap():
                  tile_wh: list[int, int]):
 
         self.base_path: str = "C:\\Users\\Kayle\\Desktop\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\"
+        self.initial_tile_wh: list[int, int] = deepcopy(tile_wh)
         self.tile_wh: list[int, int] = tile_wh
         # internal
         self.image_space_ltwh: list[int, int, int, int] = [0, 0, 0, 0]
+        self.original_map_wh: list[int, int] = [12000, 6000]
         self.map_wh: list[int, int] = [12000, 6000]
-        self.tile_array_shape: list[int, int] = [math.ceil(self.map_wh[0] / self.tile_wh[0]), math.ceil(self.map_wh[1] / self.tile_wh[1])]
-        self.edge_tile_difference_wh = [tile_wh-edge_tile_wh for tile_wh, edge_tile_wh in zip(self.tile_wh, list(pygame.image.load(f"{self.base_path}t{self.tile_array_shape[0]-1}_{self.tile_array_shape[1]-1}.png").get_size()))]
+        self.tile_array_shape: list[int, int] = [math.ceil(self.original_map_wh[0] / self.initial_tile_wh[0]), math.ceil(self.original_map_wh[1] / self.initial_tile_wh[1])]
+        self.edge_tile_difference_wh = [tile_wh-edge_tile_wh for tile_wh, edge_tile_wh in zip(self.initial_tile_wh, list(pygame.image.load(f"{self.base_path}t{self.tile_array_shape[0]-1}_{self.tile_array_shape[1]-1}.png").get_size()))]
         self.tile_array: list[list[EditorTile]] = []
         self._create_editor_tiles()
         self.map_offset_xy: list[int, int] = [0, 0]
@@ -1194,7 +1199,25 @@ class EditorMap():
         self.image_space_ltwh = image_space_ltwh
 
         # update map zoom
-        initial_pixel_dimension, final_pixel_dimension = self._zoom(keys_class_instance)
+        [initial_pixel_dimension, final_pixel_dimension], zoomed = self._zoom(keys_class_instance)
+        if zoomed:
+            pixel_scale = final_pixel_dimension / initial_pixel_dimension
+            self.tile_wh[0] = int(self.initial_tile_wh[0] * pixel_scale)
+            self.tile_wh[1] = int(self.initial_tile_wh[1] * pixel_scale)
+            # reset map from zoom
+            for column in self.loaded_x:
+                for row in self.loaded_y:
+                    self.tile_array[column][row].unload(render_instance, column, row)
+            self.map_offset_xy: list[int, int] = [0, 0]
+            self.tile_offset_xy: list[int, int] = [0, 0]
+            self.left_tile    = -1
+            self.top_tile     = -1
+            self.right_tile   = -1
+            self.bottom_tile  = -1
+            self.tiles_across = 0
+            self.tiles_high   = 0
+            self.loaded_x: list[int] = []
+            self.loaded_y: list[int] = []
 
         # update map hand
         self._hand(keys_class_instance, image_space_ltwh)
@@ -1273,13 +1296,15 @@ class EditorMap():
             left += self.tile_wh[0]
 
     def _zoom(self, keys_class_instance):
+        zoomed = False
         if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
             pass
         elif keys_class_instance.editor_scroll_y.value == 0:
             pass
         else:
+            zoomed = True
             self.zoom_index = move_number_to_desired_range(0, self.zoom_index+keys_class_instance.editor_scroll_y.value, self.zoom_levels)
-        return EditorMap._ZOOM[self.zoom_index]
+        return EditorMap._ZOOM[self.zoom_index], zoomed
 
     def _hand(self, keys_class_instance, image_space_ltwh: list[int, int, int, int]):
         if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):

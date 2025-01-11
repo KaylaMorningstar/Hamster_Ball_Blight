@@ -65,7 +65,6 @@ class TimingClass():
         Render.draw_string_of_characters(Screen, gl_context, fps, lt, TimingClass._TEXT_PIXEL_SIZE, COLORS['BLACK'])
 
 
-
 class CursorClass():
     def __init__(self):
         self.cursors = {
