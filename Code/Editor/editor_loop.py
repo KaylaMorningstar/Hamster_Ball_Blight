@@ -260,7 +260,7 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
     #
     # update image
     # Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.image_area_ltwh, COLORS['WHITE'])
-    Singleton.map.update(Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh)
+    Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh)
 
 
 def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):

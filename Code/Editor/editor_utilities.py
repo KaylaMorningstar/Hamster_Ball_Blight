@@ -1176,12 +1176,14 @@ class EditorMap():
         self.loaded_y: list[int] = []
         self.held: bool = False
 
-    def update(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int]):
+    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int]):
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
 
         # update map scroll
-        self._scroll(keys_class_instance, image_space_ltwh)
+        self._hand(keys_class_instance, image_space_ltwh)
+        self.map_offset_xy[0] = move_number_to_desired_range(-self.map_wh[0] - self.edge_tile_difference_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0)
+        self.map_offset_xy[1] = move_number_to_desired_range(-self.map_wh[1] - self.edge_tile_difference_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0)
 
         # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
         last_left_tile = self.left_tile
@@ -1255,7 +1257,7 @@ class EditorMap():
             left += self.tile_wh[0]
 
 
-    def _scroll(self, keys_class_instance, image_space_ltwh: list[int, int, int, int]):
+    def _hand(self, keys_class_instance, image_space_ltwh: list[int, int, int, int]):
         if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
             self.held = True
             return
@@ -1266,9 +1268,6 @@ class EditorMap():
                 return
             self.map_offset_xy[0] += keys_class_instance.cursor_x_pos.delta
             self.map_offset_xy[1] += keys_class_instance.cursor_y_pos.delta
-            self.map_offset_xy[0] = move_number_to_desired_range(-self.map_wh[0] - self.edge_tile_difference_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0)
-            self.map_offset_xy[1] = move_number_to_desired_range(-self.map_wh[1] - self.edge_tile_difference_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0)
-            print(self.map_offset_xy)
             return
 
     def _create_editor_tiles(self):

@@ -13,7 +13,9 @@ def update_events(Api: ApiObject, Screen: ScreenObject):
             pygame.quit()
             sys.exit()
         #
+        Screen.window_resize = False
         if event.type == pygame.VIDEORESIZE:
+            Screen.window_resize = True
             Screen.width = event.w
             Screen.height = event.h
             Screen.width = move_number_to_desired_range(Screen.ACCEPTABLE_WIDTH_RANGE[0], Screen.width, Screen.ACCEPTABLE_WIDTH_RANGE[1])
