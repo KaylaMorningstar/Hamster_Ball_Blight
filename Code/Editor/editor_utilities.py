@@ -1,4 +1,5 @@
 from Code.utilities import point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
+import pygame
 import math
 
 
@@ -1160,6 +1161,7 @@ class EditorMap():
         self.image_space_ltwh: list[int, int, int, int] = [0, 0, 0, 0]
         self.map_wh: list[int, int] = [12000, 6000]
         self.tile_array_shape: list[int, int] = [math.ceil(self.map_wh[0] / self.tile_wh[0]), math.ceil(self.map_wh[1] / self.tile_wh[1])]
+        self.edge_tile_difference_wh = [tile_wh-edge_tile_wh for tile_wh, edge_tile_wh in zip(self.tile_wh, list(pygame.image.load(f"{self.base_path}t{self.tile_array_shape[0]-1}_{self.tile_array_shape[1]-1}.png").get_size()))]
         self.tile_array: list[list[EditorTile]] = []
         self._create_editor_tiles()
         self.map_offset_xy: list[int, int] = [0, 0]
@@ -1174,12 +1176,12 @@ class EditorMap():
         self.loaded_y: list[int] = []
         self.held: bool = False
 
-    def update(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int]):
+    def update(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int]):
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
 
         # update map scroll
-        self._scroll(keys_class_instance)
+        self._scroll(keys_class_instance, image_space_ltwh)
 
         # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
         last_left_tile = self.left_tile
@@ -1227,12 +1229,12 @@ class EditorMap():
         if (unload_x != []):
             for column in unload_x:
                 for row in self.loaded_y:
-                    self.tile_array[row][column].unload(render_instance, column, row)
+                    self.tile_array[column][row].unload(render_instance, column, row)
                 self.loaded_x = sorted([tile for tile in self.loaded_x if tile not in unload_x])
         if (unload_y != []):
             for row in unload_y:
                 for column in self.loaded_x:
-                    self.tile_array[row][column].unload(render_instance, column, row)
+                    self.tile_array[column][row].unload(render_instance, column, row)
                 self.loaded_y = sorted([tile for tile in self.loaded_y if tile not in unload_y])
         # update which tiles are loaded
         if (load_x != []):
@@ -1241,20 +1243,19 @@ class EditorMap():
         if (load_y != []):
             self.loaded_y += load_y
             self.loaded_y = sorted(self.loaded_y)
-        print(self.loaded_x, self.loaded_y)
         # iterate through all loaded tiles
         load = True
         left = self.image_space_ltwh[0] - self.tile_offset_xy[0]
         for column in self.loaded_x:
             top = self.image_space_ltwh[1] - self.tile_offset_xy[1]
             for row in self.loaded_y:
-                tile = self.tile_array[row][column]
+                tile = self.tile_array[column][row]
                 load = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], load)
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
 
-    def _scroll(self, keys_class_instance):
+    def _scroll(self, keys_class_instance, image_space_ltwh: list[int, int, int, int]):
         if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
             self.held = True
             return
@@ -1265,6 +1266,9 @@ class EditorMap():
                 return
             self.map_offset_xy[0] += keys_class_instance.cursor_x_pos.delta
             self.map_offset_xy[1] += keys_class_instance.cursor_y_pos.delta
+            self.map_offset_xy[0] = move_number_to_desired_range(-self.map_wh[0] - self.edge_tile_difference_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0)
+            self.map_offset_xy[1] = move_number_to_desired_range(-self.map_wh[1] - self.edge_tile_difference_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0)
+            print(self.map_offset_xy)
             return
 
     def _create_editor_tiles(self):
