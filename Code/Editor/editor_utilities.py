@@ -1164,10 +1164,10 @@ class EditorMap():
         self._create_editor_tiles()
         self.map_offset_xy: list[int, int] = [0, 0]
         self.tile_offset_xy: list[int, int] = [0, 0]
-        self.left_tile    = 0
-        self.top_tile     = 0
-        self.right_tile   = 0
-        self.bottom_tile  = 0
+        self.left_tile    = -1
+        self.top_tile     = -1
+        self.right_tile   = -1
+        self.bottom_tile  = -1
         self.tiles_across = 0
         self.tiles_high   = 0
         self.loaded_x: list[int] = []
@@ -1227,12 +1227,12 @@ class EditorMap():
         if (unload_x != []):
             for column in unload_x:
                 for row in self.loaded_y:
-                    self.tile_array[column][row].unload(render_instance, row, column)
+                    self.tile_array[row][column].unload(render_instance, column, row)
                 self.loaded_x = sorted([tile for tile in self.loaded_x if tile not in unload_x])
         if (unload_y != []):
             for row in unload_y:
                 for column in self.loaded_x:
-                    self.tile_array[column][row].unload(render_instance, row, column)
+                    self.tile_array[row][column].unload(render_instance, column, row)
                 self.loaded_y = sorted([tile for tile in self.loaded_y if tile not in unload_y])
         # update which tiles are loaded
         if (load_x != []):
@@ -1241,14 +1241,15 @@ class EditorMap():
         if (load_y != []):
             self.loaded_y += load_y
             self.loaded_y = sorted(self.loaded_y)
+        print(self.loaded_x, self.loaded_y)
         # iterate through all loaded tiles
         load = True
         left = self.image_space_ltwh[0] - self.tile_offset_xy[0]
-        for row in self.loaded_x:
+        for column in self.loaded_x:
             top = self.image_space_ltwh[1] - self.tile_offset_xy[1]
-            for column in self.loaded_y:
+            for row in self.loaded_y:
                 tile = self.tile_array[row][column]
-                load = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, row, column, [left, top, self.tile_wh[0], self.tile_wh[1]], load)
+                load = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], load)
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
@@ -1279,22 +1280,25 @@ class EditorTile():
         self.gl_image_reference: str | None = None
         self.pg_image: None = None
 
-    def load(self, render_instance, screen_instance, gl_context, path: str, row: int, column: int):
+    def load(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int):
+        if not self.loaded:
+            render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}")
         self.loaded = True
-        render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{row}_{column}.png", f"{row}_{column}")
 
-    def unload(self, render_instance, row: int, column: int):
-        render_instance.remove_moderngl_texture_from_renderable_objects_dict(f"{row}_{column}")
+    def unload(self, render_instance, column: int, row: int):
+        if self.loaded:
+            render_instance.remove_moderngl_texture_from_renderable_objects_dict(f"{column}_{row}")
+        self.loaded = False
 
-    def draw_image(self, render_instance, screen_instance, gl_context, path: str, row: int, column: int, ltwh: list[int, int, int, int], load: bool = False):
+    def draw_image(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, ltwh: list[int, int, int, int], load: bool = False):
         if load and not self.loaded:
-            self.load(render_instance, screen_instance, gl_context, path, row, column)
+            self.load(render_instance, screen_instance, gl_context, path, column, row)
             load = False
 
         if not self.loaded:
             return load
 
-        render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{row}_{column}", ltwh)
+        render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{column}_{row}", ltwh)
         return load
 
 
