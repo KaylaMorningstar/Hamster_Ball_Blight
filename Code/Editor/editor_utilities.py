@@ -1151,6 +1151,17 @@ class EditorMap():
     _LOADED = 2
     _UNLOADING = 3
 
+    _STARTING_ZOOM_INDEX = 1
+    _ZOOM = [
+        # [# of pixels, resulting pixel size]
+        # e.g. [2, 1] means 2x2 pixels becomes a 1x1 pixel
+        [2, 1],
+        [1, 1],
+        [1, 2],
+        [1, 4],
+        [1, 8],
+    ]
+
     def __init__(self,
                  base_path: str,
                  tile_wh: list[int, int]):
@@ -1166,6 +1177,8 @@ class EditorMap():
         self._create_editor_tiles()
         self.map_offset_xy: list[int, int] = [0, 0]
         self.tile_offset_xy: list[int, int] = [0, 0]
+        self.zoom_levels = len(EditorMap._ZOOM) - 1
+        self.zoom_index = EditorMap._STARTING_ZOOM_INDEX
         self.left_tile    = -1
         self.top_tile     = -1
         self.right_tile   = -1
@@ -1180,7 +1193,10 @@ class EditorMap():
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
 
-        # update map scroll
+        # update map zoom
+        initial_pixel_dimension, final_pixel_dimension = self._zoom(keys_class_instance)
+
+        # update map hand
         self._hand(keys_class_instance, image_space_ltwh)
         self.map_offset_xy[0] = move_number_to_desired_range(-self.map_wh[0] - self.edge_tile_difference_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0)
         self.map_offset_xy[1] = move_number_to_desired_range(-self.map_wh[1] - self.edge_tile_difference_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0)
@@ -1256,6 +1272,14 @@ class EditorMap():
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
+    def _zoom(self, keys_class_instance):
+        if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
+            pass
+        elif keys_class_instance.editor_scroll_y.value == 0:
+            pass
+        else:
+            self.zoom_index = move_number_to_desired_range(0, self.zoom_index+keys_class_instance.editor_scroll_y.value, self.zoom_levels)
+        return EditorMap._ZOOM[self.zoom_index]
 
     def _hand(self, keys_class_instance, image_space_ltwh: list[int, int, int, int]):
         if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
