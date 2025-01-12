@@ -1147,11 +1147,6 @@ class ScrollBar():
 
 
 class EditorMap():
-    _NOT_LOADED = 0
-    _LOADING = 1
-    _LOADED = 2
-    _UNLOADING = 3
-
     _STARTING_ZOOM_INDEX = 3
     _ZOOM = [
         # [# of pixels, resulting pixel size]
@@ -1164,6 +1159,7 @@ class EditorMap():
         [1, 4],
         [1, 8],
     ]
+    _MAX_LOAD_TIME = 0.016
 
     def __init__(self,
                  base_path: str,
@@ -1286,13 +1282,16 @@ class EditorMap():
             self.loaded_y += load_y
             self.loaded_y = sorted(self.loaded_y)
         # iterate through all loaded tiles
+        start_load = get_time()
         load = True
         left = self.image_space_ltwh[0] - self.tile_offset_xy[0]
         for column in self.loaded_x:
             top = self.image_space_ltwh[1] - self.tile_offset_xy[1]
             for row in self.loaded_y:
+                if get_time() - start_load > EditorMap._MAX_LOAD_TIME:
+                    load = False
                 tile = self.tile_array[column][row]
-                load = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], self.pixel_scale, load)
+                tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], self.pixel_scale, load)
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
@@ -1339,7 +1338,6 @@ class EditorMap():
 
 
 class EditorTile():
-
     def __init__(self):
         self.loaded: bool = False
         self.gl_image_reference: str | None = None
@@ -1357,48 +1355,13 @@ class EditorTile():
         self.loaded = False
 
     def draw_image(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, ltwh: list[int, int, int, int], scale: int, load: bool = False):
-        if not self.loaded:
+        if load and not self.loaded:
             self.load(render_instance, screen_instance, gl_context, path, column, row, scale)
-            load = False
 
         if not self.loaded:
-            return load
+            return
 
         render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{column}_{row}", ltwh)
-        return load
-
-
 
     def _edit_image(self):
         pass
-
-
-# class EditorTile():
-#     _NOT_LOADED = 0
-#     _LOADING = 1
-#     _LOADED = 2
-#     _UNLOADING = 3
-
-#     def __init__(self):
-#         self.state: int = 0  # (0 = not loaded, 1 = loading, 2 = loaded, 3 = unloading)
-#         self.edited: bool = False
-
-#     def update(self, render_instance, screen_instance, gl_context, desired_state, path: str | None = None, row: int | None = None, column: int | None = None, ltwh: list[int, int, int, int] | None = None):
-#         match (self.state, desired_state):
-#             case (0, 0):  # not loaded -> not loaded
-#                 pass
-#             case (0, 2):  # not loaded -> loaded
-#                 self._load_image(render_instance, screen_instance, gl_context, path, row, column)
-#                 self.state = desired_state
-#                 render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{row}_{column}", ltwh)
-#             case (2, 0):  # loaded -> not loaded
-#                 self._unload_image(render_instance, row, column)
-#                 self.state = desired_state
-#             case (2, 2):  # loaded -> loaded
-#                 render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{row}_{column}", ltwh)
-
-#     def _load_image(self, render_instance, screen_instance, gl_context, path: str, row: int, column: int):
-#         render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{row}_{column}.png", f"{row}_{column}")
-
-#     def _unload_image(self, render_instance, row: int, column: int):
-#         render_instance.remove_moderngl_texture_from_renderable_objects_dict(f"{row}_{column}")
