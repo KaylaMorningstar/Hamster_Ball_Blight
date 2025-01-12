@@ -2,14 +2,14 @@ from PIL import Image
 
 
 FILE_LOCATION = "C:\\Users\\Kayle\\Desktop\\Hamster_Ball_Blight\\Test\\Images\\load_unload2\\Forest.png"
-TILE_WIDTH = 128
-TILE_HEIGHT = 128
+TILE_WIDTH = 256
+TILE_HEIGHT = 256
 
 IMAGE = Image.open(FILE_LOCATION)
 IMAGE_WIDTH, IMAGE_HEIGHT = IMAGE.size
 
-ROWS = (IMAGE_WIDTH // TILE_WIDTH) + 1
-COLUMNS = (IMAGE_HEIGHT // TILE_HEIGHT) + 1
+ROWS = (IMAGE_WIDTH // TILE_WIDTH)
+COLUMNS = (IMAGE_HEIGHT // TILE_HEIGHT)
 
 
 for row_index in range(ROWS):

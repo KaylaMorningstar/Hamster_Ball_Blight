@@ -1170,16 +1170,16 @@ class EditorMap():
                  tile_wh: list[int, int]):
 
         self.base_path: str = "C:\\Users\\Kayle\\Desktop\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\"
-        self.initial_tile_wh: list[int, int] = deepcopy(tile_wh)
-        self.tile_wh: list[int, int] = tile_wh
+        self.initial_tile_wh: list[int, int] = list(pygame.image.load(f"{self.base_path}t0_0.png").get_size())
+        self.tile_wh: list[int, int] = deepcopy(self.initial_tile_wh)
         # internal
         self.image_space_ltwh: list[int, int, int, int] = [0, 0, 0, 0]
-        self.original_map_wh: list[int, int] = [12000, 6000]
-        self.map_wh: list[int, int] = [12000, 6000]
+        self.original_map_wh: list[int, int] = [11776, 5888]
+        self.map_wh: list[int, int] = [11776, 5888]
         self.tile_array_shape: list[int, int] = [math.ceil(self.original_map_wh[0] / self.initial_tile_wh[0]), math.ceil(self.original_map_wh[1] / self.initial_tile_wh[1])]
-        self.edge_tile_difference_wh = [tile_wh-edge_tile_wh for tile_wh, edge_tile_wh in zip(self.initial_tile_wh, list(pygame.image.load(f"{self.base_path}t{self.tile_array_shape[0]-1}_{self.tile_array_shape[1]-1}.png").get_size()))]
         self.tile_array: list[list[EditorTile]] = []
         self._create_editor_tiles()
+        self.pixel_scale: int | float = 1
         self.map_offset_xy: list[int, int] = [0, 0]
         self.tile_offset_xy: list[int, int] = [0, 0]
         self.zoom_levels = len(EditorMap._ZOOM) - 1
@@ -1201,13 +1201,15 @@ class EditorMap():
         # update map zoom
         [initial_pixel_dimension, final_pixel_dimension], zoomed = self._zoom(keys_class_instance)
         if zoomed:
-            pixel_scale = final_pixel_dimension / initial_pixel_dimension
-            self.tile_wh[0] = int(self.initial_tile_wh[0] * pixel_scale)
-            self.tile_wh[1] = int(self.initial_tile_wh[1] * pixel_scale)
+            self.pixel_scale = final_pixel_dimension / initial_pixel_dimension
+            self.tile_wh[0] = int(self.initial_tile_wh[0] * self.pixel_scale)
+            self.tile_wh[1] = int(self.initial_tile_wh[1] * self.pixel_scale)
             # reset map from zoom
             for column in self.loaded_x:
                 for row in self.loaded_y:
                     self.tile_array[column][row].unload(render_instance, column, row)
+            self.map_wh[0] = self.original_map_wh[0] * self.pixel_scale
+            self.map_wh[1] = self.original_map_wh[1] * self.pixel_scale
             self.map_offset_xy: list[int, int] = [0, 0]
             self.tile_offset_xy: list[int, int] = [0, 0]
             self.left_tile    = -1
@@ -1221,8 +1223,9 @@ class EditorMap():
 
         # update map hand
         self._hand(keys_class_instance, image_space_ltwh)
-        self.map_offset_xy[0] = move_number_to_desired_range(-self.map_wh[0] - self.edge_tile_difference_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0)
-        self.map_offset_xy[1] = move_number_to_desired_range(-self.map_wh[1] - self.edge_tile_difference_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0)
+        self.map_offset_xy[0] = math.ceil(move_number_to_desired_range(-self.map_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0))
+        self.map_offset_xy[1] = math.ceil(move_number_to_desired_range(-self.map_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0))
+        print(self.map_offset_xy[1], -self.map_wh[1] + 1 + image_space_ltwh[3], -self.map_wh[1], image_space_ltwh[3], self.tile_wh)
 
         # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
         last_left_tile = self.left_tile
