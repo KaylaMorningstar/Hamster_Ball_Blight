@@ -86,6 +86,17 @@ class RenderObjects():
         rotation = 0
         self.renderable_objects[name] = RenderableObject(Screen, texture, width, height, rotation)
     #
+    def add_moderngl_texture_scaled(self, Screen: ScreenObject, gl_context, path, name, scale):
+        pygame_image = pygame.image.load(path).convert_alpha()
+        width, height = [int(wh * scale) for wh in pygame_image.get_size()]
+        pygame_image = pygame.transform.scale(pygame_image, (width, height))
+        texture = gl_context.texture((width, height), 4)
+        texture.filter = (moderngl.NEAREST, moderngl.NEAREST)
+        texture.swizzle = 'BGRA'
+        texture.write(pygame_image.get_view('1'))
+        rotation = 0
+        self.renderable_objects[name] = RenderableObject(Screen, texture, width, height, rotation)
+    #
     def remove_moderngl_texture_from_renderable_objects_dict(self, name):
         self.renderable_objects[name].TEXTURE.release()
         del self.renderable_objects[name]

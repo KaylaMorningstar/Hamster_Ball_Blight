@@ -1225,7 +1225,6 @@ class EditorMap():
         self._hand(keys_class_instance, image_space_ltwh)
         self.map_offset_xy[0] = math.ceil(move_number_to_desired_range(-self.map_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0))
         self.map_offset_xy[1] = math.ceil(move_number_to_desired_range(-self.map_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0))
-        print(self.map_offset_xy[1], -self.map_wh[1] + 1 + image_space_ltwh[3], -self.map_wh[1], image_space_ltwh[3], self.tile_wh)
 
         # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
         last_left_tile = self.left_tile
@@ -1294,7 +1293,7 @@ class EditorMap():
             top = self.image_space_ltwh[1] - self.tile_offset_xy[1]
             for row in self.loaded_y:
                 tile = self.tile_array[column][row]
-                load = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], load)
+                load = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], self.pixel_scale, load)
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
@@ -1335,9 +1334,10 @@ class EditorTile():
         self.gl_image_reference: str | None = None
         self.pg_image: None = None
 
-    def load(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int):
+    def load(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, scale: int):
         if not self.loaded:
-            render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}")
+            # render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}")
+            render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}", scale)
         self.loaded = True
 
     def unload(self, render_instance, column: int, row: int):
@@ -1345,9 +1345,9 @@ class EditorTile():
             render_instance.remove_moderngl_texture_from_renderable_objects_dict(f"{column}_{row}")
         self.loaded = False
 
-    def draw_image(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, ltwh: list[int, int, int, int], load: bool = False):
-        if load and not self.loaded:
-            self.load(render_instance, screen_instance, gl_context, path, column, row)
+    def draw_image(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, ltwh: list[int, int, int, int], scale: int, load: bool = False):
+        if not self.loaded:
+            self.load(render_instance, screen_instance, gl_context, path, column, row, scale)
             load = False
 
         if not self.loaded:
