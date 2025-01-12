@@ -8,12 +8,12 @@ import moderngl
 
 def update_events(Api: ApiObject, Screen: ScreenObject):
     Api.scroll_x, Api.scroll_y = 0, 0
+    Screen.window_resize = False
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
         #
-        Screen.window_resize = False
         if event.type == pygame.VIDEORESIZE:
             Screen.window_resize = True
             Screen.width = event.w
@@ -24,8 +24,8 @@ def update_events(Api: ApiObject, Screen: ScreenObject):
             Screen.screen = pygame.display.set_mode((Screen.width, Screen.height), pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
             Screen.display = pygame.Surface((Screen.width, Screen.height))
         #
-        if Api.current_api == Api.EDITOR:
-            if event.type == pygame.MOUSEWHEEL:
+        if event.type == pygame.MOUSEWHEEL:
+            if Api.current_api == Api.EDITOR:
                 Api.scroll_x, Api.scroll_y = event.x, event.y
 
 

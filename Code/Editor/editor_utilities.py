@@ -1199,9 +1199,8 @@ class EditorMap():
         self.image_space_ltwh = image_space_ltwh
 
         # update map zoom
-        [initial_pixel_dimension, final_pixel_dimension], zoomed = self._zoom(keys_class_instance)
+        zoomed = self._zoom(screen_instance, keys_class_instance)
         if zoomed:
-            self.pixel_scale = final_pixel_dimension / initial_pixel_dimension
             self.tile_wh[0] = int(self.initial_tile_wh[0] * self.pixel_scale)
             self.tile_wh[1] = int(self.initial_tile_wh[1] * self.pixel_scale)
             # reset map from zoom
@@ -1297,16 +1296,28 @@ class EditorMap():
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
-    def _zoom(self, keys_class_instance):
-        zoomed = False
-        if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
-            pass
-        elif keys_class_instance.editor_scroll_y.value == 0:
-            pass
+    def _zoom(self, screen_instance, keys_class_instance):
+        if screen_instance.window_resize:
+            return self._calculate_zoom(keys_class_instance)
+        elif (keys_class_instance.editor_scroll_y.value == 0):
+            return False
+        elif not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
+            return False
         else:
-            zoomed = True
-            self.zoom_index = move_number_to_desired_range(0, self.zoom_index+keys_class_instance.editor_scroll_y.value, self.zoom_levels)
-        return EditorMap._ZOOM[self.zoom_index], zoomed
+            return self._calculate_zoom(keys_class_instance)
+
+    def _calculate_zoom(self, keys_class_instance):
+            zoomed = False
+            zoom_reduction = 0
+            while not zoomed:
+                zoom_index = move_number_to_desired_range(0, self.zoom_index+keys_class_instance.editor_scroll_y.value+zoom_reduction, self.zoom_levels)
+                pixel_scale = EditorMap._ZOOM[zoom_index][1] / EditorMap._ZOOM[zoom_index][0]
+                zoomed = ((self.original_map_wh[0] * pixel_scale) > self.image_space_ltwh[2]) or ((self.original_map_wh[1] * pixel_scale) > self.image_space_ltwh[3])
+                if zoomed:
+                    self.pixel_scale = pixel_scale
+                    self.zoom_index = zoom_index
+                zoom_reduction += 1
+            return zoomed
 
     def _hand(self, keys_class_instance, image_space_ltwh: list[int, int, int, int]):
         if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
