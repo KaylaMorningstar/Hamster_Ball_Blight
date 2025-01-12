@@ -238,6 +238,16 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
     Render.draw_rectangle(Screen, gl_context, Singleton.image_large_border_ltwh, Singleton.image_large_border_thickness, Singleton.image_large_border_color, True, Singleton.image_large_inside_color, False)
     Singleton.image_inside_border_ltwh = get_rect_minus_borders(Singleton.image_large_border_ltwh, Singleton.image_large_border_thickness)
     #
+    # update image area ltwh
+    Singleton.image_area_ltwh[0] = Singleton.image_inside_border_ltwh[0]
+    Singleton.image_area_ltwh[1] = Singleton.image_inside_border_ltwh[1]
+    Singleton.image_area_ltwh[2] = Singleton.image_inside_border_ltwh[2] - Singleton.image_vertical_scroll.scroll_area_ltwh[2] + Singleton.image_large_border_thickness
+    Singleton.image_area_ltwh[3] = Singleton.image_inside_border_ltwh[3] - Singleton.image_horizontal_scroll.scroll_area_ltwh[3] + Singleton.image_large_border_thickness
+    #
+    # update image
+    # Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.image_area_ltwh, COLORS['WHITE'])
+    Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh)
+    #
     # update scroll bars
     # vertical scroll
     Singleton.image_vertical_scroll.scroll_area_ltwh[0] = Singleton.image_inside_border_ltwh[0] + Singleton.image_inside_border_ltwh[2] - Singleton.image_vertical_scroll.scroll_area_ltwh[2] + Singleton.image_large_border_thickness
@@ -251,16 +261,6 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
     Singleton.image_horizontal_scroll.update(Screen, gl_context, Keys, Render, Cursor)
     # square in image area corner between scroll bars
     Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', [Singleton.image_horizontal_scroll.scroll_area_ltwh[0] + Singleton.image_horizontal_scroll.scroll_area_ltwh[2], Singleton.image_horizontal_scroll.scroll_area_ltwh[1], Singleton.image_horizontal_scroll.scroll_area_ltwh[3] - Singleton.image_large_border_thickness, Singleton.image_horizontal_scroll.scroll_area_ltwh[3]], Singleton.image_vertical_scroll.border_color)
-    #
-    # update image area ltwh
-    Singleton.image_area_ltwh[0] = Singleton.image_inside_border_ltwh[0]
-    Singleton.image_area_ltwh[1] = Singleton.image_inside_border_ltwh[1]
-    Singleton.image_area_ltwh[2] = Singleton.image_inside_border_ltwh[2] - Singleton.image_vertical_scroll.scroll_area_ltwh[2] + Singleton.image_large_border_thickness
-    Singleton.image_area_ltwh[3] = Singleton.image_inside_border_ltwh[3] - Singleton.image_horizontal_scroll.scroll_area_ltwh[3] + Singleton.image_large_border_thickness
-    #
-    # update image
-    # Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.image_area_ltwh, COLORS['WHITE'])
-    Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh)
 
 
 def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
@@ -271,11 +271,11 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
         Api.setup_required = False
     #
     Singleton = Api.api_initiated_singletons[Api.current_api]
+    update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_header(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_footer(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_separate_palette_and_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
-    update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     
