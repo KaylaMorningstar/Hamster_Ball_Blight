@@ -218,6 +218,7 @@ class EditorSingleton():
         self.image_vertical_scroll = ScrollBar(scroll_area_lt=[0, 0], is_vertical=True, scroll_thickness=22, scroll_length=50, scroll_area_border_thickness=self.image_large_border_thickness, scroll_border_thickness=5, border_color=COLORS['PINK'], background_color=COLORS['WHITE'], scroll_border_color=COLORS['RED'], unhighlighted_color=COLORS['WHITE'], shaded_color=COLORS['LIGHT_GREY'], highlighted_color=COLORS['GREY'])
         self.image_horizontal_scroll = ScrollBar(scroll_area_lt=[0, 0], is_vertical=False, scroll_thickness=22, scroll_length=50, scroll_area_border_thickness=self.image_large_border_thickness, scroll_border_thickness=5, border_color=COLORS['PINK'], background_color=COLORS['WHITE'], scroll_border_color=COLORS['RED'], unhighlighted_color=COLORS['WHITE'], shaded_color=COLORS['LIGHT_GREY'], highlighted_color=COLORS['GREY'])
         self.image_area_ltwh = [0, 0, 0, 0]
+        self.window_resize_last_frame = False
         self.map: EditorMap = EditorMap(PATH, [128, 128])
 
     def get_color_spectrum_ltwh(self):
@@ -245,8 +246,12 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
     Singleton.image_area_ltwh[3] = Singleton.image_inside_border_ltwh[3] - Singleton.image_horizontal_scroll.scroll_area_ltwh[3] + Singleton.image_large_border_thickness
     #
     # update image
+    if Screen.window_resize:
+        Singleton.window_resize_last_frame = True
+    else:
+        Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh, Singleton.window_resize_last_frame)
+        Singleton.window_resize_last_frame = False
     # Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.image_area_ltwh, COLORS['WHITE'])
-    Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh)
     #
     # update scroll bars
     # vertical scroll

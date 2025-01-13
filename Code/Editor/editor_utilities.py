@@ -1184,18 +1184,16 @@ class EditorMap():
         self.top_tile     = -1
         self.right_tile   = -1
         self.bottom_tile  = -1
-        self.tiles_across = 0
-        self.tiles_high   = 0
         self.loaded_x: list[int] = []
         self.loaded_y: list[int] = []
         self.held: bool = False
 
-    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int]):
+    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize_last_frame: bool):
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
 
         # update map zoom
-        zoomed = self._zoom(screen_instance, keys_class_instance)
+        zoomed = self._zoom(keys_class_instance, window_resize_last_frame)
         if zoomed:
             self.tile_wh[0] = int(self.initial_tile_wh[0] * self.pixel_scale)
             self.tile_wh[1] = int(self.initial_tile_wh[1] * self.pixel_scale)
@@ -1211,8 +1209,6 @@ class EditorMap():
             self.top_tile     = -1
             self.right_tile   = -1
             self.bottom_tile  = -1
-            self.tiles_across = 0
-            self.tiles_high   = 0
             self.loaded_x: list[int] = []
             self.loaded_y: list[int] = []
 
@@ -1295,8 +1291,8 @@ class EditorMap():
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
-    def _zoom(self, screen_instance, keys_class_instance):
-        if screen_instance.window_resize:
+    def _zoom(self, keys_class_instance, window_resize_last_frame):
+        if window_resize_last_frame:
             return self._calculate_zoom(keys_class_instance)
         elif (keys_class_instance.editor_scroll_y.value == 0):
             return False
@@ -1313,6 +1309,8 @@ class EditorMap():
                 pixel_scale = EditorMap._ZOOM[zoom_index][1] / EditorMap._ZOOM[zoom_index][0]
                 zoomed = ((self.original_map_wh[0] * pixel_scale) > self.image_space_ltwh[2]) or ((self.original_map_wh[1] * pixel_scale) > self.image_space_ltwh[3])
                 if zoomed:
+                    if (zoom_index == self.zoom_index):
+                        return False
                     self.pixel_scale = pixel_scale
                     self.zoom_index = zoom_index
                 zoom_reduction += 1
@@ -1346,7 +1344,7 @@ class EditorTile():
     def load(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, scale: int):
         if not self.loaded:
             # render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}")
-            render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}", scale)
+            render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}", move_number_to_desired_range(0, scale, 1))
         self.loaded = True
 
     def unload(self, render_instance, column: int, row: int):
