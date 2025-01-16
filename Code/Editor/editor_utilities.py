@@ -1200,6 +1200,8 @@ class EditorMap():
         self.map_offset_xy[0] = math.ceil(move_number_to_desired_range(-self.map_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0))
         self.map_offset_xy[1] = math.ceil(move_number_to_desired_range(-self.map_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0))
 
+        self._get_cursor_position_on_map(keys_class_instance)
+
         # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
         last_left_tile = self.left_tile
         last_top_tile = self.top_tile
@@ -1331,6 +1333,11 @@ class EditorMap():
             self.map_offset_xy[0] += keys_class_instance.cursor_x_pos.delta
             self.map_offset_xy[1] += keys_class_instance.cursor_y_pos.delta
             return
+
+    def _get_cursor_position_on_map(self, keys_class_instance):
+        # x = 0, y = 0 is top-left; x = image_space_ltwh[2], y = image_space_ltwh[3] is bottom-right; x = -1, y = -1 is invalid
+        print(math.floor(((keys_class_instance.cursor_x_pos.value - self.image_space_ltwh[0]) / self.pixel_scale) - (self.map_offset_xy[0] / self.pixel_scale)),
+              math.floor(((keys_class_instance.cursor_y_pos.value - self.image_space_ltwh[1]) / self.pixel_scale) - (self.map_offset_xy[1] / self.pixel_scale)))
 
     def _create_editor_tiles(self):
         self.tile_array = []
