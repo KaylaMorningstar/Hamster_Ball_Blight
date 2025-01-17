@@ -1158,6 +1158,8 @@ class EditorMap():
         [1, 2],
         [1, 4],
         [1, 8],
+        [1, 16],
+        [1, 32],
     ]
     _MAX_LOAD_TIME = 0.02
 
@@ -1200,7 +1202,8 @@ class EditorMap():
         self.map_offset_xy[0] = math.ceil(move_number_to_desired_range(-self.map_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0))
         self.map_offset_xy[1] = math.ceil(move_number_to_desired_range(-self.map_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0))
 
-        self._get_cursor_position_on_map(keys_class_instance)
+        x, y = self._get_cursor_position_on_map(keys_class_instance)
+        # print(x, y)
 
         # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
         last_left_tile = self.left_tile
@@ -1263,16 +1266,20 @@ class EditorMap():
             self.loaded_y += load_y
             self.loaded_y = sorted(self.loaded_y)
         # iterate through all loaded tiles
-        start_load = get_time()
         load = True
+        started_loading = False
         left = self.image_space_ltwh[0] - self.tile_offset_xy[0]
         for column in self.loaded_x:
             top = self.image_space_ltwh[1] - self.tile_offset_xy[1]
             for row in self.loaded_y:
-                if get_time() - start_load > EditorMap._MAX_LOAD_TIME:
-                    load = False
+                if started_loading:
+                    if get_time() - start_load > EditorMap._MAX_LOAD_TIME:
+                        load = False
                 tile = self.tile_array[column][row]
-                tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], self.pixel_scale, load)
+                loaded = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], self.pixel_scale, load)
+                if loaded and not started_loading:
+                    started_loading = True
+                    start_load = get_time()
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
@@ -1336,8 +1343,12 @@ class EditorMap():
 
     def _get_cursor_position_on_map(self, keys_class_instance):
         # x = 0, y = 0 is top-left; x = image_space_ltwh[2], y = image_space_ltwh[3] is bottom-right; x = -1, y = -1 is invalid
-        print(math.floor(((keys_class_instance.cursor_x_pos.value - self.image_space_ltwh[0]) / self.pixel_scale) - (self.map_offset_xy[0] / self.pixel_scale)),
-              math.floor(((keys_class_instance.cursor_y_pos.value - self.image_space_ltwh[1]) / self.pixel_scale) - (self.map_offset_xy[1] / self.pixel_scale)))
+        cursor_x, cursor_y = keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value
+        if not point_is_in_ltwh(cursor_x, cursor_y, self.image_space_ltwh):
+            return -1, -1
+        left = math.floor(((cursor_x - self.image_space_ltwh[0]) / self.pixel_scale) - (self.map_offset_xy[0] / self.pixel_scale))
+        top = math.floor(((cursor_y - self.image_space_ltwh[1]) / self.pixel_scale) - (self.map_offset_xy[1] / self.pixel_scale))
+        return left, top
 
     def _create_editor_tiles(self):
         self.tile_array = []
@@ -1363,13 +1374,16 @@ class EditorTile():
         self.loaded = False
 
     def draw_image(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, ltwh: list[int, int, int, int], scale: int, load: bool = False):
+        loaded = False
         if load and not self.loaded:
             self.load(render_instance, screen_instance, gl_context, path, column, row, scale)
+            loaded = True
 
         if not self.loaded:
-            return
+            return loaded
 
         render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{column}_{row}", ltwh)
+        return loaded
 
     def _edit_image(self):
         pass
