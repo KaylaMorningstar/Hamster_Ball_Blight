@@ -1195,16 +1195,82 @@ class EditorMap():
         self.image_space_ltwh = image_space_ltwh
 
         # update map zoom
-        self._zoom(render_instance, keys_class_instance, window_resize_last_frame)
+        self._zoom(render_instance, keys_class_instance, screen_instance, gl_context, window_resize_last_frame)
 
         # update map hand
         self._hand(keys_class_instance, image_space_ltwh)
         self.map_offset_xy[0] = math.ceil(move_number_to_desired_range(-self.map_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0))
         self.map_offset_xy[1] = math.ceil(move_number_to_desired_range(-self.map_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0))
+        self._get_ltrb_pixels_on_map()
 
-        x, y = self._get_cursor_position_on_map(keys_class_instance)
-        # print(x, y)
+        # calculate which tiles should be loaded and unloaded; perform unloading
+        self._update_loaded_tiles(render_instance)
 
+        # iterate through tiles that should be loaded; load them; draw them
+        self._iterate_through_tiles(render_instance, screen_instance, gl_context, True, True)
+
+    def _zoom(self, render_instance, keys_class_instance, screen_instance, gl_context, window_resize_last_frame):
+        if window_resize_last_frame:
+            self._calculate_zoom(render_instance, keys_class_instance, screen_instance, gl_context)
+        elif (keys_class_instance.editor_scroll_y.value == 0):
+            return
+        elif not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
+            return
+        else:
+            self._calculate_zoom(render_instance, keys_class_instance, screen_instance, gl_context)
+
+    def _calculate_zoom(self, render_instance, keys_class_instance, screen_instance, gl_context):
+            # find whether a zoom occurred; find what the new zoom is
+            zoomed = False
+            zoom_reduction = 0
+            while not zoomed:
+                zoom_index = move_number_to_desired_range(0, self.zoom_index+keys_class_instance.editor_scroll_y.value+zoom_reduction, self.zoom_levels)
+                pixel_scale = EditorMap._ZOOM[zoom_index][1] / EditorMap._ZOOM[zoom_index][0]
+                zoomed = ((self.original_map_wh[0] * pixel_scale) > self.image_space_ltwh[2]) or ((self.original_map_wh[1] * pixel_scale) > self.image_space_ltwh[3])
+                if zoomed:
+                    if (zoom_index == self.zoom_index):
+                        return
+                    self.pixel_scale = pixel_scale
+                    self.zoom_index = zoom_index
+                zoom_reduction += 1
+            if not zoomed:
+                return
+
+            # implement the new zoom
+            original_map_offset_xy = self.map_offset_xy
+            self.tile_wh[0] = int(self.initial_tile_wh[0] * self.pixel_scale)
+            self.tile_wh[1] = int(self.initial_tile_wh[1] * self.pixel_scale)
+            # reset map from zoom
+            for column in self.loaded_x:
+                for row in self.loaded_y:
+                    self.tile_array[column][row].unload(render_instance, column, row)
+            self.map_wh[0] = self.original_map_wh[0] * self.pixel_scale
+            self.map_wh[1] = self.original_map_wh[1] * self.pixel_scale
+            self.map_offset_xy = [0, 0]
+            self.tile_offset_xy = [0, 0]
+            self.left_tile    = -1
+            self.top_tile     = -1
+            self.right_tile   = -1
+            self.bottom_tile  = -1
+            self.loaded_x = []
+            self.loaded_y = []
+
+            # update which tiles are loaded from the top-left of the map
+            self._update_loaded_tiles(render_instance)
+            self._iterate_through_tiles(render_instance, screen_instance, gl_context, False, False)
+
+            # move the map to a new location centered on the zoom
+            cursor_percent_x = (keys_class_instance.cursor_x_pos.value - self.image_space_ltwh[0]) / self.image_space_ltwh[2]
+            cursor_percent_y = (keys_class_instance.cursor_y_pos.value - self.image_space_ltwh[1]) / self.image_space_ltwh[3]
+            print(original_map_offset_xy)
+
+
+            # print(self.map_wh, self.map_offset_xy)
+            # self.map_offset_xy[0] = -cursor_x * self.pixel_scale
+            # self.map_offset_xy[1] = -cursor_y * self.pixel_scale
+            # print(self.map_offset_xy)
+
+    def _update_loaded_tiles(self, render_instance):
         # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
         last_left_tile = self.left_tile
         last_top_tile = self.top_tile
@@ -1265,6 +1331,8 @@ class EditorMap():
         if (load_y != []):
             self.loaded_y += load_y
             self.loaded_y = sorted(self.loaded_y)
+
+    def _iterate_through_tiles(self, render_instance, screen_instance, gl_context, draw_tiles: bool, load_tiles: bool):
         # iterate through all loaded tiles
         load = True
         started_loading = False
@@ -1276,57 +1344,12 @@ class EditorMap():
                     if get_time() - start_load > EditorMap._MAX_LOAD_TIME:
                         load = False
                 tile = self.tile_array[column][row]
-                loaded = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], self.pixel_scale, load)
+                loaded = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], self.pixel_scale, load and load_tiles, draw_tiles)
                 if loaded and not started_loading:
                     started_loading = True
                     start_load = get_time()
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
-
-    def _zoom(self, render_instance, keys_class_instance, window_resize_last_frame):
-        if window_resize_last_frame:
-            self._calculate_zoom(render_instance, keys_class_instance)
-        elif (keys_class_instance.editor_scroll_y.value == 0):
-            return
-        elif not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
-            return
-        else:
-            self._calculate_zoom(render_instance, keys_class_instance)
-
-    def _calculate_zoom(self, render_instance, keys_class_instance):
-            # find whether a zoom occurred; find what the new zoom is
-            zoomed = False
-            zoom_reduction = 0
-            while not zoomed:
-                zoom_index = move_number_to_desired_range(0, self.zoom_index+keys_class_instance.editor_scroll_y.value+zoom_reduction, self.zoom_levels)
-                pixel_scale = EditorMap._ZOOM[zoom_index][1] / EditorMap._ZOOM[zoom_index][0]
-                zoomed = ((self.original_map_wh[0] * pixel_scale) > self.image_space_ltwh[2]) or ((self.original_map_wh[1] * pixel_scale) > self.image_space_ltwh[3])
-                if zoomed:
-                    if (zoom_index == self.zoom_index):
-                        return
-                    self.pixel_scale = pixel_scale
-                    self.zoom_index = zoom_index
-                zoom_reduction += 1
-            if not zoomed:
-                return
-
-            # implement the new zoom
-            self.tile_wh[0] = int(self.initial_tile_wh[0] * self.pixel_scale)
-            self.tile_wh[1] = int(self.initial_tile_wh[1] * self.pixel_scale)
-            # reset map from zoom
-            for column in self.loaded_x:
-                for row in self.loaded_y:
-                    self.tile_array[column][row].unload(render_instance, column, row)
-            self.map_wh[0] = self.original_map_wh[0] * self.pixel_scale
-            self.map_wh[1] = self.original_map_wh[1] * self.pixel_scale
-            self.map_offset_xy: list[int, int] = [0, 0]
-            self.tile_offset_xy: list[int, int] = [0, 0]
-            self.left_tile    = -1
-            self.top_tile     = -1
-            self.right_tile   = -1
-            self.bottom_tile  = -1
-            self.loaded_x: list[int] = []
-            self.loaded_y: list[int] = []
 
     def _hand(self, keys_class_instance, image_space_ltwh: list[int, int, int, int]):
         if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
@@ -1349,6 +1372,14 @@ class EditorMap():
         left = math.floor(((cursor_x - self.image_space_ltwh[0]) / self.pixel_scale) - (self.map_offset_xy[0] / self.pixel_scale))
         top = math.floor(((cursor_y - self.image_space_ltwh[1]) / self.pixel_scale) - (self.map_offset_xy[1] / self.pixel_scale))
         return left, top
+
+    def _get_ltrb_pixels_on_map(self):
+        # get the leftest, topest, rightest, and bottomest pixels on the map
+        leftest = math.floor(-(self.map_offset_xy[0] / self.pixel_scale))
+        topest = math.floor(-(self.map_offset_xy[1] / self.pixel_scale))
+        rightest = math.floor(((self.image_space_ltwh[2]) / self.pixel_scale) - (self.map_offset_xy[0] / self.pixel_scale))
+        bottomest = math.floor(((self.image_space_ltwh[3]) / self.pixel_scale) - (self.map_offset_xy[1] / self.pixel_scale))
+        return leftest, topest, rightest, bottomest
 
     def _create_editor_tiles(self):
         self.tile_array = []
@@ -1373,7 +1404,7 @@ class EditorTile():
             render_instance.remove_moderngl_texture_from_renderable_objects_dict(f"{column}_{row}")
         self.loaded = False
 
-    def draw_image(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, ltwh: list[int, int, int, int], scale: int, load: bool = False):
+    def draw_image(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, ltwh: list[int, int, int, int], scale: int, load: bool = False, draw_tiles: bool = True):
         loaded = False
         if load and not self.loaded:
             self.load(render_instance, screen_instance, gl_context, path, column, row, scale)
@@ -1381,6 +1412,9 @@ class EditorTile():
 
         if not self.loaded:
             return loaded
+
+        if not draw_tiles:
+            return True
 
         render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{column}_{row}", ltwh)
         return loaded
