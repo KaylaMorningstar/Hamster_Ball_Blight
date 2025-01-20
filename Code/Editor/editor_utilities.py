@@ -1164,8 +1164,7 @@ class EditorMap():
     _MAX_LOAD_TIME = 0.02
 
     def __init__(self,
-                 base_path: str,
-                 tile_wh: list[int, int]):
+                 base_path: str):
 
         self.base_path: str = "C:\\Users\\Kayle\\Desktop\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\"
         self.initial_tile_wh: list[int, int] = list(pygame.image.load(f"{self.base_path}t0_0.png").get_size())
@@ -1189,16 +1188,17 @@ class EditorMap():
         self.loaded_x: list[int] = []
         self.loaded_y: list[int] = []
         self.held: bool = False
+        self.window_resize_last_frame: bool = False
 
-    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize_last_frame: bool):
+    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool):
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
 
         # update map zoom
-        self._zoom(render_instance, keys_class_instance, screen_instance, gl_context, window_resize_last_frame)
+        self._zoom(render_instance, keys_class_instance, screen_instance, gl_context, window_resize)
 
         # update map hand
-        self._hand(keys_class_instance, image_space_ltwh)
+        self._hand(keys_class_instance)
         self._move_map_offset_to_bounds()
 
         # calculate which tiles should be loaded and unloaded; perform unloading
@@ -1207,8 +1207,8 @@ class EditorMap():
         # iterate through tiles that should be loaded; load them; draw them
         self._iterate_through_tiles(render_instance, screen_instance, gl_context, True, True)
 
-    def _zoom(self, render_instance, keys_class_instance, screen_instance, gl_context, window_resize_last_frame):
-        if window_resize_last_frame:
+    def _zoom(self, render_instance, keys_class_instance, screen_instance, gl_context, window_resize):
+        if window_resize:
             self._calculate_zoom(render_instance, keys_class_instance, screen_instance, gl_context)
         elif (keys_class_instance.editor_scroll_y.value == 0):
             return
@@ -1253,17 +1253,18 @@ class EditorMap():
         self.loaded_x = []
         self.loaded_y = []
 
+        # update map offset
         self.map_offset_xy[0] = math.ceil((-original_cursor_x * self.pixel_scale) + (cursor_percent_x * self.image_space_ltwh[2]))
         self.map_offset_xy[1] = math.ceil((-original_cursor_y * self.pixel_scale) + (cursor_percent_y * self.image_space_ltwh[3]))
         self._move_map_offset_to_bounds()
 
+        # update which tiles are loaded and tile offset
         self.left_tile = -self.map_offset_xy[0] // self.tile_wh[0]
         self.top_tile = -self.map_offset_xy[1] // self.tile_wh[1]
         self.tile_offset_xy[0] = ((self.tile_wh[0] - (self.map_offset_xy[0] % self.tile_wh[0])) % self.tile_wh[0])
         self.tile_offset_xy[1] = ((self.tile_wh[1] - (self.map_offset_xy[1] % self.tile_wh[1])) % self.tile_wh[1])
         self.right_tile = self.left_tile + ((self.image_space_ltwh[2] + self.tile_offset_xy[0]) // self.tile_wh[0])
         self.bottom_tile = self.top_tile + ((self.image_space_ltwh[3] + self.tile_offset_xy[1]) // self.tile_wh[1])
-
         self.loaded_x = [x for x in range(self.left_tile, self.right_tile + 1)]
         self.loaded_y = [x for x in range(self.top_tile, self.bottom_tile + 1)]
 
@@ -1348,7 +1349,7 @@ class EditorMap():
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
-    def _hand(self, keys_class_instance, image_space_ltwh: list[int, int, int, int]):
+    def _hand(self, keys_class_instance):
         if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
             self.held = True
             return

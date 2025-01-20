@@ -219,7 +219,7 @@ class EditorSingleton():
         self.image_horizontal_scroll = ScrollBar(scroll_area_lt=[0, 0], is_vertical=False, scroll_thickness=22, scroll_length=50, scroll_area_border_thickness=self.image_large_border_thickness, scroll_border_thickness=5, border_color=COLORS['PINK'], background_color=COLORS['WHITE'], scroll_border_color=COLORS['RED'], unhighlighted_color=COLORS['WHITE'], shaded_color=COLORS['LIGHT_GREY'], highlighted_color=COLORS['GREY'])
         self.image_area_ltwh = [0, 0, 0, 0]
         self.window_resize_last_frame = False
-        self.map: EditorMap = EditorMap(PATH, [128, 128])
+        self.map: EditorMap = EditorMap(PATH)
 
     def get_color_spectrum_ltwh(self):
         return [self.palette_padding + self.add_color_spectrum_border_thickness, 
