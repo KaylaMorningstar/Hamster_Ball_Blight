@@ -1199,11 +1199,7 @@ class EditorMap():
 
         # update map hand
         self._hand(keys_class_instance, image_space_ltwh)
-        self.map_offset_xy[0] = math.ceil(move_number_to_desired_range(-self.map_wh[0] + 1 + image_space_ltwh[2], self.map_offset_xy[0], 0))
-        self.map_offset_xy[1] = math.ceil(move_number_to_desired_range(-self.map_wh[1] + 1 + image_space_ltwh[3], self.map_offset_xy[1], 0))
-        # print(self.map_offset_xy)
-        # print(self.tile_offset_xy)
-        print(self.loaded_x, self.loaded_y)
+        self._move_map_offset_to_bounds()
 
         # calculate which tiles should be loaded and unloaded; perform unloading
         self._update_loaded_tiles(render_instance)
@@ -1223,7 +1219,9 @@ class EditorMap():
 
     def _calculate_zoom(self, render_instance, keys_class_instance, screen_instance, gl_context):
         original_cursor_x, original_cursor_y = self._get_cursor_position_on_map(keys_class_instance)
-        original_tile_column, original_tile_row = self._get_tile_index(original_cursor_x, original_cursor_y)
+        cursor_percent_x = (keys_class_instance.cursor_x_pos.value - self.image_space_ltwh[0]) / self.image_space_ltwh[2]
+        cursor_percent_y = (keys_class_instance.cursor_y_pos.value - self.image_space_ltwh[1]) / self.image_space_ltwh[3]
+        # original_tile_column, original_tile_row = self._get_tile_index(original_cursor_x, original_cursor_y)
 
         # find whether a zoom occurred; find what the new zoom is
         zoomed = False
@@ -1240,7 +1238,6 @@ class EditorMap():
             return
 
         # get new pixel scale and zoom
-        original_pixel_scale = self.pixel_scale
         self.pixel_scale = pixel_scale
         self.zoom_index = zoom_index
 
@@ -1256,49 +1253,19 @@ class EditorMap():
         self.loaded_x = []
         self.loaded_y = []
 
-
-        self.tile_offset_xy[0] = math.floor(self.tile_offset_xy[0] * self.pixel_scale)
-        self.tile_offset_xy[1] = math.floor(self.tile_offset_xy[1] * self.pixel_scale)
-
-        self.map_offset_xy[0] = math.ceil(-original_cursor_x * self.pixel_scale)
-        self.map_offset_xy[1] = math.ceil(-original_cursor_y * self.pixel_scale)
+        self.map_offset_xy[0] = math.ceil((-original_cursor_x * self.pixel_scale) + (cursor_percent_x * self.image_space_ltwh[2]))
+        self.map_offset_xy[1] = math.ceil((-original_cursor_y * self.pixel_scale) + (cursor_percent_y * self.image_space_ltwh[3]))
+        self._move_map_offset_to_bounds()
 
         self.left_tile = -self.map_offset_xy[0] // self.tile_wh[0]
         self.top_tile = -self.map_offset_xy[1] // self.tile_wh[1]
-        # self.tile_offset_xy[0] = ((self.tile_wh[0] - (self.map_offset_xy[0] % self.tile_wh[0])) % self.tile_wh[0])
-        # self.tile_offset_xy[1] = ((self.tile_wh[1] - (self.map_offset_xy[1] % self.tile_wh[1])) % self.tile_wh[1])
+        self.tile_offset_xy[0] = ((self.tile_wh[0] - (self.map_offset_xy[0] % self.tile_wh[0])) % self.tile_wh[0])
+        self.tile_offset_xy[1] = ((self.tile_wh[1] - (self.map_offset_xy[1] % self.tile_wh[1])) % self.tile_wh[1])
         self.right_tile = self.left_tile + ((self.image_space_ltwh[2] + self.tile_offset_xy[0]) // self.tile_wh[0])
         self.bottom_tile = self.top_tile + ((self.image_space_ltwh[3] + self.tile_offset_xy[1]) // self.tile_wh[1])
 
-        self.loaded_x = [x for x in range(self.left_tile, self.left_tile + 5)]
-        self.loaded_y = [x for x in range(self.top_tile, self.top_tile + 5)]
-
-
-        # self.map_offset_xy = [0, 0]
-        # self.tile_offset_xy = [0, 0]
-        # self.left_tile    = -1
-        # self.top_tile     = -1
-        # self.right_tile   = -1
-        # self.bottom_tile  = -1
-
-        # update which tiles are loaded from the top-left of the map
-        # self._update_loaded_tiles(render_instance)
-        # self._iterate_through_tiles(render_instance, screen_instance, gl_context, False, False)
-
-        # move the map to a new location centered on the zoom
-        # cursor_percent_x = (keys_class_instance.cursor_x_pos.value - self.image_space_ltwh[0]) / self.image_space_ltwh[2]
-        # cursor_percent_y = (keys_class_instance.cursor_y_pos.value - self.image_space_ltwh[1]) / self.image_space_ltwh[3]
-        # print(-original_cursor_x * self.pixel_scale, -original_cursor_y * self.pixel_scale)
-        # self.map_offset_xy[0] = -original_cursor_x * self.pixel_scale
-        # self.map_offset_xy[1] = -original_cursor_y * self.pixel_scale
-
-        # left, top, right, bottom = self._get_ltrb_pixels_on_map()
-
-
-        # print(self.map_wh, self.map_offset_xy)
-        # self.map_offset_xy[0] = -cursor_x * self.pixel_scale
-        # self.map_offset_xy[1] = -cursor_y * self.pixel_scale
-        # print(self.map_offset_xy)
+        self.loaded_x = [x for x in range(self.left_tile, self.right_tile + 1)]
+        self.loaded_y = [x for x in range(self.top_tile, self.bottom_tile + 1)]
 
     def _update_loaded_tiles(self, render_instance):
         # left_tile, top_tile, number_of_tiles_across, number_of_tiles_high
@@ -1413,6 +1380,10 @@ class EditorMap():
         rightest = math.floor(((self.image_space_ltwh[2]) / self.pixel_scale) - (self.map_offset_xy[0] / self.pixel_scale))
         bottomest = math.floor(((self.image_space_ltwh[3]) / self.pixel_scale) - (self.map_offset_xy[1] / self.pixel_scale))
         return leftest, topest, rightest, bottomest
+
+    def _move_map_offset_to_bounds(self):
+        self.map_offset_xy[0] = math.ceil(move_number_to_desired_range(-self.map_wh[0] + 1 + self.image_space_ltwh[2], self.map_offset_xy[0], 0))
+        self.map_offset_xy[1] = math.ceil(move_number_to_desired_range(-self.map_wh[1] + 1 + self.image_space_ltwh[3], self.map_offset_xy[1], 0))
 
     def _create_editor_tiles(self):
         self.tile_array = []
