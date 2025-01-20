@@ -1160,6 +1160,8 @@ class EditorMap():
         [1, 8],
         [1, 16],
         [1, 32],
+        [1, 64],
+        [1, 128],
     ]
     _MAX_LOAD_TIME = 0.02
 
@@ -1215,15 +1217,15 @@ class EditorMap():
 
     def _zoom(self, render_instance, keys_class_instance, screen_instance, gl_context, window_resize):
         if window_resize:
-            self._calculate_zoom(render_instance, keys_class_instance, screen_instance, gl_context)
+            self._calculate_zoom(render_instance, keys_class_instance)
         elif (keys_class_instance.editor_scroll_y.value == 0):
             return
         elif not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
             return
         else:
-            self._calculate_zoom(render_instance, keys_class_instance, screen_instance, gl_context)
+            self._calculate_zoom(render_instance, keys_class_instance)
 
-    def _calculate_zoom(self, render_instance, keys_class_instance, screen_instance, gl_context):
+    def _calculate_zoom(self, render_instance, keys_class_instance):
         original_cursor_x, original_cursor_y = self._get_cursor_position_on_map(keys_class_instance)
         cursor_percent_x = (keys_class_instance.cursor_x_pos.value - self.image_space_ltwh[0]) / self.image_space_ltwh[2]
         cursor_percent_y = (keys_class_instance.cursor_y_pos.value - self.image_space_ltwh[1]) / self.image_space_ltwh[3]
@@ -1396,8 +1398,6 @@ class EditorMap():
             self.tile_array.append([EditorTile() for _ in range(self.tile_array_shape[1])])
 
     def _reset_map(self, render_instance):
-        print(self.loaded_x, self.loaded_y)
-
         # reset map from zoom
         for column in range(self.tile_array_shape[0]):
             for row in range(self.tile_array_shape[1]):
