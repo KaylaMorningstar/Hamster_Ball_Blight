@@ -1191,6 +1191,12 @@ class EditorMap():
         self.window_resize_last_frame: bool = False
 
     def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool):
+        try:
+            self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize)
+        except:
+            self._reset_map()
+
+    def _update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool):
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
 
@@ -1390,6 +1396,24 @@ class EditorMap():
         self.tile_array = []
         for _ in range(self.tile_array_shape[0]):
             self.tile_array.append([EditorTile() for _ in range(self.tile_array_shape[1])])
+
+    def _reset_map(self, render_instance):
+        self.tile_wh[0] = int(self.initial_tile_wh[0] * self.pixel_scale)
+        self.tile_wh[1] = int(self.initial_tile_wh[1] * self.pixel_scale)
+        # reset map from zoom
+        for column in self.loaded_x:
+            for row in self.loaded_y:
+                self.tile_array[column][row].unload(render_instance, column, row)
+        self.map_wh[0] = self.original_map_wh[0] * self.pixel_scale
+        self.map_wh[1] = self.original_map_wh[1] * self.pixel_scale
+        self.map_offset_xy = [0, 0]
+        self.tile_offset_xy = [0, 0]
+        self.left_tile    = -1
+        self.top_tile     = -1
+        self.right_tile   = -1
+        self.bottom_tile  = -1
+        self.loaded_x = []
+        self.loaded_y = []
 
 
 class EditorTile():
