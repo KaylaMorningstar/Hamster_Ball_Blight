@@ -1172,7 +1172,7 @@ class EditorMap():
         # internal
         self.image_space_ltwh: list[int, int, int, int] = [0, 0, 0, 0]
         self.original_map_wh: list[int, int] = [11776, 5888]
-        self.map_wh: list[int, int] = [11776, 5888]
+        self.map_wh: list[int, int] = deepcopy(self.original_map_wh)
         self.tile_array_shape: list[int, int] = [math.ceil(self.original_map_wh[0] / self.initial_tile_wh[0]), math.ceil(self.original_map_wh[1] / self.initial_tile_wh[1])]
         self.tile_array: list[list[EditorTile]] = []
         self._create_editor_tiles()
@@ -1194,7 +1194,7 @@ class EditorMap():
         try:
             self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize)
         except:
-            self._reset_map()
+            self._reset_map(render_instance)
 
     def _update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool):
         # update map area width and height in case screen size has changed
@@ -1227,7 +1227,6 @@ class EditorMap():
         original_cursor_x, original_cursor_y = self._get_cursor_position_on_map(keys_class_instance)
         cursor_percent_x = (keys_class_instance.cursor_x_pos.value - self.image_space_ltwh[0]) / self.image_space_ltwh[2]
         cursor_percent_y = (keys_class_instance.cursor_y_pos.value - self.image_space_ltwh[1]) / self.image_space_ltwh[3]
-        # original_tile_column, original_tile_row = self._get_tile_index(original_cursor_x, original_cursor_y)
 
         # find whether a zoom occurred; find what the new zoom is
         zoomed = False
@@ -1235,10 +1234,9 @@ class EditorMap():
         while not zoomed:
             zoom_index = move_number_to_desired_range(0, self.zoom_index+keys_class_instance.editor_scroll_y.value+zoom_reduction, self.zoom_levels)
             pixel_scale = EditorMap._ZOOM[zoom_index][1] / EditorMap._ZOOM[zoom_index][0]
-            zoomed = ((self.original_map_wh[0] * pixel_scale) > self.image_space_ltwh[2]) or ((self.original_map_wh[1] * pixel_scale) > self.image_space_ltwh[3])
-            if zoomed:
-                if (zoom_index == self.zoom_index):
-                    return
+            zoomed = ((self.original_map_wh[0] * pixel_scale) > self.image_space_ltwh[2]) and ((self.original_map_wh[1] * pixel_scale) > self.image_space_ltwh[3])
+            if zoomed and (zoom_index == self.zoom_index):
+                return
             zoom_reduction += 1
         if not zoomed:
             return
@@ -1398,22 +1396,32 @@ class EditorMap():
             self.tile_array.append([EditorTile() for _ in range(self.tile_array_shape[1])])
 
     def _reset_map(self, render_instance):
-        self.tile_wh[0] = int(self.initial_tile_wh[0] * self.pixel_scale)
-        self.tile_wh[1] = int(self.initial_tile_wh[1] * self.pixel_scale)
+        print(self.loaded_x, self.loaded_y)
+
         # reset map from zoom
-        for column in self.loaded_x:
-            for row in self.loaded_y:
-                self.tile_array[column][row].unload(render_instance, column, row)
-        self.map_wh[0] = self.original_map_wh[0] * self.pixel_scale
-        self.map_wh[1] = self.original_map_wh[1] * self.pixel_scale
+        for column in range(self.tile_array_shape[0]):
+            for row in range(self.tile_array_shape[1]):
+                try:
+                    self.tile_array[column][row].unload(render_instance, column, row)
+                except:
+                    continue
+
+        self.tile_wh = deepcopy(self.initial_tile_wh)
+        self.image_space_ltwh = [0, 0, 0, 0]
+        self.map_wh = deepcopy(self.original_map_wh)
+        self.pixel_scale = 1
         self.map_offset_xy = [0, 0]
         self.tile_offset_xy = [0, 0]
+        self.zoom_levels = len(EditorMap._ZOOM) - 1
+        self.zoom_index = EditorMap._STARTING_ZOOM_INDEX
         self.left_tile    = -1
         self.top_tile     = -1
         self.right_tile   = -1
         self.bottom_tile  = -1
         self.loaded_x = []
         self.loaded_y = []
+        self.held = False
+        self.window_resize_last_frame = False
 
 
 class EditorTile():

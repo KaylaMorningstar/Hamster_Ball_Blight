@@ -46,10 +46,6 @@ def application_loop(Api: ApiObject, PATH: str, Screen: ScreenObject, gl_context
 
 
         Time.display_fps(Screen, Render, gl_context, [300, 300])
-        # Render.add_moderngl_texture_to_renderable_objects_dict(Screen, gl_context, f"{PATH}\\Test\\Images\\test_64.png", "test")
-        # Render.basic_rect_ltwh_to_quad(Screen, gl_context, "test", [350, 350, Render.renderable_objects["test"].ORIGINAL_WIDTH, Render.renderable_objects["test"].ORIGINAL_HEIGHT])
-        # Render.remove_moderngl_texture_from_renderable_objects_dict("test")
-
 
 
         #
