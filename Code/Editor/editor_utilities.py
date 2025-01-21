@@ -1363,10 +1363,12 @@ class EditorMap():
                 self.loaded_y = sorted([tile for tile in self.loaded_y if tile not in unload_y])
         # update which tiles are loaded
         if (load_x != []):
-            self.loaded_x += load_x
+            # self.loaded_x += load_x
+            self.loaded_x += [x for x in load_x if x not in unload_x]
             self.loaded_x = sorted(self.loaded_x)
         if (load_y != []):
-            self.loaded_y += load_y
+            # self.loaded_y += load_y
+            self.loaded_y += [y for y in load_y if y not in unload_y]
             self.loaded_y = sorted(self.loaded_y)
 
     def _iterate_through_tiles(self, render_instance, screen_instance, gl_context, draw_tiles: bool, load_tiles: bool):
@@ -1389,6 +1391,7 @@ class EditorMap():
             left += self.tile_wh[0]
 
     def _hand(self, keys_class_instance):
+        # this function is for grabbing and moving the map editor
         if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
             self.held = True
             return
