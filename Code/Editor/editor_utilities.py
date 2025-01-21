@@ -982,6 +982,11 @@ class HeaderManager():
 class ScrollBar():
     _SCROLL_PARTITIONS = 20
 
+    _UNHIGHLIGHTED = 0
+    _CURSOR_OVER_SCROLL_AREA = 1
+    _CURSOR_OVER_SCROLL = 2
+    _SCROLL_GRABBED = 3
+
     def __init__(self,
                  scroll_area_lt: list[int, int, int, int],
                  is_vertical: bool,
@@ -1002,6 +1007,7 @@ class ScrollBar():
         self.scroll_area_border_thickness: int = scroll_area_border_thickness
         self.scroll_border_thickness: int = scroll_border_thickness
         self.pixels_scrolled: int = pixels_scrolled
+        self.scroll_percentage: float = 0
         self.grabbed_location: int = 0
         self.grabbed: bool = False
         self.scroll_area_ltwh: list[int, int, int, int] = [scroll_area_lt[0], scroll_area_lt[1], scroll_thickness + (2 * scroll_area_border_thickness), 0] if self.is_vertical else [scroll_area_lt[0], scroll_area_lt[1], 0, scroll_thickness + (2 * scroll_area_border_thickness)]
@@ -1015,6 +1021,7 @@ class ScrollBar():
         self.highlighted_color = highlighted_color
         self.inside_scroll_color = self.unhighlighted_color
         self._coloring_area_border = True if self.scroll_area_border_thickness > 0 else False
+        self.mouse_scroll: bool = False
     #
     def update(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors) -> float:
         # check for state changes
@@ -1101,6 +1108,7 @@ class ScrollBar():
         if update_mouse_scroll:
             self._update_mouse_scroll(keys_class_instance)
         self._update_scroll_ltwh()
+        self._update_scroll_percentage()
         
         # draw the scroll
         render_instance.draw_rectangle(screen_instance, gl_context, self.scroll_area_ltwh, self.scroll_area_border_thickness, self.border_color, self._coloring_area_border, self.background_color, True)
@@ -1108,30 +1116,34 @@ class ScrollBar():
     #
     def _update_state(self, keys_class_instance):
         # user continues to grab scroll bar
-        if (self.state == 3) and keys_class_instance.editor_primary.pressed:
+        if (self.state == ScrollBar._SCROLL_GRABBED) and keys_class_instance.editor_primary.pressed:
             return
         hovered_over_scroll_area = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, get_rect_minus_borders(self.scroll_area_ltwh, self.scroll_area_border_thickness))
         hovered_over_scroll = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.scroll_ltwh)
         # newly grabbing scroll
         if hovered_over_scroll_area and keys_class_instance.editor_primary.newly_pressed:
-            self.state = 3
+            self.state = ScrollBar._SCROLL_GRABBED
             return
         # hovering over scroll
         if hovered_over_scroll:
-            self.state = 2
+            self.state = ScrollBar._CURSOR_OVER_SCROLL
             return
         # hovering over scroll area
         if hovered_over_scroll_area:
-            self.state = 1
+            self.state = ScrollBar._CURSOR_OVER_SCROLL_AREA
             return
         # not hovering over scroll area
-        self.state = 0
+        self.state = ScrollBar._UNHIGHLIGHTED
     #
     def _update_mouse_scroll(self, keys_class_instance):
         if self.is_vertical:
             partitions = min(self._SCROLL_PARTITIONS, self.scroll_area_ltwh[3] - (2 * self.scroll_area_border_thickness) - self.scroll_ltwh[3])
             partition_size = math.ceil((self.scroll_area_ltwh[3] - (2 * self.scroll_area_border_thickness) - self.scroll_ltwh[3]) / partitions)
             self.pixels_scrolled -= int(partition_size * keys_class_instance.editor_scroll_y.value)
+            if keys_class_instance.editor_scroll_y.value == 0:
+                self.mouse_scroll = False
+            else:
+                self.mouse_scroll = True
         else:
             pass
     #
@@ -1144,6 +1156,20 @@ class ScrollBar():
             self.pixels_scrolled = move_number_to_desired_range(0, self.pixels_scrolled, self.scroll_area_ltwh[2] - (2 * self.scroll_area_border_thickness) - self.scroll_ltwh[2])
             self.scroll_ltwh[0] = self.scroll_area_ltwh[0] + self.scroll_area_border_thickness + self.pixels_scrolled
             self.scroll_ltwh[1] = self.scroll_area_ltwh[1] + self.scroll_area_border_thickness
+    #
+    def _update_scroll_percentage(self):
+        if self.is_vertical:
+            self.scroll_percentage = self.pixels_scrolled / (self.scroll_area_ltwh[3] - (2 * self.scroll_area_border_thickness) - self.scroll_ltwh[3])
+        else:
+            self.scroll_percentage = self.pixels_scrolled / (self.scroll_area_ltwh[2] - (2 * self.scroll_area_border_thickness) - self.scroll_ltwh[2])
+    #
+    def update_pixels_scrolled_with_percentage(self, scroll_percentage: float):
+        if self.is_vertical:
+            max_scroll = self.scroll_area_ltwh[3] - (2 * self.scroll_area_border_thickness) - self.scroll_ltwh[3]
+        else:
+            max_scroll = self.scroll_area_ltwh[2] - (2 * self.scroll_area_border_thickness) - self.scroll_ltwh[2]
+        self.pixels_scrolled = int(move_number_to_desired_range(0, max_scroll * scroll_percentage, max_scroll))
+        self.scroll_percentage = scroll_percentage
 
 
 class EditorMap():
@@ -1192,22 +1218,29 @@ class EditorMap():
         self.held: bool = False
         self.window_resize_last_frame: bool = False
 
-    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool):
+    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar):
+        self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll)
+        return
         try:
-            self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize)
+            self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll)
         except:
             self._reset_map(render_instance)
 
-    def _update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool):
+    def _update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar):
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
 
         # update map zoom
-        self._zoom(render_instance, keys_class_instance, screen_instance, gl_context, window_resize)
+        self._zoom(render_instance, keys_class_instance, screen_instance, gl_context, window_resize, horizontal_scroll, vertical_scroll)
 
         # update map hand
         self._hand(keys_class_instance)
-        self._move_map_offset_to_bounds()
+
+        # update map with scroll bars
+        self._update_map_with_scroll_bars(horizontal_scroll, vertical_scroll)
+
+        # ensure the map is within its bounds after movement
+        self._move_map_offset_to_bounds(horizontal_scroll, vertical_scroll)
 
         # calculate which tiles should be loaded and unloaded; perform unloading
         self._update_loaded_tiles(render_instance)
@@ -1215,17 +1248,17 @@ class EditorMap():
         # iterate through tiles that should be loaded; load them; draw them
         self._iterate_through_tiles(render_instance, screen_instance, gl_context, True, True)
 
-    def _zoom(self, render_instance, keys_class_instance, screen_instance, gl_context, window_resize):
+    def _zoom(self, render_instance, keys_class_instance, screen_instance, gl_context, window_resize, horizontal_scroll, vertical_scroll):
         if window_resize:
-            self._calculate_zoom(render_instance, keys_class_instance)
+            self._calculate_zoom(render_instance, keys_class_instance, horizontal_scroll, vertical_scroll)
         elif (keys_class_instance.editor_scroll_y.value == 0):
             return
         elif not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
             return
         else:
-            self._calculate_zoom(render_instance, keys_class_instance)
+            self._calculate_zoom(render_instance, keys_class_instance, horizontal_scroll, vertical_scroll)
 
-    def _calculate_zoom(self, render_instance, keys_class_instance):
+    def _calculate_zoom(self, render_instance, keys_class_instance, horizontal_scroll, vertical_scroll):
         original_cursor_x, original_cursor_y = self._get_cursor_position_on_map(keys_class_instance)
         cursor_percent_x = (keys_class_instance.cursor_x_pos.value - self.image_space_ltwh[0]) / self.image_space_ltwh[2]
         cursor_percent_y = (keys_class_instance.cursor_y_pos.value - self.image_space_ltwh[1]) / self.image_space_ltwh[3]
@@ -1262,7 +1295,7 @@ class EditorMap():
         # update map offset
         self.map_offset_xy[0] = math.ceil((-original_cursor_x * self.pixel_scale) + (cursor_percent_x * self.image_space_ltwh[2]))
         self.map_offset_xy[1] = math.ceil((-original_cursor_y * self.pixel_scale) + (cursor_percent_y * self.image_space_ltwh[3]))
-        self._move_map_offset_to_bounds()
+        self._move_map_offset_to_bounds(horizontal_scroll, vertical_scroll)
 
         # update which tiles are loaded and tile offset
         self.left_tile = -self.map_offset_xy[0] // self.tile_wh[0]
@@ -1388,9 +1421,24 @@ class EditorMap():
         bottomest = math.floor(((self.image_space_ltwh[3]) / self.pixel_scale) - (self.map_offset_xy[1] / self.pixel_scale))
         return leftest, topest, rightest, bottomest
 
-    def _move_map_offset_to_bounds(self):
-        self.map_offset_xy[0] = math.ceil(move_number_to_desired_range(-self.map_wh[0] + 1 + self.image_space_ltwh[2], self.map_offset_xy[0], 0))
-        self.map_offset_xy[1] = math.ceil(move_number_to_desired_range(-self.map_wh[1] + 1 + self.image_space_ltwh[3], self.map_offset_xy[1], 0))
+    def _update_map_with_scroll_bars(self, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar):
+        if (horizontal_scroll.state == ScrollBar._SCROLL_GRABBED) or horizontal_scroll.mouse_scroll:
+            max_scroll = -self.map_wh[0] + 1 + self.image_space_ltwh[2]
+            self.map_offset_xy[0] = math.floor(horizontal_scroll.scroll_percentage * max_scroll)
+
+        if (vertical_scroll.state == ScrollBar._SCROLL_GRABBED) or vertical_scroll.mouse_scroll:
+            max_scroll = -self.map_wh[1] + 1 + self.image_space_ltwh[3]
+            self.map_offset_xy[1] = math.floor(vertical_scroll.scroll_percentage * max_scroll)
+
+    def _move_map_offset_to_bounds(self, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar):
+        # update map bounds
+        max_map_scroll_xy = [-self.map_wh[0] + 1 + self.image_space_ltwh[2], -self.map_wh[1] + 1 + self.image_space_ltwh[3]]
+        self.map_offset_xy[0] = math.ceil(move_number_to_desired_range(max_map_scroll_xy[0], self.map_offset_xy[0], 0))
+        self.map_offset_xy[1] = math.ceil(move_number_to_desired_range(max_map_scroll_xy[1], self.map_offset_xy[1], 0))
+
+        # update scrolls with new map bounds
+        horizontal_scroll.update_pixels_scrolled_with_percentage(self.map_offset_xy[0] / max_map_scroll_xy[0])
+        vertical_scroll.update_pixels_scrolled_with_percentage(self.map_offset_xy[1] / max_map_scroll_xy[1])
 
     def _create_editor_tiles(self):
         self.tile_array = []

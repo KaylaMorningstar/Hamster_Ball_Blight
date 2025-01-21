@@ -248,9 +248,8 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
     if Screen.window_resize:
         Singleton.window_resize_last_frame = True
     else:
-        Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh, Singleton.window_resize_last_frame)
+        Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh, Singleton.window_resize_last_frame, Singleton.image_horizontal_scroll, Singleton.image_vertical_scroll)
         Singleton.window_resize_last_frame = False
-    # Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.image_area_ltwh, COLORS['WHITE'])
     Render.draw_rectangle(Screen, gl_context, Singleton.image_large_border_ltwh, Singleton.image_large_border_thickness, Singleton.image_large_border_color, True, Singleton.image_large_inside_color, False)
     #
     # update scroll bars
