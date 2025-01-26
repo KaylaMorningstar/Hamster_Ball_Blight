@@ -4,6 +4,7 @@ from copy import deepcopy
 from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, LOADED_IN_EDITOR, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
 from Code.Editor.editor_update import update_palette, update_header, update_footer, update_separate_palette_and_add_color, update_tools, update_add_color
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap
+from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, EraserTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, EmptyRectangleTool, FilledRectangleTool, EmptyEllipseTool, FilledEllipseTool, BlurTool, JumbleTool, EyedropTool
 
 
 class EditorSingleton():
@@ -79,7 +80,7 @@ class EditorSingleton():
         self.palette_border_color = COLORS['PINK']
         self.palette_background_color = COLORS['GREY']
         self.palette_colors_border_color = COLORS['BLACK']
-        self.palette_colors = [rgba_to_glsl((random.randint(0,255), random.randint(0,255), random.randint(0,255), random.randint(0,255))) for _ in range(100)]
+        self.palette_colors = [rgba_to_glsl((random.randint(0,255), random.randint(0,255), random.randint(0,255), random.randint(0,255))) for _ in range(1000)]
         self.palette_color_wh = [35, 35]
         self.palette_colors_before_move = []
         self.last_palette_index_during_move = -1
@@ -197,14 +198,29 @@ class EditorSingleton():
         self.tool_bar_outline_pixels = 3
         self.tool_bar_tool_width = Render.renderable_objects['Marquee rectangle'].ORIGINAL_WIDTH
         self.tool_bar_ltwh = [0, self.header_bottom, Render.renderable_objects['Marquee rectangle'].ORIGINAL_WIDTH + (2 * self.tool_bar_padding), 0]
-        tool_bar_tool_names = ['Marquee rectangle', 'Lasso', 'Pencil', 'Eraser', 'Spray', 'Hand', 'Bucket',
-                               'Line', 'Curvy line', 'Empty rectangle', 'Filled rectangle', 'Empty ellipse',
-                               'Filled ellipse', 'Blur', 'Jumble', 'Eyedropper']
-        self.tool_bar_tools_dict = {}
-        for tool_name_index, tool_name in enumerate(tool_bar_tool_names):
-            self.tool_bar_tools_dict[tool_name] = [[0, self.header_bottom + (Render.renderable_objects[tool_name].ORIGINAL_HEIGHT * tool_name_index) + (self.tool_bar_padding * (tool_name_index + 1)), Render.renderable_objects[tool_name].ORIGINAL_WIDTH, Render.renderable_objects[tool_name].ORIGINAL_HEIGHT], # ltwh
-                                                   True if tool_name == 'Hand' else False # selected
-                                                   ]
+        tool_bar_tool_names_and_indexes = [(deepcopy(MarqueeRectangleTool.NAME), deepcopy(MarqueeRectangleTool.INDEX)),
+                                           (deepcopy(LassoTool.NAME), deepcopy(LassoTool.INDEX)),
+                                           (deepcopy(PencilTool.NAME), deepcopy(PencilTool.INDEX)),
+                                           (deepcopy(EraserTool.NAME), deepcopy(EraserTool.INDEX)),
+                                           (deepcopy(SprayTool.NAME), deepcopy(SprayTool.INDEX)),
+                                           (deepcopy(HandTool.NAME), deepcopy(HandTool.INDEX)),
+                                           (deepcopy(BucketTool.NAME), deepcopy(BucketTool.INDEX)),
+                                           (deepcopy(LineTool.NAME), deepcopy(LineTool.INDEX)),
+                                           (deepcopy(CurvyLineTool.NAME), deepcopy(CurvyLineTool.INDEX)),
+                                           (deepcopy(EmptyRectangleTool.NAME), deepcopy(EmptyRectangleTool.INDEX)),
+                                           (deepcopy(FilledRectangleTool.NAME), deepcopy(FilledRectangleTool.INDEX)),
+                                           (deepcopy(EmptyEllipseTool.NAME), deepcopy(EmptyEllipseTool.INDEX)),
+                                           (deepcopy(FilledEllipseTool.NAME), deepcopy(FilledEllipseTool.INDEX)),
+                                           (deepcopy(BlurTool.NAME), deepcopy(BlurTool.INDEX)),
+                                           (deepcopy(JumbleTool.NAME), deepcopy(JumbleTool.INDEX)),
+                                           (deepcopy(EyedropTool.NAME), deepcopy(EyedropTool.INDEX))]
+        self.tool_bar_tools = []
+        self.tool_active = tool_bar_tool_names_and_indexes[EditorTool.STARTING_TOOL_INDEX]
+        for tool_name, tool_index in tool_bar_tool_names_and_indexes:
+            self.tool_bar_tools.append([[0, self.header_bottom + (Render.renderable_objects[tool_name].ORIGINAL_HEIGHT * tool_index) + (self.tool_bar_padding * (tool_index + 1)), Render.renderable_objects[tool_name].ORIGINAL_WIDTH, Render.renderable_objects[tool_name].ORIGINAL_HEIGHT], # ltwh
+                                         True if tool_name == self.tool_active[0] else False, # selected
+                                         tool_name # name
+                                         ])
         #
         # image area
         self.image_large_border_color = COLORS['PINK']
@@ -248,7 +264,7 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
     if Screen.window_resize:
         Singleton.window_resize_last_frame = True
     else:
-        Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh, Singleton.window_resize_last_frame, Singleton.image_horizontal_scroll, Singleton.image_vertical_scroll)
+        Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh, Singleton.window_resize_last_frame, Singleton.image_horizontal_scroll, Singleton.image_vertical_scroll, Singleton.tool_active)
         Singleton.window_resize_last_frame = False
     Render.draw_rectangle(Screen, gl_context, Singleton.image_large_border_ltwh, Singleton.image_large_border_thickness, Singleton.image_large_border_color, True, Singleton.image_large_inside_color, False)
     #

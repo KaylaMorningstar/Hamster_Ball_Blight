@@ -243,6 +243,8 @@ class KeysClass():
         self.cursor_y_pos = AnalogKey(mapping=self.ANALOG_MAPPING['MOUSE_Y_POS'])
         # editor
         self.editor_primary = IOKey(mapping=self.IO_MAPPING['LEFT_CLICK'])
+        self.editor_secondary = IOKey(mapping=self.IO_MAPPING['RIGHT_CLICK'])
+        self.editor_hand = IOKey(mapping=self.IO_MAPPING['MIDDLE_CLICK'])
         self.editor_up = IOKey(mapping=self.IO_MAPPING['UP'])
         self.editor_left = IOKey(mapping=self.IO_MAPPING['LEFT'])
         self.editor_down = IOKey(mapping=self.IO_MAPPING['DOWN'])
@@ -268,7 +270,7 @@ class KeysClass():
             # common
             self.cursor_x_pos, self.cursor_y_pos, 
             # editor
-            self.editor_primary, self.editor_up, self.editor_left, self.editor_down, self.editor_right, self.editor_shift, self.editor_control, self.editor_tab, self.editor_scroll_x, self.editor_scroll_y,
+            self.editor_primary, self.editor_secondary, self.editor_hand, self.editor_up, self.editor_left, self.editor_down, self.editor_right, self.editor_shift, self.editor_control, self.editor_tab, self.editor_scroll_x, self.editor_scroll_y,
             # main game
             self.primary, self.secondary, self.release_grapple, self.float_up, self.left, self.sink_down, self.right, self.select, self.interact, self.pause,
         ]

@@ -2,6 +2,7 @@ from Code.utilities import point_is_in_ltwh, move_number_to_desired_range, get_t
 import pygame
 import math
 from copy import deepcopy
+from abc import ABC
 
 
 class TextInput():
@@ -1172,6 +1173,117 @@ class ScrollBar():
         self.scroll_percentage = scroll_percentage
 
 
+class EditorTool(ABC):
+    """Tool base class"""
+    STARTING_TOOL_INDEX = 5
+
+    def __init__(self, active: bool):
+        self.active: bool = active
+
+    def __str__(self):
+        return self.NAME
+    
+    def __int__(self):
+        return self.INDEX
+
+
+class MarqueeRectangleTool(EditorTool):
+    NAME = 'Marquee rectangle'
+    INDEX = 0
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class LassoTool(EditorTool):
+    NAME = 'Lasso'
+    INDEX = 1
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class PencilTool(EditorTool):
+    NAME = 'Pencil'
+    INDEX = 2
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class EraserTool(EditorTool):
+    NAME = 'Eraser'
+    INDEX = 3
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class SprayTool(EditorTool):
+    NAME = 'Spray'
+    INDEX = 4
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class HandTool(EditorTool):
+    NAME = 'Hand'
+    INDEX = 5
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class BucketTool(EditorTool):
+    NAME = 'Bucket'
+    INDEX = 6
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class LineTool(EditorTool):
+    NAME = 'Line'
+    INDEX = 7
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class CurvyLineTool(EditorTool):
+    NAME = 'Curvy line'
+    INDEX = 8
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class EmptyRectangleTool(EditorTool):
+    NAME = 'Empty rectangle'
+    INDEX = 9
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class FilledRectangleTool(EditorTool):
+    NAME = 'Filled rectangle'
+    INDEX = 10
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class EmptyEllipseTool(EditorTool):
+    NAME = 'Empty ellipse'
+    INDEX = 11
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class FilledEllipseTool(EditorTool):
+    NAME = 'Filled ellipse'
+    INDEX = 12
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class BlurTool(EditorTool):
+    NAME = 'Blur'
+    INDEX = 13
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class JumbleTool(EditorTool):
+    NAME = 'Jumble'
+    INDEX = 14
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+class EyedropTool(EditorTool):
+    NAME = 'Eyedropper'
+    INDEX = 15
+    def __init__(self, active: bool):
+        super().__init__(active)
+
+
 class EditorMap():
     _STARTING_ZOOM_INDEX = 3
     _ZOOM = [
@@ -1190,6 +1302,10 @@ class EditorMap():
         [1, 128],
     ]
     _MAX_LOAD_TIME = 0.02
+
+    _NOT_HELD = 0
+    _HAND_TOOL_HELD = 1
+    _EDITOR_HAND_HELD = 2
 
     def __init__(self,
                  base_path: str):
@@ -1215,20 +1331,43 @@ class EditorMap():
         self.bottom_tile  = -1
         self.loaded_x: list[int] = []
         self.loaded_y: list[int] = []
-        self.held: bool = False
+        self.held: int = 0  # (0 = not held, 1 = held with hand tool, 2 = held with editor hand)
         self.window_resize_last_frame: bool = False
+        # tools
+        self.tools: list = [
+            MarqueeRectangleTool(False),
+            LassoTool(False),
+            PencilTool(False),
+            EraserTool(False),
+            SprayTool(False),
+            HandTool(True),
+            BucketTool(False),
+            LineTool(False),
+            CurvyLineTool(False),
+            EmptyRectangleTool(False),
+            FilledRectangleTool(False),
+            EmptyEllipseTool(False),
+            FilledEllipseTool(False),
+            BlurTool(False),
+            JumbleTool(False),
+            EyedropTool(False)
+        ]
+        self.current_tool: EditorTool = self.tools[5]
 
-    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar):
-        self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll)
+    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int]):
+        self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool)
         return
         try:
-            self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll)
+            self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool)
         except:
             self._reset_map(render_instance)
 
-    def _update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar):
+    def _update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int]):
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
+
+        # get the tool currently being used
+        self._update_current_tool(current_tool)
 
         # update map zoom
         self._zoom(render_instance, keys_class_instance, screen_instance, gl_context, window_resize, horizontal_scroll, vertical_scroll)
@@ -1391,14 +1530,22 @@ class EditorMap():
             left += self.tile_wh[0]
 
     def _hand(self, keys_class_instance):
-        # this function is for grabbing and moving the map editor
-        if keys_class_instance.editor_primary.newly_pressed and point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
-            self.held = True
+        if not ((int(self.current_tool) == HandTool.INDEX) or (keys_class_instance.editor_hand.pressed)):
+            self.held = EditorMap._NOT_HELD
             return
 
+        # this function is for grabbing and moving the map editor
+        if point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
+            if keys_class_instance.editor_primary.newly_pressed:
+                self.held = EditorMap._HAND_TOOL_HELD
+                return
+            if keys_class_instance.editor_hand.newly_pressed:
+                self.held = EditorMap._EDITOR_HAND_HELD
+                return
+
         if self.held:
-            if keys_class_instance.editor_primary.released:
-                self.held = False
+            if keys_class_instance.editor_primary.released or keys_class_instance.editor_hand.released:
+                self.held = EditorMap._NOT_HELD
                 return
             self.map_offset_xy[0] += keys_class_instance.cursor_x_pos.delta
             self.map_offset_xy[1] += keys_class_instance.cursor_y_pos.delta
@@ -1442,6 +1589,9 @@ class EditorMap():
         # update scrolls with new map bounds
         horizontal_scroll.update_pixels_scrolled_with_percentage(self.map_offset_xy[0] / max_map_scroll_xy[0])
         vertical_scroll.update_pixels_scrolled_with_percentage(self.map_offset_xy[1] / max_map_scroll_xy[1])
+
+    def _update_current_tool(self, current_tool: tuple[str, int]):
+        self.current_tool = self.tools[current_tool[1]]
 
     def _create_editor_tiles(self):
         self.tile_array = []

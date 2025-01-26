@@ -644,12 +644,13 @@ def update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
     #
     # draw tools
     drawn_glowing_tool_this_frame = False
-    for tool_name, tool_attributes in Singleton.tool_bar_tools_dict.items():
+    for tool_index, tool_attributes in enumerate(Singleton.tool_bar_tools):
         tool_attributes[0][0] = Singleton.tool_bar_ltwh[0] + Singleton.tool_bar_padding
         if tool_attributes[1] and not drawn_glowing_tool_this_frame:
-            Render.basic_outline_ltwh(Screen, gl_context, tool_name, tool_attributes[0], Singleton.tool_bar_glow_color, Singleton.tool_bar_outline_pixels)
+            Render.basic_outline_ltwh(Screen, gl_context, tool_attributes[2], tool_attributes[0], Singleton.tool_bar_glow_color, Singleton.tool_bar_outline_pixels)
             drawn_glowing_tool_this_frame = True
         if Singleton.editor_enabled and Keys.editor_primary.newly_pressed:
             if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, tool_attributes[0]):
-                Singleton.tool_bar_tools_dict = {key: [value[0], False if key != tool_name else True] for key, value in Singleton.tool_bar_tools_dict.items()}
-        Render.basic_rect_ltwh_to_quad(Screen, gl_context, tool_name, tool_attributes[0])
+                Singleton.tool_bar_tools = [[value[0], True if (index == tool_index) else False, value[2]] for index, value in enumerate(Singleton.tool_bar_tools)]
+                Singleton.tool_active = (tool_attributes[2], tool_index)
+        Render.basic_rect_ltwh_to_quad(Screen, gl_context, tool_attributes[2], tool_attributes[0])
