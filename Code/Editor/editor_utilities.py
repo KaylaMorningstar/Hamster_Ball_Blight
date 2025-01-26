@@ -1202,8 +1202,16 @@ class LassoTool(EditorTool):
 class PencilTool(EditorTool):
     NAME = 'Pencil'
     INDEX = 2
+
+    _MIN_BRUSH_THICKNESS = 1
+    _MAX_BRUSH_THICKNESS = 64
+
     def __init__(self, active: bool):
+        self.brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
         super().__init__(active)
+
+    def _update_brush_thickness(self, brush_thickness: int):
+        self.brush_thickness = move_number_to_desired_range(PencilTool._MIN_BRUSH_THICKNESS, self.brush_thickness, PencilTool._MAX_BRUSH_THICKNESS)
 
 class EraserTool(EditorTool):
     NAME = 'Eraser'
@@ -1381,6 +1389,9 @@ class EditorMap():
         # ensure the map is within its bounds after movement
         self._move_map_offset_to_bounds(horizontal_scroll, vertical_scroll)
 
+        # perform edits to the map
+        self._draw(screen_instance, gl_context, keys_class_instance, render_instance, cursors)
+
         # calculate which tiles should be loaded and unloaded; perform unloading
         self._update_loaded_tiles(render_instance)
 
@@ -1528,6 +1539,42 @@ class EditorMap():
                     start_load = get_time()
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
+
+    def _draw(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors):
+        match int(self.current_tool):
+            case MarqueeRectangleTool.INDEX:
+                pass
+            case LassoTool.INDEX:
+                pass
+            case PencilTool.INDEX:
+                pass
+            case EraserTool.INDEX:
+                pass
+            case SprayTool.INDEX:
+                pass
+            case HandTool.INDEX:
+                pass
+            case BucketTool.INDEX:
+                pass
+            case LineTool.INDEX:
+                pass
+            case CurvyLineTool.INDEX:
+                pass
+            case EmptyRectangleTool.INDEX:
+                pass
+            case FilledRectangleTool.INDEX:
+                pass
+            case EmptyEllipseTool.INDEX:
+                pass
+            case FilledEllipseTool.INDEX:
+                pass
+            case BlurTool.INDEX:
+                pass
+            case JumbleTool.INDEX:
+                pass
+            case EyedropTool.INDEX:
+                pass
+
 
     def _hand(self, keys_class_instance):
         if not ((int(self.current_tool) == HandTool.INDEX) or (keys_class_instance.editor_hand.pressed)):
