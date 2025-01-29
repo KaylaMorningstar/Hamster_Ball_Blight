@@ -166,6 +166,10 @@ def loading_and_unloading_images_manager(Screen, Render, gl_context, IMAGE_PATHS
                 Render.remove_moderngl_texture_from_renderable_objects_dict(key)
 
 
+class case_break(Exception):
+    pass
+
+
 ALWAYS_LOADED = 'ALWAYS_LOADED'
 LOADED_IN_EDITOR = 'LOADED_IN_EDITOR'
 
@@ -267,6 +271,7 @@ IMAGE_PATHS = {
     # cursors
     'cursor_arrow': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_arrow.png'],
     'cursor_crosshair': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_crosshair.png'],
+    'cursor_big_crosshair': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_big_crosshair.png'],
     'cursor_nesw': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_nesw.png'],
     'cursor_eyedrop': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_eyedrop.png'],
     'cursor_i_beam': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_i_beam.png'],

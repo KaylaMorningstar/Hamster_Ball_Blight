@@ -72,6 +72,7 @@ class CursorClass():
             # higher priority > lower priority
             'cursor_arrow': [0, 0, 1],
             'cursor_crosshair': [-3, -3, 5],
+            'cursor_big_crosshair': [-10, -10, 7],
             'cursor_nesw': [-13, -13, 99],
             'cursor_eyedrop': [0, -21, 6],
             'cursor_i_beam': [-6, -9, 2]
@@ -84,7 +85,7 @@ class CursorClass():
         match self.current_cursor[0]:
             case 'cursor_arrow' | 'cursor_crosshair' | 'cursor_nesw' | 'cursor_eyedrop':
                 Render.basic_rect_ltwh_to_quad(Screen, gl_context, self.current_cursor[0], [Keys.cursor_x_pos.value + self.cursors[self.current_cursor[0]][0], Keys.cursor_y_pos.value + self.cursors[self.current_cursor[0]][1], Render.renderable_objects[self.current_cursor[0]].ORIGINAL_WIDTH, Render.renderable_objects[self.current_cursor[0]].ORIGINAL_HEIGHT])
-            case 'cursor_i_beam':
+            case 'cursor_i_beam' | 'cursor_big_crosshair':
                 Render.invert_white(Screen, gl_context, self.current_cursor[0], [Keys.cursor_x_pos.value + self.cursors[self.current_cursor[0]][0], Keys.cursor_y_pos.value + self.cursors[self.current_cursor[0]][1], Render.renderable_objects[self.current_cursor[0]].ORIGINAL_WIDTH, Render.renderable_objects[self.current_cursor[0]].ORIGINAL_HEIGHT], COLORS['BLACK'])
         self.last_cursor = self.current_cursor
         self.reset_current_cursor()

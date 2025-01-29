@@ -1,4 +1,4 @@
-from Code.utilities import point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
+from Code.utilities import case_break, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
 import pygame
 import math
 from copy import deepcopy
@@ -1173,6 +1173,24 @@ class ScrollBar():
         self.scroll_percentage = scroll_percentage
 
 
+@staticmethod
+def get_perfect_circle(diameter: int):
+    circle = []
+    radius = (diameter - 0.5) / 2  # smaller than the actual radius for a better looking circle
+    center = diameter / 2
+    for row in range(diameter):
+        row += 0.5
+        current_row = []
+        for column in range(diameter):
+            column += 0.5
+            if (column - center) ** 2 + (row - center) ** 2 <= radius ** 2:
+                current_row.append(True)
+            else:
+                current_row.append(False)
+        circle.append(current_row)
+    return circle
+
+
 class EditorTool(ABC):
     """Tool base class"""
     STARTING_TOOL_INDEX = 5
@@ -1206,9 +1224,11 @@ class PencilTool(EditorTool):
     INDEX = 2
     _MIN_BRUSH_THICKNESS = 1
     _MAX_BRUSH_THICKNESS = 64
+    CIRCLE_REFERENCE = 'circle'
 
     def __init__(self, active: bool):
-        self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
+        self._brush_thickness: int = PencilTool._MAX_BRUSH_THICKNESS
+        self._circle: list[list[bool]]
         super().__init__(active)
 
     @property
@@ -1216,8 +1236,12 @@ class PencilTool(EditorTool):
         return self._brush_thickness
     
     @brush_thickness.setter
-    def brush_thickness(self, brush_thickness: int):
+    def brush_thickness(self, render_instance, screen_instance, gl_context, base_path, brush_thickness: int):
         self._brush_thickness = move_number_to_desired_range(PencilTool._MIN_BRUSH_THICKNESS, brush_thickness, PencilTool._MAX_BRUSH_THICKNESS)
+        self._circle = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{base_path}Images\\not_always_loaded\\editor\\editor_shapes\\p{brush_thickness}.png", PencilTool.CIRCLE_REFERENCE, 1)
+
+    def draw_brush(self):
+        pass
 
 
 class EraserTool(EditorTool):
@@ -1380,16 +1404,17 @@ class EditorMap():
             EyedropTool(False)
         ]
         self.current_tool: EditorTool = self.tools[5]
+        self.map_changes: list = []
 
-    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int]):
-        self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool)
+    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int], current_color: list[float, float, float, float]):
+        self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool, current_color)
         return
         try:
-            self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool)
+            self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool, current_color)
         except:
             self._reset_map(render_instance)
 
-    def _update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int]):
+    def _update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int], current_color: list[float, float, float, float]):
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
 
@@ -1409,7 +1434,7 @@ class EditorMap():
         self._move_map_offset_to_bounds(horizontal_scroll, vertical_scroll)
 
         # perform edits to the map
-        self._draw(screen_instance, gl_context, keys_class_instance, render_instance, cursors)
+        self._draw(screen_instance, gl_context, keys_class_instance, render_instance, cursors, current_color)
 
         # calculate which tiles should be loaded and unloaded; perform unloading
         self._update_loaded_tiles(render_instance)
@@ -1559,40 +1584,64 @@ class EditorMap():
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
-    def _draw(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors):
-        match int(self.current_tool):
-            case MarqueeRectangleTool.INDEX:
-                pass
-            case LassoTool.INDEX:
-                pass
-            case PencilTool.INDEX:
-                pass
-            case EraserTool.INDEX:
-                pass
-            case SprayTool.INDEX:
-                pass
-            case HandTool.INDEX:
-                pass
-            case BucketTool.INDEX:
-                pass
-            case LineTool.INDEX:
-                pass
-            case CurvyLineTool.INDEX:
-                pass
-            case EmptyRectangleTool.INDEX:
-                pass
-            case FilledRectangleTool.INDEX:
-                pass
-            case EmptyEllipseTool.INDEX:
-                pass
-            case FilledEllipseTool.INDEX:
-                pass
-            case BlurTool.INDEX:
-                pass
-            case JumbleTool.INDEX:
-                pass
-            case EyedropTool.INDEX:
-                pass
+    def _draw(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, current_color: list[float, float, float, float]):
+        try:
+            match int(self.current_tool):
+                case MarqueeRectangleTool.INDEX:
+                    pass
+
+                case LassoTool.INDEX:
+                    pass
+
+                case PencilTool.INDEX:
+                    if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
+                        raise case_break()
+                    cursors.add_cursor_this_frame('cursor_big_crosshair')
+                    pos_x, pos_y = self._get_cursor_position_on_map(keys_class_instance)
+                    print(pos_x, pos_y)
+                    
+
+                case EraserTool.INDEX:
+                    pass
+
+                case SprayTool.INDEX:
+                    pass
+
+                case HandTool.INDEX:
+                    pass
+
+                case BucketTool.INDEX:
+                    pass
+
+                case LineTool.INDEX:
+                    pass
+
+                case CurvyLineTool.INDEX:
+                    pass
+
+                case EmptyRectangleTool.INDEX:
+                    pass
+
+                case FilledRectangleTool.INDEX:
+                    pass
+
+                case EmptyEllipseTool.INDEX:
+                    pass
+
+                case FilledEllipseTool.INDEX:
+                    pass
+
+                case BlurTool.INDEX:
+                    pass
+
+                case JumbleTool.INDEX:
+                    pass
+
+                case EyedropTool.INDEX:
+                    pass
+
+        except case_break:
+            pass
 
 
     def _hand(self, keys_class_instance):

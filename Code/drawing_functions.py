@@ -85,6 +85,7 @@ class RenderObjects():
         texture.write(pygame_image.get_view('1'))
         rotation = 0
         self.renderable_objects[name] = RenderableObject(Screen, texture, width, height, rotation)
+        return pygame_image
     #
     def add_moderngl_texture_scaled(self, Screen: ScreenObject, gl_context, path, name, scale):
         pygame_image = pygame.image.load(path).convert_alpha()
@@ -96,6 +97,7 @@ class RenderObjects():
         texture.write(pygame_image.get_view('1'))
         rotation = 0
         self.renderable_objects[name] = RenderableObject(Screen, texture, width, height, rotation)
+        return pygame_image
     #
     def remove_moderngl_texture_from_renderable_objects_dict(self, name):
         self.renderable_objects[name].TEXTURE.release()
