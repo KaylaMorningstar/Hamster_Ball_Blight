@@ -1204,6 +1204,9 @@ class EditorTool(ABC):
     def __int__(self):
         return self.INDEX
 
+    def unload_tool(self):
+        raise NotImplementedError
+
 
 class MarqueeRectangleTool(EditorTool):
     NAME = 'Marquee rectangle'
@@ -1226,8 +1229,10 @@ class PencilTool(EditorTool):
     _MAX_BRUSH_THICKNESS = 64
     CIRCLE_REFERENCE = 'circle'
 
-    def __init__(self, active: bool):
-        self._brush_thickness: int = PencilTool._MAX_BRUSH_THICKNESS
+    def __init__(self, active: bool, render_instance, screen_instance, gl_context, base_path):
+        self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
+        self.update_brush_thickness(render_instance, screen_instance, gl_context, base_path, self._brush_thickness)
+        self._circle_offset: list[int, int]
         self._circle: list[list[bool]]
         super().__init__(active)
 
@@ -1235,10 +1240,14 @@ class PencilTool(EditorTool):
     def brush_thickness(self):
         return self._brush_thickness
     
-    @brush_thickness.setter
-    def brush_thickness(self, render_instance, screen_instance, gl_context, base_path, brush_thickness: int):
+    def update_brush_thickness(self, render_instance, screen_instance, gl_context, base_path, brush_thickness: int):
+        try:
+            render_instance.remove_moderngl_texture_from_renderable_objects_dict(PencilTool.CIRCLE_REFERENCE)
+        except:
+            pass
         self._brush_thickness = move_number_to_desired_range(PencilTool._MIN_BRUSH_THICKNESS, brush_thickness, PencilTool._MAX_BRUSH_THICKNESS)
-        self._circle = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{base_path}Images\\not_always_loaded\\editor\\editor_shapes\\p{brush_thickness}.png", PencilTool.CIRCLE_REFERENCE, 1)
+        self._circle_offset = [self._brush_thickness // 2, self._brush_thickness // 2]
+        self._circle = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{base_path}\\Images\\not_always_loaded\\editor\\editor_shapes\\p{brush_thickness}.png", PencilTool.CIRCLE_REFERENCE, 1)
 
     def draw_brush(self):
         pass
@@ -1359,6 +1368,10 @@ class EditorMap():
     _EDITOR_HAND_HELD = 2
 
     def __init__(self,
+                 PATH: str,
+                 screen_instance,
+                 gl_context,
+                 render_instance,
                  base_path: str):
 
         self.base_path: str = "C:\\Users\\Kayle\\Desktop\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\"
@@ -1388,7 +1401,7 @@ class EditorMap():
         self.tools: list = [
             MarqueeRectangleTool(False),
             LassoTool(False),
-            PencilTool(False),
+            PencilTool(False, render_instance, screen_instance, gl_context, PATH),
             EraserTool(False),
             SprayTool(False),
             HandTool(True),
@@ -1433,14 +1446,14 @@ class EditorMap():
         # ensure the map is within its bounds after movement
         self._move_map_offset_to_bounds(horizontal_scroll, vertical_scroll)
 
-        # perform edits to the map
-        self._draw(screen_instance, gl_context, keys_class_instance, render_instance, cursors, current_color)
-
         # calculate which tiles should be loaded and unloaded; perform unloading
         self._update_loaded_tiles(render_instance)
 
         # iterate through tiles that should be loaded; load them; draw them
         self._iterate_through_tiles(render_instance, screen_instance, gl_context, True, True)
+
+        # perform edits to the map
+        self._draw(screen_instance, gl_context, keys_class_instance, render_instance, cursors, current_color)
 
     def _zoom(self, render_instance, keys_class_instance, screen_instance, gl_context, window_resize, horizontal_scroll, vertical_scroll):
         if window_resize:
@@ -1557,11 +1570,9 @@ class EditorMap():
                 self.loaded_y = sorted([tile for tile in self.loaded_y if tile not in unload_y])
         # update which tiles are loaded
         if (load_x != []):
-            # self.loaded_x += load_x
             self.loaded_x += [x for x in load_x if x not in unload_x]
             self.loaded_x = sorted(self.loaded_x)
         if (load_y != []):
-            # self.loaded_y += load_y
             self.loaded_y += [y for y in load_y if y not in unload_y]
             self.loaded_y = sorted(self.loaded_y)
 
@@ -1598,7 +1609,25 @@ class EditorMap():
                         raise case_break()
                     cursors.add_cursor_this_frame('cursor_big_crosshair')
                     pos_x, pos_y = self._get_cursor_position_on_map(keys_class_instance)
-                    print(pos_x, pos_y)
+                    # ltwh = [self.image_space_ltwh[0], self.image_space_ltwh[1], self.current_tool.brush_thickness * self.pixel_scale, self.current_tool.brush_thickness * self.pixel_scale]
+                    ltrb = self._get_ltrb_pixels_on_map()
+
+                    pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
+                    if pixel_offset_x == 1:
+                        pixel_offset_x = 0
+                    pixel_offset_x *= self.pixel_scale
+                    leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
+                    pixel_x = leftest_pixel + ((pos_x - ltrb[0]) * self.pixel_scale)
+
+                    pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
+                    if pixel_offset_y == 1:
+                        pixel_offset_y = 0
+                    pixel_offset_y *= self.pixel_scale
+                    topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
+                    pixel_y = topest_pixel + ((pos_y - ltrb[1]) * self.pixel_scale)
+
+                    ltwh = [pixel_x, pixel_y, self.current_tool.brush_thickness * self.pixel_scale, self.current_tool.brush_thickness * self.pixel_scale]
+                    render_instance.basic_rect_ltwh_image_with_color(screen_instance, gl_context, PencilTool.CIRCLE_REFERENCE, ltwh, current_color)
                     
 
                 case EraserTool.INDEX:

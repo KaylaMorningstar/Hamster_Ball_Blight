@@ -8,7 +8,7 @@ from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, Lasso
 
 
 class EditorSingleton():
-    def __init__(self, Render, PATH):
+    def __init__(self, Render, Screen, gl_context, PATH):
         self.editor_enabled = True
         self.border_color = COLORS['BLACK']
         #
@@ -235,14 +235,13 @@ class EditorSingleton():
         self.image_horizontal_scroll = ScrollBar(scroll_area_lt=[0, 0], is_vertical=False, scroll_thickness=22, scroll_length=50, scroll_area_border_thickness=self.image_large_border_thickness, scroll_border_thickness=5, border_color=COLORS['PINK'], background_color=COLORS['WHITE'], scroll_border_color=COLORS['RED'], unhighlighted_color=COLORS['WHITE'], shaded_color=COLORS['LIGHT_GREY'], highlighted_color=COLORS['GREY'])
         self.image_area_ltwh = [0, 0, 0, 0]
         self.window_resize_last_frame = False
-        self.map: EditorMap = EditorMap(PATH)
+        self.map: EditorMap = EditorMap(PATH, Screen, gl_context, Render, PATH)
 
     def get_color_spectrum_ltwh(self):
         return [self.palette_padding + self.add_color_spectrum_border_thickness, 
                 self.separate_palette_and_add_color_ltwh[1] + self.add_color_words_background_ltwh[3] + self.gap_between_add_or_remove_color_and_spectrum + self.separate_palette_and_add_color_ltwh[3] + self.palette_padding + self.add_color_spectrum_border_thickness, 
                 self.palette_ltwh[2] - (2 * self.palette_padding) - (2 * self.add_color_spectrum_border_thickness), 
                 self.add_color_spectrum_height - (2 * self.add_color_spectrum_border_thickness)]
-
 
 
 def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
@@ -287,7 +286,7 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     Cursor.add_cursor_this_frame('cursor_arrow')
     if Api.setup_required:
         loading_and_unloading_images_manager(Screen, Render, gl_context, IMAGE_PATHS, [LOADED_IN_EDITOR], [])
-        Api.api_initiated_singletons['Editor'] = Api.api_singletons['Editor'](Render, PATH)
+        Api.api_initiated_singletons['Editor'] = Api.api_singletons['Editor'](Render, Screen, gl_context, PATH)
         Api.setup_required = False
     #
     Singleton = Api.api_initiated_singletons[Api.current_api]
