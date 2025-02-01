@@ -1231,6 +1231,7 @@ class PencilTool(EditorTool):
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context, base_path):
         self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
+        self._brush_thickness = 57
         self.update_brush_thickness(render_instance, screen_instance, gl_context, base_path, self._brush_thickness)
         self._circle_offset: list[int, int]
         self._circle: list[list[bool]]
@@ -1617,14 +1618,14 @@ class EditorMap():
                         pixel_offset_x = 0
                     pixel_offset_x *= self.pixel_scale
                     leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
-                    pixel_x = leftest_pixel + ((pos_x - ltrb[0]) * self.pixel_scale)
+                    pixel_x = leftest_pixel + ((pos_x - ((self.current_tool.brush_thickness - 1) // 2) - ltrb[0]) * self.pixel_scale)
 
                     pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
                     if pixel_offset_y == 1:
                         pixel_offset_y = 0
                     pixel_offset_y *= self.pixel_scale
                     topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
-                    pixel_y = topest_pixel + ((pos_y - ltrb[1]) * self.pixel_scale)
+                    pixel_y = topest_pixel + ((pos_y - ((self.current_tool.brush_thickness - 1) // 2) - ltrb[1]) * self.pixel_scale)
 
                     ltwh = [pixel_x, pixel_y, self.current_tool.brush_thickness * self.pixel_scale, self.current_tool.brush_thickness * self.pixel_scale]
                     render_instance.basic_rect_ltwh_image_with_color(screen_instance, gl_context, PencilTool.CIRCLE_REFERENCE, ltwh, current_color)
