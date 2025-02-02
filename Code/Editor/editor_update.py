@@ -625,14 +625,8 @@ def update_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Key
             Singleton.currently_selected_color.calculate_color(Singleton.add_color_spectrum_x_percentage, Singleton.add_color_spectrum_y_percentage, Singleton.add_color_alpha_percentage)
 
 
-def update_separate_palette_and_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
-    #
-    # draw separate palette and add color
-    Singleton.separate_palette_and_add_color_ltwh[1] = Singleton.add_color_ltwh[1] - Singleton.separate_palette_and_add_color_ltwh[3]
-    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.separate_palette_and_add_color_ltwh, Singleton.separate_palette_and_add_color_color)
-
-
 def update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
+    Singleton.separate_palette_and_add_color_ltwh[1] = Singleton.add_color_ltwh[1] - Singleton.separate_palette_and_add_color_ltwh[3]
     #
     # editor is disabled
     if not Singleton.editor_enabled:
@@ -678,6 +672,7 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 new_brush_thickness = current_tool.brush_thickness_text_input.current_string
                 if current_tool.brush_thickness_is_valid(new_brush_thickness):
                     current_tool.update_brush_thickness(Render, Screen, gl_context, int(new_brush_thickness))
+
             case EraserTool.INDEX:
                 pass
 

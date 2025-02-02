@@ -2,7 +2,7 @@ import math
 import random
 from copy import deepcopy
 from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, LOADED_IN_EDITOR, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
-from Code.Editor.editor_update import update_palette, update_header, update_footer, update_separate_palette_and_add_color, update_tools, update_add_color, update_tool_attributes
+from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap
 from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, EraserTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, EmptyRectangleTool, FilledRectangleTool, EmptyEllipseTool, FilledEllipseTool, BlurTool, JumbleTool, EyedropTool
 
@@ -115,8 +115,7 @@ class EditorSingleton():
         self.palette_pixels_down = 0
         #
         # separate palette and add color
-        self.separate_palette_and_add_color_color = COLORS['BLUE']
-        self.separate_palette_and_add_color_ltwh = [0, 0, self.palette_ltwh[2], 2]
+        self.separate_palette_and_add_color_ltwh = [0, 0, self.palette_ltwh[2], 0]
         #
         # footer
         self.footer_color = COLORS['BLUE']
@@ -299,7 +298,6 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     update_header(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_footer(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
-    update_separate_palette_and_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     
