@@ -1,4 +1,4 @@
-from Code.utilities import case_break, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
+from Code.utilities import CaseBreak, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
 import pygame
 import math
 from copy import deepcopy
@@ -1229,29 +1229,44 @@ class PencilTool(EditorTool):
     _MAX_BRUSH_THICKNESS = 64
     CIRCLE_REFERENCE = 'circle'
 
-    def __init__(self, active: bool, render_instance, screen_instance, gl_context, base_path):
+    TEXT_PIXEL_THICKNESS = 3
+    _TEXT_BACKGROUND_COLOR = COLORS['LIGHT_GREY']
+    _TEXT_COLOR = COLORS['BLACK']
+    _TEXT_HIGHLIGHT_COLOR = COLORS['WHITE']
+    _HIGHLIGHT_COLOR = COLORS['RED']
+
+    def __init__(self, active: bool, render_instance, screen_instance, gl_context, base_path: str):
+        self.BASE_PATH: str = base_path
         self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
-        self._brush_thickness = 57
-        self.update_brush_thickness(render_instance, screen_instance, gl_context, base_path, self._brush_thickness)
+        self._brush_thickness = 1
+        self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
         self._circle_offset: list[int, int]
         self._circle: list[list[bool]]
+        self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size), PencilTool.TEXT_PIXEL_THICKNESS) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.TEXT_PIXEL_THICKNESS) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.TEXT_PIXEL_THICKNESS), get_text_height(PencilTool.TEXT_PIXEL_THICKNESS)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.TEXT_PIXEL_THICKNESS, PencilTool.TEXT_PIXEL_THICKNESS, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness))
         super().__init__(active)
 
     @property
     def brush_thickness(self):
         return self._brush_thickness
     
-    def update_brush_thickness(self, render_instance, screen_instance, gl_context, base_path, brush_thickness: int):
+    def update_brush_thickness(self, render_instance, screen_instance, gl_context, brush_thickness: int):
         try:
             render_instance.remove_moderngl_texture_from_renderable_objects_dict(PencilTool.CIRCLE_REFERENCE)
         except:
             pass
         self._brush_thickness = move_number_to_desired_range(PencilTool._MIN_BRUSH_THICKNESS, brush_thickness, PencilTool._MAX_BRUSH_THICKNESS)
         self._circle_offset = [self._brush_thickness // 2, self._brush_thickness // 2]
-        self._circle = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{base_path}\\Images\\not_always_loaded\\editor\\editor_shapes\\p{brush_thickness}.png", PencilTool.CIRCLE_REFERENCE, 1)
+        self._circle = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{self.BASE_PATH}\\Images\\not_always_loaded\\editor\\editor_shapes\\p{brush_thickness}.png", PencilTool.CIRCLE_REFERENCE, 1)
 
-    def draw_brush(self):
-        pass
+    def brush_thickness_is_valid(self, brush_thickness):
+        try:
+            int(brush_thickness)
+        except:
+            return False
+        if not (PencilTool._MIN_BRUSH_THICKNESS <= int(brush_thickness) <= PencilTool._MAX_BRUSH_THICKNESS):
+            return False
+        return True
+
 
 
 class EraserTool(EditorTool):
@@ -1606,8 +1621,9 @@ class EditorMap():
                     pass
 
                 case PencilTool.INDEX:
+
                     if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
-                        raise case_break()
+                        raise CaseBreak()
                     cursors.add_cursor_this_frame('cursor_big_crosshair')
                     pos_x, pos_y = self._get_cursor_position_on_map(keys_class_instance)
                     # ltwh = [self.image_space_ltwh[0], self.image_space_ltwh[1], self.current_tool.brush_thickness * self.pixel_scale, self.current_tool.brush_thickness * self.pixel_scale]
@@ -1670,7 +1686,7 @@ class EditorMap():
                 case EyedropTool.INDEX:
                     pass
 
-        except case_break:
+        except CaseBreak:
             pass
 
 

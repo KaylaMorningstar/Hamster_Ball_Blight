@@ -1,6 +1,7 @@
 import math
 from copy import deepcopy
-from Code.utilities import point_is_in_ltwh, move_number_to_desired_range, percent_to_rgba, base10_to_hex, add_characters_to_front_of_string, get_time, switch_to_base10, rgba_to_glsl, get_rect_minus_borders, round_scaled, COLORS
+from Code.utilities import CaseBreak, point_is_in_ltwh, move_number_to_desired_range, percent_to_rgba, base10_to_hex, add_characters_to_front_of_string, get_time, switch_to_base10, rgba_to_glsl, get_rect_minus_borders, round_scaled, COLORS
+from Code.Editor.editor_utilities import MarqueeRectangleTool, LassoTool, PencilTool, EraserTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, EmptyRectangleTool, FilledRectangleTool, EmptyEllipseTool, FilledEllipseTool, BlurTool, JumbleTool, EyedropTool
 
 
 def update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
@@ -654,3 +655,67 @@ def update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
                 Singleton.tool_bar_tools = [[value[0], True if (index == tool_index) else False, value[2]] for index, value in enumerate(Singleton.tool_bar_tools)]
                 Singleton.tool_active = (tool_attributes[2], tool_index)
         Render.basic_rect_ltwh_to_quad(Screen, gl_context, tool_attributes[2], tool_attributes[0])
+
+
+def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
+    # Singleton.tool_attribute_ltwh
+    current_tool = Singleton.map.current_tool
+    # Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.tool_attribute_ltwh, COLORS['RED'])
+
+    try:
+        match int(current_tool):
+            case MarqueeRectangleTool.INDEX:
+                pass
+
+            case LassoTool.INDEX:
+                pass
+
+            case PencilTool.INDEX:
+                Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'brush_thickness', [Singleton.tool_attribute_ltwh[0], Singleton.tool_attribute_ltwh[1] + PencilTool.TEXT_PIXEL_THICKNESS, Render.renderable_objects['brush_thickness'].ORIGINAL_WIDTH, Render.renderable_objects['brush_thickness'].ORIGINAL_HEIGHT])
+                current_tool.brush_thickness_text_input.background_ltwh[0] = Singleton.tool_attribute_ltwh[0] + Render.renderable_objects['brush_thickness'].ORIGINAL_WIDTH + PencilTool.TEXT_PIXEL_THICKNESS
+                current_tool.brush_thickness_text_input.background_ltwh[1] = Singleton.tool_attribute_ltwh[1] + PencilTool.TEXT_PIXEL_THICKNESS - 1
+                current_tool.brush_thickness_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
+                new_brush_thickness = current_tool.brush_thickness_text_input.current_string
+                if current_tool.brush_thickness_is_valid(new_brush_thickness):
+                    current_tool.update_brush_thickness(Render, Screen, gl_context, int(new_brush_thickness))
+            case EraserTool.INDEX:
+                pass
+
+            case SprayTool.INDEX:
+                pass
+
+            case HandTool.INDEX:
+                pass
+
+            case BucketTool.INDEX:
+                pass
+
+            case LineTool.INDEX:
+                pass
+
+            case CurvyLineTool.INDEX:
+                pass
+
+            case EmptyRectangleTool.INDEX:
+                pass
+
+            case FilledRectangleTool.INDEX:
+                pass
+
+            case EmptyEllipseTool.INDEX:
+                pass
+
+            case FilledEllipseTool.INDEX:
+                pass
+
+            case BlurTool.INDEX:
+                pass
+
+            case JumbleTool.INDEX:
+                pass
+
+            case EyedropTool.INDEX:
+                pass
+
+    except CaseBreak:
+        pass

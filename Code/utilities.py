@@ -166,7 +166,7 @@ def loading_and_unloading_images_manager(Screen, Render, gl_context, IMAGE_PATHS
                 Render.remove_moderngl_texture_from_renderable_objects_dict(key)
 
 
-class case_break(Exception):
+class CaseBreak(Exception):
     pass
 
 
@@ -294,6 +294,8 @@ IMAGE_PATHS = {
     'Blur':              [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Blur.png'],
     'Jumble':            [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Jumble.png'],
     'Eyedropper':        [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Eyedropper.png'],
+    # tool attributes
+    'brush_thickness': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tool_attributes\\brush_thickness.png'],
     # test
     # 'map': [[LOADED_IN_EDITOR], 'C:\\Users\\Kayle\\Desktop\\OLD_HAMSTER\\HAMSTER_BALL_BLITZ\\data\\Images\\Forest\\Forest1.png']
 }

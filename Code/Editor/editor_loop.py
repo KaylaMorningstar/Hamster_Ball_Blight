@@ -2,7 +2,7 @@ import math
 import random
 from copy import deepcopy
 from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, LOADED_IN_EDITOR, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
-from Code.Editor.editor_update import update_palette, update_header, update_footer, update_separate_palette_and_add_color, update_tools, update_add_color
+from Code.Editor.editor_update import update_palette, update_header, update_footer, update_separate_palette_and_add_color, update_tools, update_add_color, update_tool_attributes
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap
 from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, EraserTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, EmptyRectangleTool, FilledRectangleTool, EmptyEllipseTool, FilledEllipseTool, BlurTool, JumbleTool, EyedropTool
 
@@ -18,7 +18,7 @@ class EditorSingleton():
         self.header_highlight_color = (COLORS['YELLOW'][0], COLORS['YELLOW'][1], COLORS['YELLOW'][2], COLORS['YELLOW'][3] * 0.5)
         self.header_selected_color = COLORS['YELLOW']
         self.header_border_color = COLORS['WHITE']
-        self.header_border_thickness = 20
+        self.header_border_thickness = 25
         self.header_strings = ['File', 'Edit', 'Options', 'Objects', 'Blocks']
         self.header_string_selected = ''
         self.header_index_selected = -1
@@ -236,6 +236,9 @@ class EditorSingleton():
         self.image_area_ltwh = [0, 0, 0, 0]
         self.window_resize_last_frame = False
         self.map: EditorMap = EditorMap(PATH, Screen, gl_context, Render, PATH)
+        #
+        # tool attribute area
+        self.tool_attribute_ltwh = [0, 0, 0, 0]
 
     def get_color_spectrum_ltwh(self):
         return [self.palette_padding + self.add_color_spectrum_border_thickness, 
@@ -260,6 +263,7 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
     Singleton.image_area_ltwh[3] = Singleton.image_inside_border_ltwh[3] - Singleton.image_horizontal_scroll.scroll_area_ltwh[3] + Singleton.image_large_border_thickness
     #
     # update image
+    Singleton.tool_attribute_ltwh = [Singleton.image_area_ltwh[0], Singleton.header_height, Singleton.image_area_ltwh[2], Singleton.header_border_thickness]
     if Screen.window_resize:
         Singleton.window_resize_last_frame = True
     else:
@@ -297,4 +301,5 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     update_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_separate_palette_and_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
+    update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     
