@@ -3,7 +3,6 @@ import math
 from Code.utilities import atan2, get_text_height, get_text_width
 import pygame
 import moderngl
-import numpy as np
 
 
 def initialize_display():

@@ -3,6 +3,7 @@ import pygame
 import math
 from copy import deepcopy
 from abc import ABC
+from array import array
 
 
 class TextInput():
@@ -1236,19 +1237,17 @@ class PencilTool(EditorTool):
     _HIGHLIGHT_COLOR = COLORS['RED']
 
     NOT_DRAWING = 0
-    START_DRAWING = 1
-    DRAWING = 2
-    END_DRAWING = 3
+    DRAWING = 1
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context, base_path: str):
         self.state = 0  # (NOT_DRAWING = 0, DRAWING = 1)
         self.BASE_PATH: str = base_path
         self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
-        self._brush_thickness = 1
         self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
         self._circle_offset: list[int, int]
         self._circle: list[list[bool]]
         self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size), PencilTool.TEXT_PIXEL_THICKNESS) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.TEXT_PIXEL_THICKNESS) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.TEXT_PIXEL_THICKNESS), get_text_height(PencilTool.TEXT_PIXEL_THICKNESS)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.TEXT_PIXEL_THICKNESS, PencilTool.TEXT_PIXEL_THICKNESS, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness))
+        self.last_xy: array = array('i', [0, 0])
         super().__init__(active)
 
     @property
@@ -1263,6 +1262,7 @@ class PencilTool(EditorTool):
         self._brush_thickness = move_number_to_desired_range(PencilTool._MIN_BRUSH_THICKNESS, brush_thickness, PencilTool._MAX_BRUSH_THICKNESS)
         self._circle_offset = [self._brush_thickness // 2, self._brush_thickness // 2]
         self._circle = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{self.BASE_PATH}\\Images\\not_always_loaded\\editor\\editor_shapes\\p{brush_thickness}.png", PencilTool.CIRCLE_REFERENCE, 1)
+        print('s')
 
     def brush_thickness_is_valid(self, brush_thickness):
         try:
@@ -1270,6 +1270,8 @@ class PencilTool(EditorTool):
         except:
             return False
         if not (PencilTool._MIN_BRUSH_THICKNESS <= int(brush_thickness) <= PencilTool._MAX_BRUSH_THICKNESS):
+            return False
+        if int(brush_thickness) == self._brush_thickness:
             return False
         return True
 
@@ -1389,7 +1391,7 @@ class EditorMap():
     _HAND_TOOL_HELD = 1
     _EDITOR_HAND_HELD = 2
 
-    _MAX_CTRL_Z = 100
+    MAX_CTRL_Z = 100
 
     def __init__(self,
                  PATH: str,
@@ -1441,11 +1443,18 @@ class EditorMap():
             EyedropTool(False)
         ]
         self.current_tool: EditorTool = self.tools[5]
-        self.map_changes: list = []
+        self.map_edits: list[self.PixelChange | self.ObjectChange] = []
+      
+    class PixelChange():
+        def __init__(self, xy: array, old_rgba: array, new_rgba: array):
+            self.xy: array = xy
+            self.old_rgba: array = old_rgba
+            self.new_rgba: array = new_rgba
 
-    class Edit():
-        def __init__(self):
-            pass
+    class ObjectChange():
+        def __init__(self, xy, object):
+            self.xy: array = array('i', xy)
+            self.object = object
 
     def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int], current_color: list[float, float, float, float]):
         self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool, current_color)
@@ -1643,7 +1652,8 @@ class EditorMap():
                         pixel_offset_x = 0
                     pixel_offset_x *= self.pixel_scale
                     leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
-                    pixel_x = leftest_pixel + ((pos_x - ((self.current_tool.brush_thickness - 1) // 2) - ltrb[0]) * self.pixel_scale)
+                    leftest_brush_pixel = pos_x - ((self.current_tool.brush_thickness - 1) // 2)
+                    pixel_x = leftest_pixel + ((leftest_brush_pixel - ltrb[0]) * self.pixel_scale)
 
                     # get the topest pixel that needs to be drawn
                     pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
@@ -1651,7 +1661,8 @@ class EditorMap():
                         pixel_offset_y = 0
                     pixel_offset_y *= self.pixel_scale
                     topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
-                    pixel_y = topest_pixel + ((pos_y - ((self.current_tool.brush_thickness - 1) // 2) - ltrb[1]) * self.pixel_scale)
+                    topest_brush_pixel = pos_y - ((self.current_tool.brush_thickness - 1) // 2)
+                    pixel_y = topest_pixel + ((topest_brush_pixel - ltrb[1]) * self.pixel_scale)
 
                     ltwh = [pixel_x, pixel_y, self.current_tool.brush_thickness * self.pixel_scale, self.current_tool.brush_thickness * self.pixel_scale]
 
@@ -1660,25 +1671,35 @@ class EditorMap():
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
                         render_instance.basic_rect_ltwh_image_with_color(screen_instance, gl_context, PencilTool.CIRCLE_REFERENCE, ltwh, current_color)
 
-
-                    # NOT_DRAWING = 0
-                    # START_DRAWING = 1
-                    # DRAWING = 2
-                    # END_DRAWING = 3
-
-                    # update pencil tool state
-                    if (self.current_tool.state == PencilTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed:
-                        self.current_tool.state = PencilTool.START_DRAWING
-                    elif self.current_tool.state == PencilTool.START_DRAWING:
+                    # change drawing state
+                    if (self.current_tool.state == PencilTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
                         self.current_tool.state = PencilTool.DRAWING
+                        self.map_edits.append([])
                     elif (self.current_tool.state == PencilTool.DRAWING) and keys_class_instance.editor_primary.released:
-                        self.current_tool.state = PencilTool.END_DRAWING
-                    elif self.current_tool.state == PencilTool.END_DRAWING:
                         self.current_tool.state = PencilTool.NOT_DRAWING
-
-                    print(self.current_tool.state)
                     
+                    match self.current_tool.state:
+                        case PencilTool.NOT_DRAWING:
+                            pass
+                        case PencilTool.DRAWING:
+                            current_tile_x, current_pixel_x = divmod(leftest_brush_pixel, self.initial_tile_wh[0])
+                            current_tile_y, current_pixel_y = divmod(topest_brush_pixel, self.initial_tile_wh[1])
+                            last_tile_x, last_pixel_x = divmod(self.current_tool.last_xy[0], self.initial_tile_wh[0])
+                            last_tile_y, last_pixel_y = divmod(self.current_tool.last_xy[1], self.initial_tile_wh[1])
 
+                            # self.map_edits[-1].append(self.PixelChange())
+
+
+                            # for tile_row in self.tile_array[last_tile_x, current_tile_x]:
+                            #     for tile in self.tile_array[last_tile_y, current_tile_y]:
+                            #         pass
+                            # self.tile_array
+                            # self.initial_tile_wh
+                            # leftest_brush_pixel, topest_brush_pixel
+
+                    # update values to use next loop
+                    self.current_tool.last_xy[0] = leftest_brush_pixel
+                    self.current_tool.last_xy[1] = topest_brush_pixel
 
                     
 
@@ -1752,8 +1773,8 @@ class EditorMap():
     def _get_cursor_position_on_map(self, keys_class_instance):
         # x = 0, y = 0 is top-left; x = image_space_ltwh[2], y = image_space_ltwh[3] is bottom-right; x = -1, y = -1 is invalid
         cursor_x, cursor_y = keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value
-        if not point_is_in_ltwh(cursor_x, cursor_y, self.image_space_ltwh):
-            return -1, -1
+        # if not point_is_in_ltwh(cursor_x, cursor_y, self.image_space_ltwh):
+        #     return -1, -1
         left = math.floor(((cursor_x - self.image_space_ltwh[0]) / self.pixel_scale) - (self.map_offset_xy[0] / self.pixel_scale))
         top = math.floor(((cursor_y - self.image_space_ltwh[1]) / self.pixel_scale) - (self.map_offset_xy[1] / self.pixel_scale))
         return left, top
@@ -1827,12 +1848,13 @@ class EditorTile():
     def __init__(self):
         self.loaded: bool = False
         self.gl_image_reference: str | None = None
-        self.pg_image: None = None
+        self.pg_image: pygame.Surface | None = None
 
     def load(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, scale: int):
         if not self.loaded:
             # render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}")
-            render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}", move_number_to_desired_range(0, scale, 1))
+            self.gl_image_reference = f"{path}t{column}_{row}.png"
+            self.pg_image = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, self.gl_image_reference, f"{column}_{row}", move_number_to_desired_range(0, scale, 1))
         self.loaded = True
 
     def unload(self, render_instance, column: int, row: int):

@@ -665,6 +665,7 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 pass
 
             case PencilTool.INDEX:
+                # brush thickness
                 Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'brush_thickness', [Singleton.tool_attribute_ltwh[0], Singleton.tool_attribute_ltwh[1] + PencilTool.TEXT_PIXEL_THICKNESS, Render.renderable_objects['brush_thickness'].ORIGINAL_WIDTH, Render.renderable_objects['brush_thickness'].ORIGINAL_HEIGHT])
                 current_tool.brush_thickness_text_input.background_ltwh[0] = Singleton.tool_attribute_ltwh[0] + Render.renderable_objects['brush_thickness'].ORIGINAL_WIDTH + PencilTool.TEXT_PIXEL_THICKNESS
                 current_tool.brush_thickness_text_input.background_ltwh[1] = Singleton.tool_attribute_ltwh[1] + PencilTool.TEXT_PIXEL_THICKNESS - 1

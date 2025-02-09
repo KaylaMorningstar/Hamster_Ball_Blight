@@ -48,6 +48,7 @@ def application_loop(Api: ApiObject, PATH: str, Screen: ScreenObject, gl_context
         Time.display_fps(Screen, Render, gl_context, [300, 300])
 
 
+
         #
         # update screen
         gl_context.finish()
