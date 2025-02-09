@@ -1235,7 +1235,13 @@ class PencilTool(EditorTool):
     _TEXT_HIGHLIGHT_COLOR = COLORS['WHITE']
     _HIGHLIGHT_COLOR = COLORS['RED']
 
+    NOT_DRAWING = 0
+    START_DRAWING = 1
+    DRAWING = 2
+    END_DRAWING = 3
+
     def __init__(self, active: bool, render_instance, screen_instance, gl_context, base_path: str):
+        self.state = 0  # (NOT_DRAWING = 0, DRAWING = 1)
         self.BASE_PATH: str = base_path
         self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
         self._brush_thickness = 1
@@ -1383,6 +1389,8 @@ class EditorMap():
     _HAND_TOOL_HELD = 1
     _EDITOR_HAND_HELD = 2
 
+    _MAX_CTRL_Z = 100
+
     def __init__(self,
                  PATH: str,
                  screen_instance,
@@ -1434,6 +1442,10 @@ class EditorMap():
         ]
         self.current_tool: EditorTool = self.tools[5]
         self.map_changes: list = []
+
+    class Edit():
+        def __init__(self):
+            pass
 
     def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int], current_color: list[float, float, float, float]):
         self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool, current_color)
@@ -1621,14 +1633,11 @@ class EditorMap():
                     pass
 
                 case PencilTool.INDEX:
-
-                    if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
-                        raise CaseBreak()
-                    cursors.add_cursor_this_frame('cursor_big_crosshair')
+                    cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
                     pos_x, pos_y = self._get_cursor_position_on_map(keys_class_instance)
-                    # ltwh = [self.image_space_ltwh[0], self.image_space_ltwh[1], self.current_tool.brush_thickness * self.pixel_scale, self.current_tool.brush_thickness * self.pixel_scale]
                     ltrb = self._get_ltrb_pixels_on_map()
 
+                    # get the leftest pixel that needs to be drawn
                     pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
                     if pixel_offset_x == 1:
                         pixel_offset_x = 0
@@ -1636,6 +1645,7 @@ class EditorMap():
                     leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
                     pixel_x = leftest_pixel + ((pos_x - ((self.current_tool.brush_thickness - 1) // 2) - ltrb[0]) * self.pixel_scale)
 
+                    # get the topest pixel that needs to be drawn
                     pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
                     if pixel_offset_y == 1:
                         pixel_offset_y = 0
@@ -1644,7 +1654,34 @@ class EditorMap():
                     pixel_y = topest_pixel + ((pos_y - ((self.current_tool.brush_thickness - 1) // 2) - ltrb[1]) * self.pixel_scale)
 
                     ltwh = [pixel_x, pixel_y, self.current_tool.brush_thickness * self.pixel_scale, self.current_tool.brush_thickness * self.pixel_scale]
-                    render_instance.basic_rect_ltwh_image_with_color(screen_instance, gl_context, PencilTool.CIRCLE_REFERENCE, ltwh, current_color)
+
+                    # condition if cursor is on the map
+                    if cursor_on_map:
+                        cursors.add_cursor_this_frame('cursor_big_crosshair')
+                        render_instance.basic_rect_ltwh_image_with_color(screen_instance, gl_context, PencilTool.CIRCLE_REFERENCE, ltwh, current_color)
+
+
+                    # NOT_DRAWING = 0
+                    # START_DRAWING = 1
+                    # DRAWING = 2
+                    # END_DRAWING = 3
+
+                    # update pencil tool state
+                    if (self.current_tool.state == PencilTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed:
+                        self.current_tool.state = PencilTool.START_DRAWING
+                    elif self.current_tool.state == PencilTool.START_DRAWING:
+                        self.current_tool.state = PencilTool.DRAWING
+                    elif (self.current_tool.state == PencilTool.DRAWING) and keys_class_instance.editor_primary.released:
+                        self.current_tool.state = PencilTool.END_DRAWING
+                    elif self.current_tool.state == PencilTool.END_DRAWING:
+                        self.current_tool.state = PencilTool.NOT_DRAWING
+
+                    print(self.current_tool.state)
+                    
+
+
+                    
+
                     
 
                 case EraserTool.INDEX:
