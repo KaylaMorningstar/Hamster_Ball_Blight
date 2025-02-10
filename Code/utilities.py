@@ -116,7 +116,16 @@ def rgba_to_glsl(rgba: list[int, int, int, int] | tuple[int, int, int, int]):
         )
 
 
-def percent_to_rgba(rgba: list[int, int, int, int] | tuple[int, int, int, int]):
+def get_blended_color(background_rgba: list[float, float, float, float], foreground_rgba: list[float, float, float, float]):
+    return [
+        (foreground_rgba[0] * foreground_rgba[3]) + (background_rgba[0] * (1.0 - foreground_rgba[3])),
+        (foreground_rgba[1] * foreground_rgba[3]) + (background_rgba[1] * (1.0 - foreground_rgba[3])),
+        (foreground_rgba[2] * foreground_rgba[3]) + (background_rgba[2] * (1.0 - foreground_rgba[3])),
+        1
+    ]
+
+
+def percent_to_rgba(rgba: list[float, float, float, float] | tuple[float, float, float, float]):
     return (
         round(rgba[0] * 255), 
         round(rgba[1] * 255), 

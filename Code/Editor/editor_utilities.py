@@ -1,4 +1,4 @@
-from Code.utilities import CaseBreak, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
+from Code.utilities import CaseBreak, rgba_to_glsl, get_blended_color, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
 import pygame
 import math
 from copy import deepcopy
@@ -1700,7 +1700,8 @@ class EditorMap():
                                             continue
                                         reload_tiles[tile.image_reference] = tile
                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                        tile.pg_image.set_at((pixel_x, pixel_y), current_color_rgba)
+                                        # print(rgba_to_glsl(original_pixel_color), current_color, get_blended_color(rgba_to_glsl(original_pixel_color), current_color))
+                                        tile.pg_image.set_at((pixel_x, pixel_y), percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
                                         self.map_edits[-1].change_dict[tile_name] = original_pixel_color
                             for tile in reload_tiles.values():
                                 tile.unload(render_instance)
