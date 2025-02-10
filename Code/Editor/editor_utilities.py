@@ -1,9 +1,11 @@
-from Code.utilities import CaseBreak, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
+from Code.utilities import CaseBreak, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
 import pygame
 import math
 from copy import deepcopy
 from abc import ABC
 from array import array
+from io import StringIO
+from PIL import Image
 
 
 class TextInput():
@@ -1671,11 +1673,12 @@ class EditorMap():
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
                         render_instance.basic_rect_ltwh_image_with_color(screen_instance, gl_context, PencilTool.CIRCLE_REFERENCE, ltwh, current_color)
+                    current_color_rgba = percent_to_rgba(current_color)
 
                     # change drawing state
                     if (self.current_tool.state == PencilTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
                         self.current_tool.state = PencilTool.DRAWING
-                        self.map_edits.append(self.PixelChange(new_rgba=current_color))
+                        self.map_edits.append(self.PixelChange(new_rgba=current_color_rgba))
                     elif (self.current_tool.state == PencilTool.DRAWING) and keys_class_instance.editor_primary.released:
                         self.current_tool.state = PencilTool.NOT_DRAWING
                     
@@ -1683,17 +1686,27 @@ class EditorMap():
                         case PencilTool.NOT_DRAWING:
                             pass
                         case PencilTool.DRAWING:
+                            reload_tiles = []
                             for brush_offset_x, row in enumerate(self.current_tool.circle):
                                 for brush_offset_y, draw in enumerate(row):
                                     if not draw:
                                         continue
                                     if self.map_edits[-1].change_dict.get(tile_name := f"{leftest_brush_pixel+brush_offset_x}_{topest_brush_pixel+brush_offset_y}") is None:
-                                        pos_x, pos_y = leftest_brush_pixel + brush_offset_x, topest_brush_pixel + brush_offset_y
-                                        tile_x, pixel_x = divmod(pos_x, self.initial_tile_wh[0])
-                                        tile_y, pixel_y = divmod(pos_y, self.initial_tile_wh[1])
+                                        edited_pixel_x, edited_pixel_y = leftest_brush_pixel + brush_offset_x, topest_brush_pixel + brush_offset_y
+                                        tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                        tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
                                         tile = self.tile_array[tile_x][tile_y]
-                                        existing_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                        self.map_edits[-1].change_dict[tile_name] = existing_color
+                                        if not tile.loaded:
+                                            continue
+                                        reload_tiles.append(tile)
+                                        original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                        tile.pg_image.set_at((pixel_x, pixel_y), current_color_rgba)
+                                        self.map_edits[-1].change_dict[tile_name] = original_pixel_color
+                            for tile in reload_tiles:
+                                tile.unload(render_instance, tile.column, tile.row)
+
+                                pygame.image.save(tile.pg_image, tile.gl_image_reference)
+                                tile.load(render_instance, screen_instance, gl_context, self.base_path, tile.column, tile.row, self.pixel_scale)
 
                     # update values to use next loop
                     self.current_tool.last_xy[0] = leftest_brush_pixel
@@ -1816,8 +1829,8 @@ class EditorMap():
 
     def _create_editor_tiles(self):
         self.tile_array = []
-        for _ in range(self.tile_array_shape[0]):
-            self.tile_array.append([EditorTile() for _ in range(self.tile_array_shape[1])])
+        for column in range(self.tile_array_shape[0]):
+            self.tile_array.append([EditorTile(column, row) for row in range(self.tile_array_shape[1])])
 
     def _reset_map(self, render_instance):
         # reset map from zoom
@@ -1847,7 +1860,9 @@ class EditorMap():
 
 
 class EditorTile():
-    def __init__(self):
+    def __init__(self, column: int, row: int):
+        self.column: int = column
+        self.row: int = row
         self.loaded: bool = False
         self.gl_image_reference: str | None = None
         self.pg_image: pygame.Surface | None = None
@@ -1855,7 +1870,7 @@ class EditorTile():
     def load(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, scale: int):
         if not self.loaded:
             # render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}")
-            self.gl_image_reference = f"{path}t{column}_{row}.png"
+            self.gl_image_reference = f"{path}t{self.column}_{self.row}.png"
             self.pg_image = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, self.gl_image_reference, f"{column}_{row}", move_number_to_desired_range(0, scale, 1))
         self.loaded = True
 
