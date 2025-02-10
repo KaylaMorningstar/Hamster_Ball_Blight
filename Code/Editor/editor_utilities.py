@@ -5,6 +5,7 @@ from copy import deepcopy
 from abc import ABC
 from array import array
 from PIL import Image
+from bresenham import bresenham
 
 
 class TextInput():
@@ -1685,7 +1686,7 @@ class EditorMap():
                         case PencilTool.NOT_DRAWING:
                             pass
                         case PencilTool.DRAWING:
-                            reload_tiles = []
+                            reload_tiles = {}
                             for brush_offset_x, row in enumerate(self.current_tool.circle):
                                 for brush_offset_y, draw in enumerate(row):
                                     if not draw:
@@ -1697,13 +1698,12 @@ class EditorMap():
                                         tile = self.tile_array[tile_x][tile_y]
                                         if not tile.loaded:
                                             continue
-                                        reload_tiles.append(tile)
+                                        reload_tiles[tile.image_reference] = tile
                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                         tile.pg_image.set_at((pixel_x, pixel_y), current_color_rgba)
                                         self.map_edits[-1].change_dict[tile_name] = original_pixel_color
-                            for tile in reload_tiles:
+                            for tile in reload_tiles.values():
                                 tile.unload(render_instance)
-
                                 pygame.image.save(tile.pg_image, tile.image_path)
                                 tile.load(render_instance, screen_instance, gl_context)
 
