@@ -4,7 +4,6 @@ import math
 from copy import deepcopy
 from abc import ABC
 from array import array
-from io import StringIO
 from PIL import Image
 
 
@@ -1533,7 +1532,7 @@ class EditorMap():
         # reset map from zoom
         for column in self.loaded_x:
             for row in self.loaded_y:
-                self.tile_array[column][row].unload(render_instance, column, row)
+                self.tile_array[column][row].unload(render_instance)
         self.map_wh[0] = self.original_map_wh[0] * self.pixel_scale
         self.map_wh[1] = self.original_map_wh[1] * self.pixel_scale
         self.loaded_x = []
@@ -1601,12 +1600,12 @@ class EditorMap():
         if (unload_x != []):
             for column in unload_x:
                 for row in self.loaded_y:
-                    self.tile_array[column][row].unload(render_instance, column, row)
+                    self.tile_array[column][row].unload(render_instance)
                 self.loaded_x = sorted([tile for tile in self.loaded_x if tile not in unload_x])
         if (unload_y != []):
             for row in unload_y:
                 for column in self.loaded_x:
-                    self.tile_array[column][row].unload(render_instance, column, row)
+                    self.tile_array[column][row].unload(render_instance)
                 self.loaded_y = sorted([tile for tile in self.loaded_y if tile not in unload_y])
         # update which tiles are loaded
         if (load_x != []):
@@ -1628,7 +1627,7 @@ class EditorMap():
                     if get_time() - start_load > EditorMap._MAX_LOAD_TIME:
                         load = False
                 tile = self.tile_array[column][row]
-                loaded = tile.draw_image(render_instance, screen_instance, gl_context, self.base_path, column, row, [left, top, self.tile_wh[0], self.tile_wh[1]], self.pixel_scale, load and load_tiles, draw_tiles)
+                loaded = tile.draw_image(render_instance, screen_instance, gl_context, [left, top, self.tile_wh[0], self.tile_wh[1]], load and load_tiles, draw_tiles)
                 if loaded and not started_loading:
                     started_loading = True
                     start_load = get_time()
@@ -1703,10 +1702,10 @@ class EditorMap():
                                         tile.pg_image.set_at((pixel_x, pixel_y), current_color_rgba)
                                         self.map_edits[-1].change_dict[tile_name] = original_pixel_color
                             for tile in reload_tiles:
-                                tile.unload(render_instance, tile.column, tile.row)
+                                tile.unload(render_instance)
 
-                                pygame.image.save(tile.pg_image, tile.gl_image_reference)
-                                tile.load(render_instance, screen_instance, gl_context, self.base_path, tile.column, tile.row, self.pixel_scale)
+                                pygame.image.save(tile.pg_image, tile.image_path)
+                                tile.load(render_instance, screen_instance, gl_context)
 
                     # update values to use next loop
                     self.current_tool.last_xy[0] = leftest_brush_pixel
@@ -1757,11 +1756,6 @@ class EditorMap():
 
         except CaseBreak:
             pass
-
-    def _get_color_at_pixel(self, xy: array):
-        current_tile_x, current_pixel_x = divmod(xy[0], self.initial_tile_wh[0])
-        current_tile_y, current_pixel_y = divmod(xy[1], self.initial_tile_wh[1])
-        self.tile_array[current_tile_x][current_tile_y].pg_image.get_at()
 
     def _hand(self, keys_class_instance):
         if not ((int(self.current_tool) == HandTool.INDEX) or (keys_class_instance.editor_hand.pressed)):
@@ -1830,14 +1824,14 @@ class EditorMap():
     def _create_editor_tiles(self):
         self.tile_array = []
         for column in range(self.tile_array_shape[0]):
-            self.tile_array.append([EditorTile(column, row) for row in range(self.tile_array_shape[1])])
+            self.tile_array.append([EditorTile(self.base_path, column, row) for row in range(self.tile_array_shape[1])])
 
     def _reset_map(self, render_instance):
         # reset map from zoom
         for column in range(self.tile_array_shape[0]):
             for row in range(self.tile_array_shape[1]):
                 try:
-                    self.tile_array[column][row].unload(render_instance, column, row)
+                    self.tile_array[column][row].unload(render_instance)
                 except:
                     continue
 
@@ -1860,29 +1854,30 @@ class EditorMap():
 
 
 class EditorTile():
-    def __init__(self, column: int, row: int):
+    def __init__(self, base_path: str, column: int, row: int):
         self.column: int = column
         self.row: int = row
         self.loaded: bool = False
-        self.gl_image_reference: str | None = None
+        self.image_reference: str = f"{self.column}_{self.row}"
+        self.image_path: str = f"{base_path}t{self.image_reference}.png"
         self.pg_image: pygame.Surface | None = None
 
-    def load(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, scale: int):
+    def load(self, render_instance, screen_instance, gl_context):
         if not self.loaded:
             # render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}")
-            self.gl_image_reference = f"{path}t{self.column}_{self.row}.png"
-            self.pg_image = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, self.gl_image_reference, f"{column}_{row}", move_number_to_desired_range(0, scale, 1))
+            # self.pg_image = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, self.image_path, f"{self.column}_{self.row}", move_number_to_desired_range(0, scale, 1))
+            self.pg_image = render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, self.image_path, self.image_reference)
         self.loaded = True
 
-    def unload(self, render_instance, column: int, row: int):
+    def unload(self, render_instance):
         if self.loaded:
-            render_instance.remove_moderngl_texture_from_renderable_objects_dict(f"{column}_{row}")
+            render_instance.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
         self.loaded = False
 
-    def draw_image(self, render_instance, screen_instance, gl_context, path: str, column: int, row: int, ltwh: list[int, int, int, int], scale: int, load: bool = False, draw_tiles: bool = True):
+    def draw_image(self, render_instance, screen_instance, gl_context, ltwh: list[int, int, int, int], load: bool = False, draw_tiles: bool = True):
         loaded = False
         if load and not self.loaded:
-            self.load(render_instance, screen_instance, gl_context, path, column, row, scale)
+            self.load(render_instance, screen_instance, gl_context)
             loaded = True
 
         if not self.loaded:
@@ -1891,8 +1886,5 @@ class EditorTile():
         if not draw_tiles:
             return True
 
-        render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, f"{column}_{row}", ltwh)
+        render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.image_reference, ltwh)
         return loaded
-
-    def _edit_image(self):
-        pass
