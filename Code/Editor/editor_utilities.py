@@ -1245,7 +1245,7 @@ class PencilTool(EditorTool):
         self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
         self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
         self._circle_offset: list[int, int]
-        self._circle: list[list[bool]]
+        self.circle: list[list[bool]]
         self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size), PencilTool.TEXT_PIXEL_THICKNESS) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.TEXT_PIXEL_THICKNESS) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.TEXT_PIXEL_THICKNESS), get_text_height(PencilTool.TEXT_PIXEL_THICKNESS)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.TEXT_PIXEL_THICKNESS, PencilTool.TEXT_PIXEL_THICKNESS, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness))
         self.last_xy: array = array('i', [0, 0])
         super().__init__(active)
@@ -1261,8 +1261,10 @@ class PencilTool(EditorTool):
             pass
         self._brush_thickness = move_number_to_desired_range(PencilTool._MIN_BRUSH_THICKNESS, brush_thickness, PencilTool._MAX_BRUSH_THICKNESS)
         self._circle_offset = [self._brush_thickness // 2, self._brush_thickness // 2]
-        self._circle = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{self.BASE_PATH}\\Images\\not_always_loaded\\editor\\editor_shapes\\p{brush_thickness}.png", PencilTool.CIRCLE_REFERENCE, 1)
-        print('s')
+        pygame_circle_image: pygame.Surface = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{self.BASE_PATH}\\Images\\not_always_loaded\\editor\\editor_shapes\\p{brush_thickness}.png", PencilTool.CIRCLE_REFERENCE, 1)
+        self.circle = []
+        for row_index in range(self._brush_thickness):
+            self.circle.append([True if (pygame_circle_image.get_at((row_index, column_index))[3] != 0) else False for column_index in range(self._brush_thickness)])
 
     def brush_thickness_is_valid(self, brush_thickness):
         try:
@@ -1446,9 +1448,8 @@ class EditorMap():
         self.map_edits: list[self.PixelChange | self.ObjectChange] = []
       
     class PixelChange():
-        def __init__(self, xy: array, old_rgba: array, new_rgba: array):
-            self.xy: array = xy
-            self.old_rgba: array = old_rgba
+        def __init__(self, new_rgba: array):
+            self.change_dict: dict = {}
             self.new_rgba: array = new_rgba
 
     class ObjectChange():
@@ -1674,7 +1675,7 @@ class EditorMap():
                     # change drawing state
                     if (self.current_tool.state == PencilTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
                         self.current_tool.state = PencilTool.DRAWING
-                        self.map_edits.append([])
+                        self.map_edits.append(self.PixelChange(new_rgba=current_color))
                     elif (self.current_tool.state == PencilTool.DRAWING) and keys_class_instance.editor_primary.released:
                         self.current_tool.state = PencilTool.NOT_DRAWING
                     
@@ -1682,20 +1683,17 @@ class EditorMap():
                         case PencilTool.NOT_DRAWING:
                             pass
                         case PencilTool.DRAWING:
-                            current_tile_x, current_pixel_x = divmod(leftest_brush_pixel, self.initial_tile_wh[0])
-                            current_tile_y, current_pixel_y = divmod(topest_brush_pixel, self.initial_tile_wh[1])
-                            last_tile_x, last_pixel_x = divmod(self.current_tool.last_xy[0], self.initial_tile_wh[0])
-                            last_tile_y, last_pixel_y = divmod(self.current_tool.last_xy[1], self.initial_tile_wh[1])
-
-                            # self.map_edits[-1].append(self.PixelChange())
-
-
-                            # for tile_row in self.tile_array[last_tile_x, current_tile_x]:
-                            #     for tile in self.tile_array[last_tile_y, current_tile_y]:
-                            #         pass
-                            # self.tile_array
-                            # self.initial_tile_wh
-                            # leftest_brush_pixel, topest_brush_pixel
+                            for brush_offset_x, row in enumerate(self.current_tool.circle):
+                                for brush_offset_y, draw in enumerate(row):
+                                    if not draw:
+                                        continue
+                                    if self.map_edits[-1].change_dict.get(tile_name := f"{leftest_brush_pixel+brush_offset_x}_{topest_brush_pixel+brush_offset_y}") is None:
+                                        pos_x, pos_y = leftest_brush_pixel + brush_offset_x, topest_brush_pixel + brush_offset_y
+                                        tile_x, pixel_x = divmod(pos_x, self.initial_tile_wh[0])
+                                        tile_y, pixel_y = divmod(pos_y, self.initial_tile_wh[1])
+                                        tile = self.tile_array[tile_x][tile_y]
+                                        existing_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                        self.map_edits[-1].change_dict[tile_name] = existing_color
 
                     # update values to use next loop
                     self.current_tool.last_xy[0] = leftest_brush_pixel
@@ -1747,6 +1745,10 @@ class EditorMap():
         except CaseBreak:
             pass
 
+    def _get_color_at_pixel(self, xy: array):
+        current_tile_x, current_pixel_x = divmod(xy[0], self.initial_tile_wh[0])
+        current_tile_y, current_pixel_y = divmod(xy[1], self.initial_tile_wh[1])
+        self.tile_array[current_tile_x][current_tile_y].pg_image.get_at()
 
     def _hand(self, keys_class_instance):
         if not ((int(self.current_tool) == HandTool.INDEX) or (keys_class_instance.editor_hand.pressed)):
