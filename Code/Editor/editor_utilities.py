@@ -1396,6 +1396,7 @@ class EditorMap():
     _EDITOR_HAND_HELD = 2
 
     MAX_CTRL_Z = 100
+    _SAVE_PERIOD = 10  # s
 
     def __init__(self,
                  PATH: str,
@@ -1447,7 +1448,7 @@ class EditorMap():
             EyedropTool(False)
         ]
         self.current_tool: EditorTool = self.tools[5]
-        self.map_edits: list[self.PixelChange | self.ObjectChange] = []
+        self.map_edits: list[EditorMap.PixelChange | EditorMap.ObjectChange] = []
       
     class PixelChange():
         def __init__(self, new_rgba: array):
@@ -1696,16 +1697,17 @@ class EditorMap():
                                         tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
                                         tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
                                         tile = self.tile_array[tile_x][tile_y]
-                                        if not tile.loaded:
-                                            continue
                                         reload_tiles[tile.image_reference] = tile
+                                        if tile.pg_image is None:
+                                            tile.load(render_instance, screen_instance, gl_context)
                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                        # print(rgba_to_glsl(original_pixel_color), current_color, get_blended_color(rgba_to_glsl(original_pixel_color), current_color))
                                         tile.pg_image.set_at((pixel_x, pixel_y), percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                        # render_instance.write_texture(tile.image_reference, pixel_x, pixel_y)
                                         self.map_edits[-1].change_dict[tile_name] = original_pixel_color
                             for tile in reload_tiles.values():
-                                tile.unload(render_instance)
+                                tile.edited = True
                                 pygame.image.save(tile.pg_image, tile.image_path)
+                                tile.unload(render_instance)
                                 tile.load(render_instance, screen_instance, gl_context)
 
                     # update values to use next loop
@@ -1862,16 +1864,17 @@ class EditorTile():
         self.image_reference: str = f"{self.column}_{self.row}"
         self.image_path: str = f"{base_path}t{self.image_reference}.png"
         self.pg_image: pygame.Surface | None = None
+        self.edited: bool = False
 
     def load(self, render_instance, screen_instance, gl_context):
         if not self.loaded:
             # render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}")
-            # self.pg_image = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, self.image_path, f"{self.column}_{self.row}", move_number_to_desired_range(0, scale, 1))
             self.pg_image = render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, self.image_path, self.image_reference)
         self.loaded = True
 
     def unload(self, render_instance):
         if self.loaded:
+            self.pg_image = None
             render_instance.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
         self.loaded = False
 

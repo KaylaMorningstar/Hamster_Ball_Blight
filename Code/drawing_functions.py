@@ -35,7 +35,7 @@ class ScreenObject():
 
 class RenderableObject():
     def __init__(self, Screen: ScreenObject, texture, width, height, rotation):
-        self.TEXTURE = texture
+        self.texture = texture
         self.ORIGINAL_WIDTH = width
         self.ORIGINAL_HEIGHT = height
         self.rotation = rotation
@@ -75,7 +75,10 @@ class RenderObjects():
         self.programs['text'] = DrawText(gl_context)
         self.programs['invert_white'] = DrawInvertWhite(gl_context)
     #
-    def add_moderngl_texture_to_renderable_objects_dict(self, Screen: ScreenObject, gl_context, path, name):
+    def write_texture(self, name, pixel_x: int, pixel_y: int):
+        self.renderable_objects[name].texture.write(b'\x00\x00\xff\xff', viewport=(1,1))
+    #
+    def add_moderngl_texture_to_renderable_objects_dict(self, Screen: ScreenObject, gl_context: moderngl.Context, path, name):
         pygame_image = pygame.image.load(path).convert_alpha()
         width, height = pygame_image.get_size()
         texture = gl_context.texture((width, height), 4)
@@ -86,7 +89,7 @@ class RenderObjects():
         self.renderable_objects[name] = RenderableObject(Screen, texture, width, height, rotation)
         return pygame_image
     #
-    def add_moderngl_texture_scaled(self, Screen: ScreenObject, gl_context, path, name, scale):
+    def add_moderngl_texture_scaled(self, Screen: ScreenObject, gl_context: moderngl.Context, path, name, scale):
         pygame_image = pygame.image.load(path).convert_alpha()
         width, height = [int(wh * scale) for wh in pygame_image.get_size()]
         pygame_image = pygame.transform.scale(pygame_image, (width, height))
@@ -99,7 +102,7 @@ class RenderObjects():
         return pygame_image
     #
     def remove_moderngl_texture_from_renderable_objects_dict(self, name):
-        self.renderable_objects[name].TEXTURE.release()
+        self.renderable_objects[name].texture.release()
         del self.renderable_objects[name]
     #
     def basic_rect_ltwh_to_quad(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ltwh):
@@ -113,7 +116,7 @@ class RenderObjects():
         program['aspect'] = Screen.aspect
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-        renderable_object.TEXTURE.use(0)
+        renderable_object.texture.use(0)
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
@@ -132,7 +135,7 @@ class RenderObjects():
         program['aspect'] = Screen.aspect
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-        renderable_object.TEXTURE.use(0)
+        renderable_object.texture.use(0)
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
@@ -152,7 +155,7 @@ class RenderObjects():
         program['alpha'] = rgba[3]
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-        renderable_object.TEXTURE.use(0)
+        renderable_object.texture.use(0)
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
@@ -172,7 +175,7 @@ class RenderObjects():
         program['alpha'] = rgba[3]
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-        renderable_object.TEXTURE.use(0)
+        renderable_object.texture.use(0)
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
@@ -193,7 +196,7 @@ class RenderObjects():
         program['glowing_pixels'] = abs(1 - (ltwh[2] / new_ltwh[2]))
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-        renderable_object.TEXTURE.use(0)
+        renderable_object.texture.use(0)
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
@@ -214,7 +217,7 @@ class RenderObjects():
         program['brightness'] = brightness
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-        renderable_object.TEXTURE.use(0)
+        renderable_object.texture.use(0)
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
@@ -234,7 +237,7 @@ class RenderObjects():
         program['blue'] = rgba[2]
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-        renderable_object.TEXTURE.use(0)
+        renderable_object.texture.use(0)
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
@@ -258,7 +261,7 @@ class RenderObjects():
                 program['saturation'] = saturation
                 quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
                 renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-                renderable_object.TEXTURE.use(0)
+                renderable_object.texture.use(0)
                 renderer.render(mode=moderngl.TRIANGLE_STRIP)
                 quads.release()
                 renderer.release()
@@ -282,7 +285,7 @@ class RenderObjects():
         program['alpha2'] = rgba2[3]
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-        renderable_object.TEXTURE.use(0)
+        renderable_object.texture.use(0)
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
@@ -308,7 +311,7 @@ class RenderObjects():
         program['two_tiles_y'] = 2 / (ltwh[3] / repeat_y)
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-        renderable_object.TEXTURE.use(0)
+        renderable_object.texture.use(0)
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
@@ -331,7 +334,7 @@ class RenderObjects():
             program['alpha'] = rgba[3]
             quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
             renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-            renderable_object.TEXTURE.use(0)
+            renderable_object.texture.use(0)
             renderer.render(mode=moderngl.TRIANGLE_STRIP)
             quads.release()
             renderer.release()
@@ -351,7 +354,7 @@ class RenderObjects():
         program['aspect'] = Screen.aspect
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
-        renderable_object.TEXTURE.use(0)
+        renderable_object.texture.use(0)
         gl_context.blend_equation = moderngl.FUNC_ADD
         gl_context.blend_func = (
             moderngl.ONE_MINUS_DST_COLOR, moderngl.ONE_MINUS_SRC_ALPHA,

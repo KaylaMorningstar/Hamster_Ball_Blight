@@ -99,6 +99,10 @@ class CursorClass():
         self.current_cursor = ['', 0]
     #
     @staticmethod
+    def set_cursor_pos(x: int | None = None, y: int | None = None):
+        pygame.mouse.set_pos(10, 10)
+    #
+    @staticmethod
     def set_cursor_visibility(visible: bool):
         pygame.mouse.set_visible(visible)
     #
