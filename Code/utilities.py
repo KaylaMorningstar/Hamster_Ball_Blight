@@ -175,6 +175,136 @@ def loading_and_unloading_images_manager(Screen, Render, gl_context, IMAGE_PATHS
                 Render.remove_moderngl_texture_from_renderable_objects_dict(key)
 
 
+LINE_OVERLAP_NONE = 0
+LINE_OVERLAP_MAJOR = 0x01
+LINE_OVERLAP_MINOR = 0x02
+LINE_OVERLAP_BOTH = 0x03
+LINE_THICKNESS_MIDDLE = 1
+LINE_THICKNESS_DRAW_CLOCKWISE = 2
+LINE_THICKNESS_DRAW_COUNTERCLOCKWISE = 3
+
+
+def _bresenham(x1, y1, x2, y2, mode):
+    points = []
+    dx = x2 - x1
+    dy = y2 - y1
+    if (dx < 0):
+        dx = -dx
+        step_x = -1
+    else:
+        step_x = 1
+    if (dy < 0):
+        dy = -dy
+        step_y = -1
+    else:
+        step_y = +1
+    dxt2 = dx << 1
+    dyt2 = dy << 1
+    points.append((x1, y1))
+    if (dx > dy):
+        error = dyt2 - dx
+        while (x1 != x2):
+            x1 += step_x
+            if (error >= 0):
+                if (mode & LINE_OVERLAP_MAJOR):
+                    points.append((x1, y1))
+                y1 += step_y
+                if (mode & LINE_OVERLAP_MINOR):
+                    points.append((x1 - step_x, y1))
+                error -= dxt2
+            error += dyt2
+            points.append((x1, y1))
+    else:
+        error = dxt2 - dy
+        while (y1 != y2):
+            y1 += step_y
+            if (error >= 0):
+                if (mode & LINE_OVERLAP_MAJOR):
+                    points.append((x1, y1))
+                x1 += step_x
+                if (mode & LINE_OVERLAP_MINOR):
+                    points.append((x1, y1 - step_y))
+                error -= dyt2
+            error += dxt2
+            points.append((x1, y1))
+    return points
+
+
+def bresenham(x1, y1, x2, y2, aThickness, mode):
+    points = []
+    dy = x1 - x2
+    dx = y2 - y1
+    if (dx < 0):
+        dx = -dx
+        step_x = -1
+    else:
+        step_x = +1
+    if (dy < 0):
+        dy = -dy
+        step_y = -1
+    else:
+        step_y = +1
+    dxt2 = dx << 1
+    dyt2 = dy << 1
+    if (dx > dy):
+        if (mode == LINE_THICKNESS_MIDDLE):
+            error = dyt2 - dx
+            i = aThickness // 2
+            while i > 0:
+                x1 -= step_x
+                x2 -= step_x
+                if (error >= 0):
+                    y1 -= step_y
+                    y2 -= step_y
+                    error -= dxt2
+                error += dyt2
+                i -= 1
+        points.extend(_bresenham(x1, y1, x2, y2, mode))
+        error = dyt2 - dx
+        i = aThickness
+        while i > 1:
+            x1 += step_x
+            x2 += step_x
+            overlap = LINE_OVERLAP_NONE
+            if (error >= 0):
+                y1 += step_y
+                y2 += step_y
+                error -= dxt2
+                overlap = LINE_OVERLAP_BOTH
+            error += dyt2
+            points.extend(_bresenham(x1, y1, x2, y2, overlap))
+            i -= 1
+    else:
+        if (mode == LINE_THICKNESS_MIDDLE):
+            error = dxt2 - dy
+            i = aThickness // 2
+            while i > 0:
+                y1 -= step_y
+                y2 -= step_y
+                if (error >= 0):
+                    x1 -= step_x
+                    x2 -= step_x
+                    error -= dyt2
+                error += dxt2
+                i -= 1
+        points.extend(_bresenham(x1, y1, x2, y2, mode))
+        error = dxt2 - dy
+        i = aThickness
+        while i > 1:
+            y1 += step_y
+            y2 += step_y
+            overlap = LINE_OVERLAP_NONE
+            if (error >= 0):
+                x1 += step_x
+                x2 += step_x
+                error -= dyt2
+                overlap = LINE_OVERLAP_BOTH
+            error += dxt2
+            points.extend(_bresenham(x1, y1, x2, y2, overlap))
+            i -= 1
+    return points
+
+
 class CaseBreak(Exception):
     pass
 

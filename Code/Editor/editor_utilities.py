@@ -4,8 +4,6 @@ import math
 from copy import deepcopy
 from abc import ABC
 from array import array
-from PIL import Image
-from bresenham import bresenham
 
 
 class TextInput():
@@ -1693,22 +1691,33 @@ class EditorMap():
                                     if not draw:
                                         continue
                                     if self.map_edits[-1].change_dict.get(tile_name := f"{leftest_brush_pixel+brush_offset_x}_{topest_brush_pixel+brush_offset_y}") is None:
+                                        # get the tile and pixel being edited
                                         edited_pixel_x, edited_pixel_y = leftest_brush_pixel + brush_offset_x, topest_brush_pixel + brush_offset_y
                                         tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
                                         tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
                                         tile = self.tile_array[tile_x][tile_y]
-                                        reload_tiles[tile.image_reference] = tile
+
+                                        # check whether the tile is already loaded
                                         if tile.pg_image is None:
                                             tile.load(render_instance, screen_instance, gl_context)
+                                        else:
+                                            reload_tiles[tile.image_reference] = tile
+                                        
+                                        # make the edit
                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                         tile.pg_image.set_at((pixel_x, pixel_y), percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
                                         # render_instance.write_texture(tile.image_reference, pixel_x, pixel_y)
+
+                                        # record what was edited for ctrl-Z
                                         self.map_edits[-1].change_dict[tile_name] = original_pixel_color
+                            
+                            # save the changes
                             for tile in reload_tiles.values():
                                 tile.edited = True
                                 pygame.image.save(tile.pg_image, tile.image_path)
                                 tile.unload(render_instance)
-                                tile.load(render_instance, screen_instance, gl_context)
+                                if reload_tiles.get(tile.image_reference) is not None:
+                                    tile.load(render_instance, screen_instance, gl_context)
 
                     # update values to use next loop
                     self.current_tool.last_xy[0] = leftest_brush_pixel
