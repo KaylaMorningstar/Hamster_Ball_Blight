@@ -5,7 +5,8 @@ from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_heigh
 from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap
 from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, EraserTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, EmptyRectangleTool, FilledRectangleTool, EmptyEllipseTool, FilledEllipseTool, BlurTool, JumbleTool, EyedropTool
-from Code.utilities import bresenham, LINE_OVERLAP_NONE, LINE_OVERLAP_MAJOR, LINE_OVERLAP_MINOR, LINE_OVERLAP_BOTH, LINE_THICKNESS_MIDDLE, LINE_THICKNESS_DRAW_CLOCKWISE, LINE_THICKNESS_DRAW_COUNTERCLOCKWISE
+from Code.utilities import bresenham, CIRCLE, SQUARE
+import random
 
 
 class EditorSingleton():
@@ -302,6 +303,22 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
 
-
-    for x, y in bresenham(100, 100, 150, 110, 5, LINE_THICKNESS_MIDDLE):
-        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', [x, y, 1, 1], COLORS['BLUE'])
+    n = str(random.randint(1, 16))
+    d = {'1': [200, 200, 100, 100],
+         '9': [200, 200, 150, 100],
+         '2': [200, 200, 200, 100],
+         '10': [200, 200, 250, 100],
+         '3': [200, 200, 300, 100],
+         '11': [200, 200, 300, 150],
+         '4': [200, 200, 300, 200],
+         '12': [200, 200, 300, 250],
+         '5': [200, 200, 300, 300],
+         '13': [200, 200, 250, 300],
+         '6': [200, 200, 200, 300],
+         '14': [200, 200, 150, 300],
+         '7': [200, 200, 100, 300],
+         '15': [200, 200, 100, 250],
+         '8': [200, 200, 100, 200],
+         '16': [200, 200, 100, 150]}
+    # for x, y in bresenham(*d[n], 15, CIRCLE):
+    #     Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', [x, y, 1, 1], COLORS['BLUE'])

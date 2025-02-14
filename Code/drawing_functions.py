@@ -75,8 +75,15 @@ class RenderObjects():
         self.programs['text'] = DrawText(gl_context)
         self.programs['invert_white'] = DrawInvertWhite(gl_context)
     #
-    def write_texture(self, name, pixel_x: int, pixel_y: int):
-        self.renderable_objects[name].texture.write(b'\x00\x00\xff\xff', viewport=(1,1))
+    def add_moderngl_texture_with_surface(self, Screen: ScreenObject, gl_context: moderngl.Context, pygame_image: pygame.Surface, name):
+        width, height = pygame_image.get_size()
+        texture = gl_context.texture((width, height), 4)
+        texture.filter = (moderngl.NEAREST, moderngl.NEAREST)
+        texture.swizzle = 'BGRA'
+        texture.write(pygame_image.get_view('1'))
+        rotation = 0
+        self.renderable_objects[name] = RenderableObject(Screen, texture, width, height, rotation)
+        return pygame_image
     #
     def add_moderngl_texture_to_renderable_objects_dict(self, Screen: ScreenObject, gl_context: moderngl.Context, path, name):
         pygame_image = pygame.image.load(path).convert_alpha()

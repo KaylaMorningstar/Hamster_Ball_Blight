@@ -4,6 +4,7 @@ import math
 from copy import deepcopy
 from abc import ABC
 from array import array
+from Code.utilities import bresenham, CIRCLE, SQUARE
 
 
 class TextInput():
@@ -1174,7 +1175,6 @@ class ScrollBar():
         self.scroll_percentage = scroll_percentage
 
 
-@staticmethod
 def get_perfect_circle(diameter: int):
     circle = []
     radius = (diameter - 0.5) / 2  # smaller than the actual radius for a better looking circle
@@ -1261,10 +1261,15 @@ class PencilTool(EditorTool):
             pass
         self._brush_thickness = move_number_to_desired_range(PencilTool._MIN_BRUSH_THICKNESS, brush_thickness, PencilTool._MAX_BRUSH_THICKNESS)
         self._circle_offset = [self._brush_thickness // 2, self._brush_thickness // 2]
-        pygame_circle_image: pygame.Surface = render_instance.add_moderngl_texture_scaled(screen_instance, gl_context, f"{self.BASE_PATH}\\Images\\not_always_loaded\\editor\\editor_shapes\\p{brush_thickness}.png", PencilTool.CIRCLE_REFERENCE, 1)
-        self.circle = []
-        for row_index in range(self._brush_thickness):
-            self.circle.append([True if (pygame_circle_image.get_at((row_index, column_index))[3] != 0) else False for column_index in range(self._brush_thickness)])
+        self.circle = get_perfect_circle(self._brush_thickness)
+        pygame_circle_image = pygame.Surface((self.brush_thickness, self.brush_thickness), pygame.SRCALPHA)
+        for left, row in enumerate(self.circle):
+            for top, draw in enumerate(row):
+                if draw:
+                    pygame_circle_image.set_at((left, top), (0, 0, 0, 255))
+                else:
+                    pygame_circle_image.set_at((left, top), (0, 0, 0, 0))
+        render_instance.add_moderngl_texture_with_surface(screen_instance, gl_context, pygame_circle_image, PencilTool.CIRCLE_REFERENCE)
 
     def brush_thickness_is_valid(self, brush_thickness):
         try:
@@ -1276,7 +1281,6 @@ class PencilTool(EditorTool):
         if int(brush_thickness) == self._brush_thickness:
             return False
         return True
-
 
 
 class EraserTool(EditorTool):
@@ -1711,6 +1715,28 @@ class EditorMap():
                                         # record what was edited for ctrl-Z
                                         self.map_edits[-1].change_dict[tile_name] = original_pixel_color
                             
+                            # # add bresenham points between last and current brush position
+                            # for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.last_xy[0], self.current_tool.last_xy[1], pos_x, pos_y, self.current_tool.brush_thickness, CIRCLE):
+                            #     if self.map_edits[-1].change_dict.get(tile_name := f"{edited_pixel_x}_{edited_pixel_y}") is None:
+                            #         # get the tile and pixel being edited
+                            #         tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                            #         tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                            #         tile = self.tile_array[tile_x][tile_y]
+
+                            #         # check whether the tile is already loaded
+                            #         if tile.pg_image is None:
+                            #             tile.load(render_instance, screen_instance, gl_context)
+                            #         else:
+                            #             reload_tiles[tile.image_reference] = tile
+
+                            #         # make the edit
+                            #         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                            #         tile.pg_image.set_at((pixel_x, pixel_y), percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                            #         # render_instance.write_texture(tile.image_reference, pixel_x, pixel_y)
+
+                            #         # record what was edited for ctrl-Z
+                            #         self.map_edits[-1].change_dict[tile_name] = original_pixel_color
+                            
                             # save the changes
                             for tile in reload_tiles.values():
                                 tile.edited = True
@@ -1720,8 +1746,8 @@ class EditorMap():
                                     tile.load(render_instance, screen_instance, gl_context)
 
                     # update values to use next loop
-                    self.current_tool.last_xy[0] = leftest_brush_pixel
-                    self.current_tool.last_xy[1] = topest_brush_pixel
+                    self.current_tool.last_xy[0] = pos_x
+                    self.current_tool.last_xy[1] = pos_y
 
                     
 
