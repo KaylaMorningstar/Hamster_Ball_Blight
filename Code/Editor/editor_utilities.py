@@ -1176,7 +1176,7 @@ class ScrollBar():
 
 
 def get_perfect_circle(diameter: int):
-    circle = []
+    tf_circle = []
     radius = (diameter - 0.5) / 2  # smaller than the actual radius for a better looking circle
     center = diameter / 2
     for row in range(diameter):
@@ -1188,6 +1188,24 @@ def get_perfect_circle(diameter: int):
                 current_row.append(True)
             else:
                 current_row.append(False)
+        tf_circle.append(current_row)
+    
+    # find edges
+    circle = []
+    for row_index, row in enumerate(tf_circle):
+        current_row = []
+        for column_index, draw in enumerate(row):
+            if draw:
+                if (row_index == 0) or (row_index == len(tf_circle) - 1) or (column_index == 0) or (column_index == len(tf_circle) - 1):
+                    current_row.append(2)
+                elif (not tf_circle[row_index-1][column_index]) or (not tf_circle[row_index+1][column_index]) or (not tf_circle[row_index][column_index-1]) or (not tf_circle[row_index][column_index+1]):
+                    current_row.append(2)
+                elif (not tf_circle[row_index-1][column_index-1]) or (not tf_circle[row_index-1][column_index+1]) or (not tf_circle[row_index+1][column_index-1]) or (not tf_circle[row_index+1][column_index+1]):
+                    current_row.append(2)
+                else:
+                    current_row.append(1)
+            else:
+                current_row.append(0)
         circle.append(current_row)
     return circle
 
@@ -1239,12 +1257,14 @@ class PencilTool(EditorTool):
     NOT_DRAWING = 0
     DRAWING = 1
 
-    def __init__(self, active: bool, render_instance, screen_instance, gl_context, base_path: str):
+    NOT_DRAW_PIXEL = 0
+    DRAW_PIXEL = 1
+    DRAW_BRESENHAM = 2
+
+    def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = 0  # (NOT_DRAWING = 0, DRAWING = 1)
-        self.BASE_PATH: str = base_path
         self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
         self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
-        self._circle_offset: list[int, int]
         self.circle: list[list[bool]]
         self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size), PencilTool.TEXT_PIXEL_THICKNESS) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.TEXT_PIXEL_THICKNESS) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.TEXT_PIXEL_THICKNESS), get_text_height(PencilTool.TEXT_PIXEL_THICKNESS)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.TEXT_PIXEL_THICKNESS, PencilTool.TEXT_PIXEL_THICKNESS, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness))
         self.last_xy: array = array('i', [0, 0])
@@ -1260,7 +1280,6 @@ class PencilTool(EditorTool):
         except:
             pass
         self._brush_thickness = move_number_to_desired_range(PencilTool._MIN_BRUSH_THICKNESS, brush_thickness, PencilTool._MAX_BRUSH_THICKNESS)
-        self._circle_offset = [self._brush_thickness // 2, self._brush_thickness // 2]
         self.circle = get_perfect_circle(self._brush_thickness)
         pygame_circle_image = pygame.Surface((self.brush_thickness, self.brush_thickness), pygame.SRCALPHA)
         for left, row in enumerate(self.circle):
@@ -1434,7 +1453,7 @@ class EditorMap():
         self.tools: list = [
             MarqueeRectangleTool(False),
             LassoTool(False),
-            PencilTool(False, render_instance, screen_instance, gl_context, PATH),
+            PencilTool(False, render_instance, screen_instance, gl_context),
             EraserTool(False),
             SprayTool(False),
             HandTool(True),
@@ -1692,28 +1711,67 @@ class EditorMap():
                             reload_tiles = {}
                             for brush_offset_x, row in enumerate(self.current_tool.circle):
                                 for brush_offset_y, draw in enumerate(row):
-                                    if not draw:
+                                    if draw == self.current_tool.NOT_DRAW_PIXEL:
                                         continue
-                                    if self.map_edits[-1].change_dict.get(tile_name := f"{leftest_brush_pixel+brush_offset_x}_{topest_brush_pixel+brush_offset_y}") is None:
-                                        # get the tile and pixel being edited
-                                        edited_pixel_x, edited_pixel_y = leftest_brush_pixel + brush_offset_x, topest_brush_pixel + brush_offset_y
-                                        tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
-                                        tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
-                                        tile = self.tile_array[tile_x][tile_y]
+                                    else:
+                                        if draw == self.current_tool.DRAW_PIXEL:
+                                            if self.map_edits[-1].change_dict.get(tile_name := f"{leftest_brush_pixel+brush_offset_x}_{topest_brush_pixel+brush_offset_y}") is None:
+                                                # get the tile and pixel being edited
+                                                edited_pixel_x, edited_pixel_y = leftest_brush_pixel + brush_offset_x, topest_brush_pixel + brush_offset_y
+                                                tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                                tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                                tile = self.tile_array[tile_x][tile_y]
+                                                # check whether the tile is already loaded
+                                                if tile.pg_image is None:
+                                                    tile.load(render_instance, screen_instance, gl_context)
+                                                else:
+                                                    reload_tiles[tile.image_reference] = tile
+                                                # make the edit
+                                                original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                tile.pg_image.set_at((pixel_x, pixel_y), percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                                # record what was edited for ctrl-Z
+                                                self.map_edits[-1].change_dict[tile_name] = original_pixel_color
+                                        elif draw == self.current_tool.DRAW_BRESENHAM:
+                                            for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.last_xy[0]+brush_offset_x, self.current_tool.last_xy[1]+brush_offset_y, leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y):
+                                                if self.map_edits[-1].change_dict.get(tile_name := f"{edited_pixel_x}_{edited_pixel_y}") is None:
+                                                    # get the tile and pixel being edited
+                                                    tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                                    tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                                    tile = self.tile_array[tile_x][tile_y]
+                                                    # check whether the tile is already loaded
+                                                    if tile.pg_image is None:
+                                                        tile.load(render_instance, screen_instance, gl_context)
+                                                    else:
+                                                        reload_tiles[tile.image_reference] = tile
+                                                    # make the edit
+                                                    original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                                    # record what was edited for ctrl-Z
+                                                    self.map_edits[-1].change_dict[tile_name] = original_pixel_color
 
-                                        # check whether the tile is already loaded
-                                        if tile.pg_image is None:
-                                            tile.load(render_instance, screen_instance, gl_context)
-                                        else:
-                                            reload_tiles[tile.image_reference] = tile
+
+                                    # if self.map_edits[-1].change_dict.get(tile_name := f"{leftest_brush_pixel+brush_offset_x}_{topest_brush_pixel+brush_offset_y}") is None:
+                                    #     # get the tile and pixel being edited
+                                    #     edited_pixel_x, edited_pixel_y = leftest_brush_pixel + brush_offset_x, topest_brush_pixel + brush_offset_y
+                                    #     tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                    #     tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                    #     tile = self.tile_array[tile_x][tile_y]
+
+                                    #     # check whether the tile is already loaded
+                                    #     if tile.pg_image is None:
+                                    #         tile.load(render_instance, screen_instance, gl_context)
+                                    #     else:
+                                    #         reload_tiles[tile.image_reference] = tile
                                         
-                                        # make the edit
-                                        original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                        tile.pg_image.set_at((pixel_x, pixel_y), percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
-                                        # render_instance.write_texture(tile.image_reference, pixel_x, pixel_y)
+                                    #     # make the edit
+                                    #     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                    #     tile.pg_image.set_at((pixel_x, pixel_y), percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                    #     # render_instance.write_texture(tile.image_reference, pixel_x, pixel_y)
 
-                                        # record what was edited for ctrl-Z
-                                        self.map_edits[-1].change_dict[tile_name] = original_pixel_color
+                                    #     # record what was edited for ctrl-Z
+                                    #     self.map_edits[-1].change_dict[tile_name] = original_pixel_color
+                            
+                            
                             
                             # # add bresenham points between last and current brush position
                             # for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.last_xy[0], self.current_tool.last_xy[1], pos_x, pos_y, self.current_tool.brush_thickness, CIRCLE):
@@ -1746,8 +1804,8 @@ class EditorMap():
                                     tile.load(render_instance, screen_instance, gl_context)
 
                     # update values to use next loop
-                    self.current_tool.last_xy[0] = pos_x
-                    self.current_tool.last_xy[1] = pos_y
+                    self.current_tool.last_xy[0] = leftest_brush_pixel
+                    self.current_tool.last_xy[1] = topest_brush_pixel
 
                     
 

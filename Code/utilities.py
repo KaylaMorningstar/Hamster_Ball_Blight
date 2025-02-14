@@ -200,7 +200,7 @@ def bresenham(x0, y0, x1, y1):
     D = 2*dy - dx
     y = 0
     for x in range(dx + 1):
-        points((x0 + x*xx + y*yx, y0 + x*xy + y*yy))
+        points.append((x0 + x*xx + y*yx, y0 + x*xy + y*yy))
         if D >= 0:
             y += 1
             D -= 2*dx
