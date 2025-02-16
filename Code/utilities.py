@@ -134,6 +134,15 @@ def percent_to_rgba(rgba: list[float, float, float, float] | tuple[float, float,
         )
 
 
+def rgba_to_bgra(rgba: list[float, float, float, float] | tuple[float, float, float, float]):
+    return (
+        rgba[2],
+        rgba[1],
+        rgba[0],
+        rgba[3],
+    )
+
+
 COLORS = {
     'NOTHING': rgba_to_glsl((0, 0, 0, 0)),
     'DEFAULT': rgba_to_glsl((0, 0, 0, 255)),

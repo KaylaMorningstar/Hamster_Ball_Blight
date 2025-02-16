@@ -1,8 +1,9 @@
 from array import array
 import math
-from Code.utilities import atan2, get_text_height, get_text_width
+from Code.utilities import atan2, get_text_height, get_text_width, rgba_to_bgra
 import pygame
 import moderngl
+import numpy as np
 
 
 def initialize_display():
@@ -74,6 +75,12 @@ class RenderObjects():
         self.programs['checkerboard'] = DrawCheckerboard(gl_context)
         self.programs['text'] = DrawText(gl_context)
         self.programs['invert_white'] = DrawInvertWhite(gl_context)
+    #
+    def write_pixels(self, name: str, ltwh: tuple[int, int, int, int], rgba: tuple[int, int, int, int]):
+        self.renderable_objects[name].texture.write(np.array(rgba_to_bgra(rgba), dtype=np.uint8).tobytes(), viewport=ltwh)
+    #
+    # def write_pixels_from_pg_surface(self, name: str, pg_surface: pygame.Surface, ltwh):
+    #     self.renderable_objects[name].texture.write(np.array(rgba_to_bgra(rgba), dtype=np.uint8).tobytes(), viewport=ltwh)
     #
     def add_moderngl_texture_with_surface(self, Screen: ScreenObject, gl_context: moderngl.Context, pygame_image: pygame.Surface, name):
         width, height = pygame_image.get_size()

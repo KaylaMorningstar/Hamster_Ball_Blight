@@ -1709,11 +1709,13 @@ class EditorMap():
                             pass
                         case PencilTool.DRAWING:
                             reload_tiles = {}
+                            initial = get_time()
                             for brush_offset_x, row in enumerate(self.current_tool.circle):
                                 for brush_offset_y, draw in enumerate(row):
                                     if draw == self.current_tool.NOT_DRAW_PIXEL:
                                         continue
                                     else:
+                                        # draw brush pixels
                                         if draw == self.current_tool.DRAW_PIXEL:
                                             if self.map_edits[-1].change_dict.get(tile_name := f"{leftest_brush_pixel+brush_offset_x}_{topest_brush_pixel+brush_offset_y}") is None:
                                                 # get the tile and pixel being edited
@@ -1728,10 +1730,13 @@ class EditorMap():
                                                     reload_tiles[tile.image_reference] = tile
                                                 # make the edit
                                                 original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                tile.pg_image.set_at((pixel_x, pixel_y), percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                                # render_instance.write_pixel(tile.image_reference, (pixel_x, pixel_y), resulting_color)
+                                                tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                 # record what was edited for ctrl-Z
                                                 self.map_edits[-1].change_dict[tile_name] = original_pixel_color
-                                        elif draw == self.current_tool.DRAW_BRESENHAM:
+                                        # draw bresenham pixels
+                                        else:
                                             for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.last_xy[0]+brush_offset_x, self.current_tool.last_xy[1]+brush_offset_y, leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y):
                                                 if self.map_edits[-1].change_dict.get(tile_name := f"{edited_pixel_x}_{edited_pixel_y}") is None:
                                                     # get the tile and pixel being edited
@@ -1745,10 +1750,12 @@ class EditorMap():
                                                         reload_tiles[tile.image_reference] = tile
                                                     # make the edit
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                    tile.pg_image.set_at((pixel_x, pixel_y), percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                                    # render_instance.write_pixel(tile.image_reference, (pixel_x, pixel_y), resulting_color)
+                                                    tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # record what was edited for ctrl-Z
                                                     self.map_edits[-1].change_dict[tile_name] = original_pixel_color
-
+                            print(get_time() - initial)
 
                                     # if self.map_edits[-1].change_dict.get(tile_name := f"{leftest_brush_pixel+brush_offset_x}_{topest_brush_pixel+brush_offset_y}") is None:
                                     #     # get the tile and pixel being edited
@@ -1797,8 +1804,7 @@ class EditorMap():
                             
                             # save the changes
                             for tile in reload_tiles.values():
-                                tile.edited = True
-                                pygame.image.save(tile.pg_image, tile.image_path)
+                                tile.save()
                                 tile.unload(render_instance)
                                 if reload_tiles.get(tile.image_reference) is not None:
                                     tile.load(render_instance, screen_instance, gl_context)
@@ -1950,6 +1956,7 @@ class EditorMap():
 
 
 class EditorTile():
+
     def __init__(self, base_path: str, column: int, row: int):
         self.column: int = column
         self.row: int = row
@@ -1957,7 +1964,7 @@ class EditorTile():
         self.image_reference: str = f"{self.column}_{self.row}"
         self.image_path: str = f"{base_path}t{self.image_reference}.png"
         self.pg_image: pygame.Surface | None = None
-        self.edited: bool = False
+        self.edits: dict = {}
 
     def load(self, render_instance, screen_instance, gl_context):
         if not self.loaded:
@@ -1970,6 +1977,9 @@ class EditorTile():
             self.pg_image = None
             render_instance.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
         self.loaded = False
+
+    def save(self):
+        pygame.image.save(self.pg_image, self.image_path)
 
     def draw_image(self, render_instance, screen_instance, gl_context, ltwh: list[int, int, int, int], load: bool = False, draw_tiles: bool = True):
         loaded = False
