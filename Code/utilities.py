@@ -59,6 +59,10 @@ def str_can_be_hex(string):
         return False
 
 
+def angle_in_range(lower: float, theta: float, upper: float):
+    return (theta - lower) % 360 <= (upper - lower) % 360
+
+
 def round_scaled(value: float | int, scale: float | int):
     return scale * round(value / scale)
 
@@ -193,28 +197,26 @@ CIRCLE = 0
 SQUARE = 1
 
 
-def bresenham(x0, y0, x1, y1):
-    points = []
-    dx = x1 - x0
-    dy = y1 - y0
-    xsign = 1 if dx > 0 else -1
-    ysign = 1 if dy > 0 else -1
-    dx = abs(dx)
-    dy = abs(dy)
-    if dx > dy:
-        xx, xy, yx, yy = xsign, 0, 0, ysign
-    else:
-        dx, dy = dy, dx
-        xx, xy, yx, yy = 0, ysign, xsign, 0
-    D = 2*dy - dx
-    y = 0
-    for x in range(dx + 1):
-        points.append((x0 + x*xx + y*yx, y0 + x*xy + y*yy))
-        if D >= 0:
-            y += 1
-            D -= 2*dx
-        D += 2*dy
-    return points
+# def bresenham(x1, y1, x2, y2):
+#     dx = x2 - x1
+#     dy = y2 - y1
+#     xsign = 1 if dx > 0 else -1
+#     ysign = 1 if dy > 0 else -1
+#     dx = abs(dx)
+#     dy = abs(dy)
+#     if dx > dy:
+#         xx, xy, yx, yy = xsign, 0, 0, ysign
+#     else:
+#         dx, dy = dy, dx
+#         xx, xy, yx, yy = 0, ysign, xsign, 0
+#     D = 2*dy - dx
+#     y = 0
+#     for x in range(dx + 1):
+#         yield (x1 + x*xx + y*yx, y1 + x*xy + y*yy)
+#         if D >= 0:
+#             y += 1
+#             D -= 2*dx
+#         D += 2*dy
 
 
 # def _bresenham(x1, y1, x2, y2, mode):

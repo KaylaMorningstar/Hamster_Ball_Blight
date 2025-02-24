@@ -5,7 +5,6 @@ from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_heigh
 from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap
 from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, EraserTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, EmptyRectangleTool, FilledRectangleTool, EmptyEllipseTool, FilledEllipseTool, BlurTool, JumbleTool, EyedropTool
-from Code.utilities import bresenham, CIRCLE, SQUARE
 import random
 
 
