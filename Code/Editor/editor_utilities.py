@@ -1334,7 +1334,7 @@ class PencilTool(EditorTool):
     INDEX = 2
     _MIN_BRUSH_THICKNESS = 1
     _MAX_BRUSH_THICKNESS = 64
-    CIRCLE_REFERENCE = 'circle'
+    CIRCLE_REFERENCE = 'pencil_tool_circle'
 
     TEXT_PIXEL_THICKNESS = 3
     _TEXT_BACKGROUND_COLOR = COLORS['LIGHT_GREY']
@@ -1533,6 +1533,8 @@ class EditorMap():
         ]
         self.current_tool: EditorTool = self.tools[5]
         self.map_edits: list[EditorMap.PixelChange | EditorMap.ObjectChange] = []
+        #
+        self.stored_draw_keys = []
       
     class PixelChange():
         def __init__(self, new_rgba: array):
@@ -1574,11 +1576,14 @@ class EditorMap():
         # calculate which tiles should be loaded and unloaded; perform unloading
         self._update_loaded_tiles(render_instance)
 
+        # perform edits to the map
+        self._tool(screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton)
+        
         # iterate through tiles that should be loaded; load them; draw them
         self._iterate_through_tiles(render_instance, screen_instance, gl_context, True, True)
 
-        # perform edits to the map
-        self._tool(screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton)
+        # execute stored draws
+        self._execute_stored_draws(render_instance, screen_instance, gl_context)
 
     def _zoom(self, render_instance, keys_class_instance, screen_instance, gl_context, window_resize, horizontal_scroll, vertical_scroll):
         if window_resize:
@@ -1757,7 +1762,8 @@ class EditorMap():
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
-                        render_instance.basic_rect_ltwh_image_with_color(screen_instance, gl_context, PencilTool.CIRCLE_REFERENCE, ltwh, editor_singleton.currently_selected_color.color)
+                        render_instance.store_draw(PencilTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': PencilTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color})
+                        self.stored_draw_keys.append(PencilTool.CIRCLE_REFERENCE)
                     current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                     # change drawing state
@@ -1998,6 +2004,11 @@ class EditorMap():
 
     def _update_current_tool(self, current_tool: tuple[str, int]):
         self.current_tool = self.tools[current_tool[1]]
+
+    def _execute_stored_draws(self, render_instance, screen_instance, gl_context):
+        for key in self.stored_draw_keys:
+            render_instance.execute_stored_draw(screen_instance, gl_context, key)
+        self.stored_draw_keys = []
 
     def _create_editor_tiles(self):
         self.tile_array = []

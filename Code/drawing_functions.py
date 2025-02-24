@@ -4,6 +4,7 @@ from Code.utilities import atan2, get_text_height, get_text_width, rgba_to_bgra
 import pygame
 import moderngl
 import numpy as np
+from typing import Callable
 
 
 def initialize_display():
@@ -59,8 +60,9 @@ class RenderableObject():
 class RenderObjects():
     def __init__(self, gl_context):
         self.programs = {}
-        self.get_programs(gl_context) # 'program_name': program
-        self.renderable_objects = {} # 'object_name': RenderableObject
+        self.get_programs(gl_context)  # 'program_name': program
+        self.renderable_objects = {}  # 'object_name': RenderableObject
+        self.stored_draws = {}  # 'draw_name': [render_function_reference, {kwargs: value}]
     #
     def get_programs(self, gl_context):
         self.programs['basic_rect'] = DrawBasicRect(gl_context)
@@ -118,6 +120,14 @@ class RenderObjects():
     def remove_moderngl_texture_from_renderable_objects_dict(self, name):
         self.renderable_objects[name].texture.release()
         del self.renderable_objects[name]
+    #:
+    def store_draw(self, draw_name: str, render_function_reference: Callable, kwargs_dict: dict):
+        self.stored_draws[draw_name] = [render_function_reference, kwargs_dict]
+    #
+    def execute_stored_draw(self, Screen: ScreenObject, gl_context: moderngl.Context, draw_name: str):
+        # 'draw_name': [render_function_reference, {kwargs: value}]
+        self.stored_draws[draw_name][0](Screen, gl_context, **self.stored_draws[draw_name][1])
+        del self.stored_draws[draw_name]
     #
     def basic_rect_ltwh_to_quad(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ltwh):
         # 'basic_rect', DrawBasicRect
