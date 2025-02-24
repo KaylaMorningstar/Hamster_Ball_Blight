@@ -1179,7 +1179,7 @@ class ScrollBar():
 def get_perfect_circle(diameter: int):
     if diameter == 1:
         return [[array('f', [0.0, 360.0])]]
-
+    # get which pixels are part of the circle
     tf_circle = []
     radius = (diameter - 0.5) / 2  # smaller than the actual radius for a better looking circle
     center = diameter / 2
@@ -1193,7 +1193,6 @@ def get_perfect_circle(diameter: int):
             else:
                 current_row.append(False)
         tf_circle.append(current_row)
-    
     # find edges
     circle = []
     for column_index, column in enumerate(tf_circle):
@@ -1214,6 +1213,27 @@ def get_perfect_circle(diameter: int):
                 current_row.append(0)
         circle.append(current_row)
     return circle
+
+
+def get_perfect_square(length: int):
+    if length == 1:
+        return [[array('f', [0.0, 360.0])]]
+    center = length / 2
+    # get which pixels are part of the circle
+    square = []
+    for column_index in range(length):
+        current_row = []
+        for row_index in range(length):
+            # pixels on the edge of circle
+            if ((row_index == 0) or (row_index == length - 1) or (column_index == 0) or (column_index == length - 1)):
+                # calculate angle range that is should skip bresenham algorithm
+                angle_from_center = atan2((column_index + 0.5 - center), -(row_index + 0.5 - center))
+                angle_range = array('f', ((angle_from_center - 90) % 360, (angle_from_center + 90) % 360))
+                current_row.append(angle_range)
+            else:
+                current_row.append(1)
+        square.append(current_row)
+    return square
 
 
 class EditorTool(ABC):
@@ -1486,15 +1506,15 @@ class EditorMap():
             self.xy: array = array('i', xy)
             self.object = object
 
-    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int], current_color: list[float, float, float, float]):
-        self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool, current_color)
+    def update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int], editor_singleton):
+        self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool, editor_singleton)
         return
         try:
-            self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool, current_color)
+            self._update(api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh, window_resize, horizontal_scroll, vertical_scroll, current_tool, editor_singleton)
         except:
             self._reset_map(render_instance)
 
-    def _update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int], current_color: list[float, float, float, float]):
+    def _update(self, api, screen_instance, gl_context, keys_class_instance, render_instance, cursors, image_space_ltwh: list[int, int, int, int], window_resize: bool, horizontal_scroll: ScrollBar, vertical_scroll: ScrollBar, current_tool: tuple[str, int], editor_singleton):
         # update map area width and height in case screen size has changed
         self.image_space_ltwh = image_space_ltwh
 
@@ -1520,7 +1540,7 @@ class EditorMap():
         self._iterate_through_tiles(render_instance, screen_instance, gl_context, True, True)
 
         # perform edits to the map
-        self._draw(screen_instance, gl_context, keys_class_instance, render_instance, cursors, current_color)
+        self._draw(screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton)
 
     def _zoom(self, render_instance, keys_class_instance, screen_instance, gl_context, window_resize, horizontal_scroll, vertical_scroll):
         if window_resize:
@@ -1662,7 +1682,7 @@ class EditorMap():
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
-    def _draw(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, current_color: list[float, float, float, float]):
+    def _draw(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton):
         try:
             match int(self.current_tool):
                 case MarqueeRectangleTool.INDEX:
@@ -1699,8 +1719,8 @@ class EditorMap():
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
-                        render_instance.basic_rect_ltwh_image_with_color(screen_instance, gl_context, PencilTool.CIRCLE_REFERENCE, ltwh, current_color)
-                    current_color_rgba = percent_to_rgba(current_color)
+                        render_instance.basic_rect_ltwh_image_with_color(screen_instance, gl_context, PencilTool.CIRCLE_REFERENCE, ltwh, editor_singleton.currently_selected_color.color)
+                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                     # change drawing state
                     if (self.current_tool.state == PencilTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
@@ -1828,7 +1848,59 @@ class EditorMap():
                     pass
 
                 case EyedropTool.INDEX:
-                    pass
+                    if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
+                        raise CaseBreak
+                    
+                    cursors.add_cursor_this_frame('cursor_eyedrop')
+
+                    # get the tile being hovered over
+                    pos_x, pos_y = self._get_cursor_position_on_map(keys_class_instance)
+                    tile_x, pixel_x = divmod(pos_x, self.initial_tile_wh[0])
+                    tile_y, pixel_y = divmod(pos_y, self.initial_tile_wh[1])
+                    tile = self.tile_array[tile_x][tile_y]
+                    # check whether the tile is already loaded
+                    if tile.pg_image is None:
+                        tile.load(render_instance, screen_instance, gl_context)
+                    # make the edit
+                    eyedrop_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                    eyedrop_pixel_color[3] = 255
+
+                    if keys_class_instance.editor_primary.newly_pressed:
+                        # update text input rgba and hex
+                        red = eyedrop_pixel_color[0]
+                        green = eyedrop_pixel_color[1]
+                        blue = eyedrop_pixel_color[2]
+                        alpha = eyedrop_pixel_color[3]
+                        editor_singleton.add_color_dynamic_inputs[0].current_string = str(red)
+                        editor_singleton.add_color_dynamic_inputs[1].current_string = str(green)
+                        editor_singleton.add_color_dynamic_inputs[2].current_string = str(blue)
+                        editor_singleton.add_color_dynamic_inputs[3].current_string = str(alpha)
+                        editor_singleton.add_color_dynamic_inputs[4].current_string = f'{add_characters_to_front_of_string(base10_to_hex(red), 2, "0")}{add_characters_to_front_of_string(base10_to_hex(green), 2, "0")}{add_characters_to_front_of_string(base10_to_hex(blue), 2, "0")}{add_characters_to_front_of_string(base10_to_hex(alpha), 2, "0")}'
+                        # update spectrum based on palette selection
+                        eyedrop_pixel_color_glsl = rgba_to_glsl(eyedrop_pixel_color)
+                        editor_singleton.add_color_spectrum_x_percentage, editor_singleton.add_color_saturation_percentage, editor_singleton.add_color_spectrum_y_percentage = editor_singleton.currently_selected_color.rgb_to_hsl(eyedrop_pixel_color_glsl)
+                        editor_singleton.add_color_alpha_percentage = eyedrop_pixel_color_glsl[3]
+                        color_spectrum_ltwh = editor_singleton.get_color_spectrum_ltwh()
+                        # update spectrum
+                        spectrum_x_pos = move_number_to_desired_range(0, editor_singleton.add_color_spectrum_x_percentage * color_spectrum_ltwh[2], color_spectrum_ltwh[2])
+                        spectrum_y_pos = move_number_to_desired_range(0, editor_singleton.add_color_spectrum_y_percentage * color_spectrum_ltwh[3], color_spectrum_ltwh[3])
+                        mouse_in_bottom_half_of_spectrum = (spectrum_y_pos / color_spectrum_ltwh[3]) < 0.5
+                        editor_singleton.add_color_current_circle_color = COLORS['WHITE'] if mouse_in_bottom_half_of_spectrum else COLORS['BLACK']
+                        editor_singleton.add_color_circle_center_relative_xy = [spectrum_x_pos, abs(color_spectrum_ltwh[3] - spectrum_y_pos)]
+                        editor_singleton.add_color_spectrum_x_percentage = (spectrum_x_pos / color_spectrum_ltwh[2])
+                        editor_singleton.add_color_spectrum_y_percentage = abs(1 - (spectrum_y_pos / color_spectrum_ltwh[3]))
+                        # update saturation
+                        saturation_x_pos = move_number_to_desired_range(0, editor_singleton.add_color_saturation_percentage * color_spectrum_ltwh[2], color_spectrum_ltwh[2])
+                        editor_singleton.add_color_saturation_circle_relative_x = saturation_x_pos
+                        editor_singleton.currently_selected_color.saturation = editor_singleton.add_color_saturation_circle_relative_x / color_spectrum_ltwh[2]
+                        editor_singleton.add_color_saturation_percentage = (saturation_x_pos / color_spectrum_ltwh[2])
+                        # update alpha
+                        alpha_x_pos = move_number_to_desired_range(0, editor_singleton.add_color_alpha_percentage * color_spectrum_ltwh[2], color_spectrum_ltwh[2])
+                        editor_singleton.add_color_alpha_circle_relative_x = alpha_x_pos
+                        editor_singleton.currently_selected_color.alpha = editor_singleton.add_color_alpha_circle_relative_x / color_spectrum_ltwh[2]
+                        editor_singleton.add_color_alpha_percentage = (alpha_x_pos / color_spectrum_ltwh[2])
+                        # update the currently selected color
+                        editor_singleton.currently_selected_color.calculate_color(editor_singleton.add_color_spectrum_x_percentage, editor_singleton.add_color_spectrum_y_percentage, editor_singleton.add_color_alpha_percentage)
 
         except CaseBreak:
             pass
@@ -1858,8 +1930,6 @@ class EditorMap():
     def _get_cursor_position_on_map(self, keys_class_instance):
         # x = 0, y = 0 is top-left; x = image_space_ltwh[2], y = image_space_ltwh[3] is bottom-right; x = -1, y = -1 is invalid
         cursor_x, cursor_y = keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value
-        # if not point_is_in_ltwh(cursor_x, cursor_y, self.image_space_ltwh):
-        #     return -1, -1
         left = math.floor(((cursor_x - self.image_space_ltwh[0]) / self.pixel_scale) - (self.map_offset_xy[0] / self.pixel_scale))
         top = math.floor(((cursor_y - self.image_space_ltwh[1]) / self.pixel_scale) - (self.map_offset_xy[1] / self.pixel_scale))
         return left, top

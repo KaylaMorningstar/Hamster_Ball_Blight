@@ -267,7 +267,7 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
     if Screen.window_resize:
         Singleton.window_resize_last_frame = True
     else:
-        Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh, Singleton.window_resize_last_frame, Singleton.image_horizontal_scroll, Singleton.image_vertical_scroll, Singleton.tool_active, Singleton.currently_selected_color.color)
+        Singleton.map.update(Api, Screen, gl_context, Keys, Render, Cursor, Singleton.image_area_ltwh, Singleton.window_resize_last_frame, Singleton.image_horizontal_scroll, Singleton.image_vertical_scroll, Singleton.tool_active, Singleton)
         Singleton.window_resize_last_frame = False
     Render.draw_rectangle(Screen, gl_context, Singleton.image_large_border_ltwh, Singleton.image_large_border_thickness, Singleton.image_large_border_color, True, Singleton.image_large_inside_color, False)
     #
@@ -301,23 +301,3 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     update_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
-
-    n = str(random.randint(1, 16))
-    d = {'1': [200, 200, 100, 100],
-         '9': [200, 200, 150, 100],
-         '2': [200, 200, 200, 100],
-         '10': [200, 200, 250, 100],
-         '3': [200, 200, 300, 100],
-         '11': [200, 200, 300, 150],
-         '4': [200, 200, 300, 200],
-         '12': [200, 200, 300, 250],
-         '5': [200, 200, 300, 300],
-         '13': [200, 200, 250, 300],
-         '6': [200, 200, 200, 300],
-         '14': [200, 200, 150, 300],
-         '7': [200, 200, 100, 300],
-         '15': [200, 200, 100, 250],
-         '8': [200, 200, 100, 200],
-         '16': [200, 200, 100, 150]}
-    # for x, y in bresenham(*d[n], 15, CIRCLE):
-    #     Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', [x, y, 1, 1], COLORS['BLUE'])

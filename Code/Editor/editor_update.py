@@ -600,6 +600,7 @@ def update_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Key
         # change to new color
         if change_spectrum_to_new_color:
             # update spectrum based on palette selection
+            print('s1', new_color)
             Singleton.add_color_spectrum_x_percentage, Singleton.add_color_saturation_percentage, Singleton.add_color_spectrum_y_percentage = Singleton.currently_selected_color.rgb_to_hsl(new_color)
             Singleton.add_color_alpha_percentage = new_color[3]
             color_spectrum_ltwh = Singleton.get_color_spectrum_ltwh()
@@ -666,8 +667,8 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
 
             case PencilTool.INDEX:
                 # brush thickness
-                Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'brush_thickness', [Singleton.tool_attribute_ltwh[0], Singleton.tool_attribute_ltwh[1] + PencilTool.TEXT_PIXEL_THICKNESS, Render.renderable_objects['brush_thickness'].ORIGINAL_WIDTH, Render.renderable_objects['brush_thickness'].ORIGINAL_HEIGHT])
-                current_tool.brush_thickness_text_input.background_ltwh[0] = Singleton.tool_attribute_ltwh[0] + Render.renderable_objects['brush_thickness'].ORIGINAL_WIDTH + PencilTool.TEXT_PIXEL_THICKNESS
+                Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'brush_shape_circle', [Singleton.tool_attribute_ltwh[0], Singleton.tool_attribute_ltwh[1] + PencilTool.TEXT_PIXEL_THICKNESS, Render.renderable_objects['brush_shape_circle'].ORIGINAL_WIDTH, Render.renderable_objects['brush_shape_circle'].ORIGINAL_HEIGHT])
+                current_tool.brush_thickness_text_input.background_ltwh[0] = Singleton.tool_attribute_ltwh[0] + Render.renderable_objects['brush_shape_circle'].ORIGINAL_WIDTH + PencilTool.TEXT_PIXEL_THICKNESS
                 current_tool.brush_thickness_text_input.background_ltwh[1] = Singleton.tool_attribute_ltwh[1] + PencilTool.TEXT_PIXEL_THICKNESS - 1
                 current_tool.brush_thickness_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
                 new_brush_thickness = current_tool.brush_thickness_text_input.current_string
