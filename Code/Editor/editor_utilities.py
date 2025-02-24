@@ -25,7 +25,8 @@ class TextInput():
                  show_front_zeros: bool = False,
                  number_of_digits: int = 0,
                  must_fit: bool = False,
-                 default_value: str = '0'):
+                 default_value: str = '0',
+                 ending_characters: str = ''):
 
         self.background_ltwh = background_ltwh
         self.background_color = background_color
@@ -70,6 +71,7 @@ class TextInput():
         self.selected_index = 0
         self.current_string = self.default_value
         self.should_update_spectrum = False
+        self.ending_characters = ending_characters
     #
     def deselect_box(self):
         self.currently_selected = False
@@ -119,7 +121,7 @@ class TextInput():
         self.double_clicked_last_frame = self.double_clicked
         background_ltwh = self._update(screen_instance, gl_context, keys_class_instance, render_instance, cursors, offset_x, offset_y, enabled)
         if not self.currently_selected:
-            render_instance.draw_string_of_characters(screen_instance, gl_context, self.current_string, [math.floor(background_ltwh[0] + self.text_padding), math.floor(background_ltwh[1] + self.text_padding)], self.text_pixel_size, self.text_color)
+            render_instance.draw_string_of_characters(screen_instance, gl_context, self.current_string + self.ending_characters, [math.floor(background_ltwh[0] + self.text_padding), math.floor(background_ltwh[1] + self.text_padding)], self.text_pixel_size, self.text_color)
         if self.currently_selected:
             start_left, top = [math.floor(background_ltwh[0] + self.text_padding), math.floor(background_ltwh[1] + self.text_padding)]
             small_highlight_index = min(self.highlighted_index_range)
@@ -133,9 +135,9 @@ class TextInput():
                 render_instance.draw_string_of_characters(screen_instance, gl_context, string1, [start_left, top], self.text_pixel_size, self.text_color)
                 render_instance.basic_rect_ltwh_with_color_to_quad(screen_instance, gl_context, 'black_pixel', [start_left+string1_width-1, background_ltwh[1] + self.text_padding - 1, string2_width-self.text_pixel_size+2, self.text_height + 2], self.highlight_color)
                 render_instance.draw_string_of_characters(screen_instance, gl_context, string2, [start_left+string1_width, top], self.text_pixel_size, self.highlighted_text_color)
-                render_instance.draw_string_of_characters(screen_instance, gl_context, string3, [start_left+string1_width+string2_width, top], self.text_pixel_size, self.text_color)
+                render_instance.draw_string_of_characters(screen_instance, gl_context, string3 + self.ending_characters, [start_left+string1_width+string2_width, top], self.text_pixel_size, self.text_color)
             if small_highlight_index == big_highlight_index:
-                render_instance.draw_string_of_characters(screen_instance, gl_context, self.current_string, [math.floor(background_ltwh[0] + self.text_padding), math.floor(background_ltwh[1] + self.text_padding)], self.text_pixel_size, self.text_color)
+                render_instance.draw_string_of_characters(screen_instance, gl_context, self.current_string + self.ending_characters, [math.floor(background_ltwh[0] + self.text_padding), math.floor(background_ltwh[1] + self.text_padding)], self.text_pixel_size, self.text_color)
             self.draw_blinking_line(screen_instance, gl_context, render_instance, background_ltwh)
     #
     def _update(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, offset_x: int = 0, offset_y: int = 0, enabled: bool = False):
@@ -386,7 +388,7 @@ class TextInput():
     def fits(self, render_instance, background_ltwh, string):
         if not self.must_fit:
             return True
-        text_width = get_text_width(render_instance, string, self.text_pixel_size)
+        text_width = get_text_width(render_instance, string + self.ending_characters, self.text_pixel_size)
         return text_width <= background_ltwh[2] - (2 * self.text_padding)
     #
     def initial_click(self, render_instance, keys_class_instance, background_ltwh):
@@ -1353,7 +1355,7 @@ class PencilTool(EditorTool):
         self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
         self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
         self.circle: list[list[bool]]
-        self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size), PencilTool.TEXT_PIXEL_THICKNESS) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.TEXT_PIXEL_THICKNESS) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.TEXT_PIXEL_THICKNESS), get_text_height(PencilTool.TEXT_PIXEL_THICKNESS)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.TEXT_PIXEL_THICKNESS, PencilTool.TEXT_PIXEL_THICKNESS, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness))
+        self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', PencilTool.TEXT_PIXEL_THICKNESS) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.TEXT_PIXEL_THICKNESS) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.TEXT_PIXEL_THICKNESS), get_text_height(PencilTool.TEXT_PIXEL_THICKNESS)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.TEXT_PIXEL_THICKNESS, PencilTool.TEXT_PIXEL_THICKNESS, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
         self.last_xy: array = array('i', [0, 0])
         super().__init__(active)
 
