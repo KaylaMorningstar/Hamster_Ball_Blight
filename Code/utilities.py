@@ -60,7 +60,8 @@ def str_can_be_hex(string):
 
 
 def angle_in_range(lower: float, theta: float, upper: float):
-    return (theta - lower) % 360 <= (upper - lower) % 360
+    # not inclusive of edges
+    return (theta - lower) % 360 < (upper - lower) % 360
 
 
 def round_scaled(value: float | int, scale: float | int):
@@ -120,13 +121,24 @@ def rgba_to_glsl(rgba: list[int, int, int, int] | tuple[int, int, int, int]):
         )
 
 
-def get_blended_color(background_rgba: list[float, float, float, float], foreground_rgba: list[float, float, float, float]):
+def get_blended_color_float(background_rgba: list[float, float, float, float], foreground_rgba: list[float, float, float, float]):
     return [
         (foreground_rgba[0] * foreground_rgba[3]) + (background_rgba[0] * (1.0 - foreground_rgba[3])),
         (foreground_rgba[1] * foreground_rgba[3]) + (background_rgba[1] * (1.0 - foreground_rgba[3])),
         (foreground_rgba[2] * foreground_rgba[3]) + (background_rgba[2] * (1.0 - foreground_rgba[3])),
         1
     ]
+
+
+def get_blended_color_int(background_rgba: list[int, int, int, int], foreground_rgba: list[int, int, int, int]):
+    percent_alpha = (foreground_rgba[3] / 255)
+    inverse_percent_alpha = ((255 - foreground_rgba[3]) / 255)
+    return (
+        int((foreground_rgba[0] * percent_alpha) + (background_rgba[0] * inverse_percent_alpha)),
+        int((foreground_rgba[1] * percent_alpha) + (background_rgba[1] * inverse_percent_alpha)),
+        int((foreground_rgba[2] * percent_alpha) + (background_rgba[2] * inverse_percent_alpha)),
+        255
+    )
 
 
 def percent_to_rgba(rgba: list[float, float, float, float] | tuple[float, float, float, float]):
@@ -186,162 +198,6 @@ def loading_and_unloading_images_manager(Screen, Render, gl_context, IMAGE_PATHS
         if unloading_the_image > 0:
             if key in Render.renderable_objects.keys():
                 Render.remove_moderngl_texture_from_renderable_objects_dict(key)
-
-
-LINE_OVERLAP_NONE = 0
-LINE_THICKNESS_MIDDLE = 0
-LINE_OVERLAP_MAJOR = 0x01
-LINE_OVERLAP_MINOR = 0x02
-LINE_OVERLAP_BOTH = 0x03
-CIRCLE = 0
-SQUARE = 1
-
-
-# def bresenham(x1, y1, x2, y2):
-#     dx = x2 - x1
-#     dy = y2 - y1
-#     xsign = 1 if dx > 0 else -1
-#     ysign = 1 if dy > 0 else -1
-#     dx = abs(dx)
-#     dy = abs(dy)
-#     if dx > dy:
-#         xx, xy, yx, yy = xsign, 0, 0, ysign
-#     else:
-#         dx, dy = dy, dx
-#         xx, xy, yx, yy = 0, ysign, xsign, 0
-#     D = 2*dy - dx
-#     y = 0
-#     for x in range(dx + 1):
-#         yield (x1 + x*xx + y*yx, y1 + x*xy + y*yy)
-#         if D >= 0:
-#             y += 1
-#             D -= 2*dx
-#         D += 2*dy
-
-
-# def _bresenham(x1, y1, x2, y2, mode):
-#     points = []
-#     dx = x2 - x1
-#     dy = y2 - y1
-#     if (dx < 0):
-#         dx = -dx
-#         step_x = -1
-#     else:
-#         step_x = 1
-#     if (dy < 0):
-#         dy = -dy
-#         step_y = -1
-#     else:
-#         step_y = +1
-#     dxt2 = dx << 1
-#     dyt2 = dy << 1
-#     points.append((x1, y1))
-#     if (dx > dy):
-#         error = dyt2 - dx
-#         while (x1 != x2):
-#             x1 += step_x
-#             if (error >= 0):
-#                 if (mode & LINE_OVERLAP_MAJOR):
-#                     points.append((x1, y1))
-#                 y1 += step_y
-#                 if (mode & LINE_OVERLAP_MINOR):
-#                     points.append((x1 - step_x, y1))
-#                 error -= dxt2
-#             error += dyt2
-#             points.append((x1, y1))
-#     else:
-#         error = dxt2 - dy
-#         while (y1 != y2):
-#             y1 += step_y
-#             if (error >= 0):
-#                 if (mode & LINE_OVERLAP_MAJOR):
-#                     points.append((x1, y1))
-#                 x1 += step_x
-#                 if (mode & LINE_OVERLAP_MINOR):
-#                     points.append((x1, y1 - step_y))
-#                 error -= dyt2
-#             error += dxt2
-#             points.append((x1, y1))
-#     return points
-
-
-# def bresenham(x1, y1, x2, y2, thickness, mode):
-#     points = []
-#     dy = x1 - x2
-#     dx = y2 - y1
-#     if mode == CIRCLE:
-#         angle = abs((abs(math.degrees(math.atan2(dx, dy))) % 90) - 45)
-#         if angle != 0:
-#             sin_theta = math.sin(math.radians(angle))
-#             hypotnuse = 1 / sin_theta
-#             thickness /= hypotnuse
-#     if (dx < 0):
-#         dx = -dx
-#         step_x = -1
-#     else:
-#         step_x = +1
-#     if (dy < 0):
-#         dy = -dy
-#         step_y = -1
-#     else:
-#         step_y = +1
-#     dxt2 = dx << 1
-#     dyt2 = dy << 1
-#     if (dx > dy):
-#         error = dyt2 - dx
-#         i = thickness // 2
-#         while i > 0:
-#             x1 -= step_x
-#             x2 -= step_x
-#             if (error >= 0):
-#                 y1 -= step_y
-#                 y2 -= step_y
-#                 error -= dxt2
-#             error += dyt2
-#             i -= 1
-#         points.extend(_bresenham(x1, y1, x2, y2, LINE_THICKNESS_MIDDLE))
-#         error = dyt2 - dx
-#         i = thickness
-#         while i > 1:
-#             x1 += step_x
-#             x2 += step_x
-#             overlap = LINE_OVERLAP_NONE
-#             if (error >= 0):
-#                 y1 += step_y
-#                 y2 += step_y
-#                 error -= dxt2
-#                 overlap = LINE_OVERLAP_BOTH
-#             error += dyt2
-#             points.extend(_bresenham(x1, y1, x2, y2, overlap))
-#             i -= 1
-#     else:
-#         error = dxt2 - dy
-#         i = thickness // 2
-#         while i > 0:
-#             y1 -= step_y
-#             y2 -= step_y
-#             if (error >= 0):
-#                 x1 -= step_x
-#                 x2 -= step_x
-#                 error -= dyt2
-#             error += dxt2
-#             i -= 1
-#         points.extend(_bresenham(x1, y1, x2, y2, LINE_THICKNESS_MIDDLE))
-#         error = dxt2 - dy
-#         i = thickness
-#         while i > 1:
-#             y1 += step_y
-#             y2 += step_y
-#             overlap = LINE_OVERLAP_NONE
-#             if (error >= 0):
-#                 x1 += step_x
-#                 x2 += step_x
-#                 error -= dyt2
-#                 overlap = LINE_OVERLAP_BOTH
-#             error += dxt2
-#             points.extend(_bresenham(x1, y1, x2, y2, overlap))
-#             i -= 1
-#     return points
 
 
 class CaseBreak(Exception):

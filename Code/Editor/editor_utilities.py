@@ -1,10 +1,11 @@
-from Code.utilities import CaseBreak, angle_in_range, atan2, rgba_to_glsl, get_blended_color, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
+from Code.utilities import CaseBreak, angle_in_range, atan2, rgba_to_glsl, get_blended_color_float, get_blended_color_int, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
 import pygame
 import math
 from copy import deepcopy
 from abc import ABC
 from array import array
 from bresenham import bresenham
+import numpy as np
 
 
 class TextInput():
@@ -1176,6 +1177,9 @@ class ScrollBar():
 
 
 def get_perfect_circle(diameter: int):
+    if diameter == 1:
+        return [[array('f', [0.0, 360.0])]]
+
     tf_circle = []
     radius = (diameter - 0.5) / 2  # smaller than the actual radius for a better looking circle
     center = diameter / 2
@@ -1711,6 +1715,7 @@ class EditorMap():
                         case PencilTool.DRAWING:
                             reload_tiles = {}
                             draw_angle = math.degrees(math.atan2(self.current_tool.last_xy[1] - topest_brush_pixel, leftest_brush_pixel - self.current_tool.last_xy[0])) % 360
+                            map_edit = self.map_edits[-1].change_dict
                             for brush_offset_x, column in enumerate(self.current_tool.circle):
                                 for brush_offset_y, draw in enumerate(column):
                                     if draw == self.current_tool.NOT_DRAW_PIXEL:
@@ -1718,9 +1723,8 @@ class EditorMap():
                                     else:
                                         # draw brush pixels
                                         if (draw == self.current_tool.DRAW_PIXEL):
-                                            if self.map_edits[-1].change_dict.get(tile_name := (leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y)) is None:
+                                            if map_edit.get(tile_name := (edited_pixel_x := leftest_brush_pixel+brush_offset_x, edited_pixel_y := topest_brush_pixel+brush_offset_y)) is None:
                                                 # get the tile and pixel being edited
-                                                edited_pixel_x, edited_pixel_y = leftest_brush_pixel + brush_offset_x, topest_brush_pixel + brush_offset_y
                                                 tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
                                                 tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
                                                 tile = self.tile_array[tile_x][tile_y]
@@ -1731,17 +1735,16 @@ class EditorMap():
                                                     reload_tiles[tile.image_reference] = tile
                                                 # make the edit
                                                 original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
                                                 tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                 # record what was edited for ctrl-Z
-                                                self.map_edits[-1].change_dict[tile_name] = original_pixel_color
+                                                map_edit[tile_name] = original_pixel_color
                                         # draw bresenham pixels
                                         else:
-                                            # stamp point if bresenham isn't needed
+                                            # stamp the point if bresenham isn't needed
                                             if angle_in_range(draw[0], draw_angle, draw[1]):
-                                                if self.map_edits[-1].change_dict.get(tile_name := (leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y)) is None:
+                                                if map_edit.get(tile_name := (edited_pixel_x := leftest_brush_pixel+brush_offset_x, edited_pixel_y := topest_brush_pixel+brush_offset_y)) is None:
                                                     # get the tile and pixel being edited
-                                                    edited_pixel_x, edited_pixel_y = leftest_brush_pixel + brush_offset_x, topest_brush_pixel + brush_offset_y
                                                     tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
                                                     tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
                                                     tile = self.tile_array[tile_x][tile_y]
@@ -1752,14 +1755,14 @@ class EditorMap():
                                                         reload_tiles[tile.image_reference] = tile
                                                     # make the edit
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # record what was edited for ctrl-Z
-                                                    self.map_edits[-1].change_dict[tile_name] = original_pixel_color
+                                                    map_edit[tile_name] = original_pixel_color
                                                 continue
                                             # draw bresenham points if necessary
                                             for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.last_xy[0]+brush_offset_x, self.current_tool.last_xy[1]+brush_offset_y, leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y):
-                                                if self.map_edits[-1].change_dict.get(tile_name := (edited_pixel_x, edited_pixel_y)) is None:
+                                                if map_edit.get(tile_name := (edited_pixel_x, edited_pixel_y)) is None:
                                                     # get the tile and pixel being edited
                                                     tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
                                                     tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
@@ -1771,10 +1774,10 @@ class EditorMap():
                                                         reload_tiles[tile.image_reference] = tile
                                                     # make the edit
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color)))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # record what was edited for ctrl-Z
-                                                    self.map_edits[-1].change_dict[tile_name] = original_pixel_color
+                                                    map_edit[tile_name] = original_pixel_color
 
                             for tile in reload_tiles.values():
                                 render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image, ltwh)
