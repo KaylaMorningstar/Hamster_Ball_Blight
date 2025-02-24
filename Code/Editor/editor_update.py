@@ -1,7 +1,7 @@
 import math
 from copy import deepcopy
 from Code.utilities import CaseBreak, point_is_in_ltwh, move_number_to_desired_range, percent_to_rgba, base10_to_hex, add_characters_to_front_of_string, get_time, switch_to_base10, rgba_to_glsl, get_rect_minus_borders, round_scaled, COLORS
-from Code.Editor.editor_utilities import MarqueeRectangleTool, LassoTool, PencilTool, EraserTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, EmptyRectangleTool, FilledRectangleTool, EmptyEllipseTool, FilledEllipseTool, BlurTool, JumbleTool, EyedropTool
+from Code.Editor.editor_utilities import MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, EmptyRectangleTool, EmptyEllipseTool, BlurTool, JumbleTool, EyedropTool
 
 
 def update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
@@ -600,7 +600,6 @@ def update_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Key
         # change to new color
         if change_spectrum_to_new_color:
             # update spectrum based on palette selection
-            print('s1', new_color)
             Singleton.add_color_spectrum_x_percentage, Singleton.add_color_saturation_percentage, Singleton.add_color_spectrum_y_percentage = Singleton.currently_selected_color.rgb_to_hsl(new_color)
             Singleton.add_color_alpha_percentage = new_color[3]
             color_spectrum_ltwh = Singleton.get_color_spectrum_ltwh()
@@ -675,9 +674,6 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 if current_tool.brush_thickness_is_valid(new_brush_thickness):
                     current_tool.update_brush_thickness(Render, Screen, gl_context, int(new_brush_thickness))
 
-            case EraserTool.INDEX:
-                pass
-
             case SprayTool.INDEX:
                 pass
 
@@ -696,13 +692,7 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
             case EmptyRectangleTool.INDEX:
                 pass
 
-            case FilledRectangleTool.INDEX:
-                pass
-
             case EmptyEllipseTool.INDEX:
-                pass
-
-            case FilledEllipseTool.INDEX:
                 pass
 
             case BlurTool.INDEX:

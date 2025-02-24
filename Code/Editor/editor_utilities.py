@@ -1238,7 +1238,7 @@ def get_perfect_square(length: int):
 
 class EditorTool(ABC):
     """Tool base class"""
-    STARTING_TOOL_INDEX = 5
+    STARTING_TOOL_INDEX = 4
 
     def __init__(self, active: bool):
         self.active: bool = active
@@ -1327,93 +1327,72 @@ class PencilTool(EditorTool):
         return True
 
 
-class EraserTool(EditorTool):
-    NAME = 'Eraser'
-    INDEX = 3
-    def __init__(self, active: bool):
-        super().__init__(active)
-
-
 class SprayTool(EditorTool):
     NAME = 'Spray'
-    INDEX = 4
+    INDEX = 3
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class HandTool(EditorTool):
     NAME = 'Hand'
-    INDEX = 5
+    INDEX = 4
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class BucketTool(EditorTool):
     NAME = 'Bucket'
-    INDEX = 6
+    INDEX = 5
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class LineTool(EditorTool):
     NAME = 'Line'
-    INDEX = 7
+    INDEX = 6
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class CurvyLineTool(EditorTool):
     NAME = 'Curvy line'
-    INDEX = 8
+    INDEX = 7
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class EmptyRectangleTool(EditorTool):
     NAME = 'Empty rectangle'
-    INDEX = 9
-    def __init__(self, active: bool):
-        super().__init__(active)
-
-
-class FilledRectangleTool(EditorTool):
-    NAME = 'Filled rectangle'
-    INDEX = 10
+    INDEX = 8
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class EmptyEllipseTool(EditorTool):
     NAME = 'Empty ellipse'
-    INDEX = 11
-    def __init__(self, active: bool):
-        super().__init__(active)
-
-
-class FilledEllipseTool(EditorTool):
-    NAME = 'Filled ellipse'
-    INDEX = 12
+    INDEX = 9
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class BlurTool(EditorTool):
     NAME = 'Blur'
-    INDEX = 13
+    INDEX = 10
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class JumbleTool(EditorTool):
     NAME = 'Jumble'
-    INDEX = 14
+    INDEX = 11
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class EyedropTool(EditorTool):
     NAME = 'Eyedropper'
-    INDEX = 15
+    INDEX = 12
     def __init__(self, active: bool):
         super().__init__(active)
 
@@ -1479,16 +1458,13 @@ class EditorMap():
             MarqueeRectangleTool(False),
             LassoTool(False),
             PencilTool(False, render_instance, screen_instance, gl_context),
-            EraserTool(False),
             SprayTool(False),
             HandTool(True),
             BucketTool(False),
             LineTool(False),
             CurvyLineTool(False),
             EmptyRectangleTool(False),
-            FilledRectangleTool(False),
             EmptyEllipseTool(False),
-            FilledEllipseTool(False),
             BlurTool(False),
             JumbleTool(False),
             EyedropTool(False)
@@ -1807,13 +1783,6 @@ class EditorMap():
                     self.current_tool.last_xy[0] = leftest_brush_pixel
                     self.current_tool.last_xy[1] = topest_brush_pixel
 
-                    
-
-                    
-
-                case EraserTool.INDEX:
-                    pass
-
                 case SprayTool.INDEX:
                     pass
 
@@ -1832,13 +1801,7 @@ class EditorMap():
                 case EmptyRectangleTool.INDEX:
                     pass
 
-                case FilledRectangleTool.INDEX:
-                    pass
-
                 case EmptyEllipseTool.INDEX:
-                    pass
-
-                case FilledEllipseTool.INDEX:
                     pass
 
                 case BlurTool.INDEX:
