@@ -1176,7 +1176,7 @@ class ScrollBar():
         self.scroll_percentage = scroll_percentage
 
 
-def get_perfect_circle(diameter: int):
+def get_perfect_circle_with_edge_angles(diameter: int):
     if diameter == 1:
         return [[array('f', [0.0, 360.0])]]
     # get which pixels are part of the circle
@@ -1215,7 +1215,7 @@ def get_perfect_circle(diameter: int):
     return circle
 
 
-def get_perfect_square(length: int):
+def get_square_with_edge_angles(length: int):
     if length == 1:
         return [[array('f', [0.0, 360.0])]]
     center = length / 2
@@ -1234,6 +1234,68 @@ def get_perfect_square(length: int):
                 current_row.append(1)
         square.append(current_row)
     return square
+
+
+def get_perfect_circle_with_edges(diameter: int):
+    # get which pixels are part of the circle
+    tf_circle = []
+    radius = (diameter - 0.5) / 2  # smaller than the actual radius for a better looking circle
+    center = diameter / 2
+    for row in range(diameter):
+        row += 0.5
+        current_row = []
+        for column in range(diameter):
+            column += 0.5
+            if (column - center) ** 2 + (row - center) ** 2 <= radius ** 2:
+                current_row.append(True)
+            else:
+                current_row.append(False)
+        tf_circle.append(current_row)
+    # find edges
+    circle = []
+    for row_index, row in enumerate(tf_circle):
+        current_row = []
+        for column_index, draw in enumerate(row):
+            if draw:
+                if ((row_index == 0) or (row_index == len(tf_circle) - 1) or (column_index == 0) or (column_index == len(tf_circle) - 1) or 
+                    (not tf_circle[row_index-1][column_index]) or (not tf_circle[row_index+1][column_index]) or (not tf_circle[row_index][column_index-1]) or (not tf_circle[row_index][column_index+1])):
+                    # [left, top, right, bottom]
+                    edges = []
+                    # left
+                    if column_index == 0:
+                        edges.append(True)
+                    elif not tf_circle[row_index][column_index-1]:
+                        edges.append(True)
+                    else:
+                        edges.append(False)
+                    # top
+                    if row_index == 0:
+                        edges.append(True)
+                    elif not tf_circle[row_index-1][column_index]:
+                        edges.append(True)
+                    else:
+                        edges.append(False)
+                    # right
+                    if column_index == len(tf_circle) - 1:
+                        edges.append(True)
+                    elif not tf_circle[row_index][column_index+1]:
+                        edges.append(True)
+                    else:
+                        edges.append(False)
+                    # bottom
+                    if row_index == len(tf_circle) - 1:
+                        edges.append(True)
+                    elif not tf_circle[row_index+1][column_index]:
+                        edges.append(True)
+                    else:
+                        edges.append(False)
+                    current_row.append(edges)
+                else:
+                    current_row.append(1)
+            else:
+                current_row.append(0)
+        circle.append(current_row)
+    return circle
 
 
 class EditorTool(ABC):
@@ -1305,7 +1367,7 @@ class PencilTool(EditorTool):
         except:
             pass
         self._brush_thickness = move_number_to_desired_range(PencilTool._MIN_BRUSH_THICKNESS, brush_thickness, PencilTool._MAX_BRUSH_THICKNESS)
-        self.circle = get_perfect_circle(self._brush_thickness)
+        self.circle = get_perfect_circle_with_edge_angles(self._brush_thickness)
         pygame_circle_image = pygame.Surface((self.brush_thickness, self.brush_thickness), pygame.SRCALPHA)
         for left, row in enumerate(self.circle):
             for top, draw in enumerate(row):
@@ -1362,14 +1424,14 @@ class CurvyLineTool(EditorTool):
         super().__init__(active)
 
 
-class EmptyRectangleTool(EditorTool):
+class RectangleTool(EditorTool):
     NAME = 'Empty rectangle'
     INDEX = 8
     def __init__(self, active: bool):
         super().__init__(active)
 
 
-class EmptyEllipseTool(EditorTool):
+class EllipseTool(EditorTool):
     NAME = 'Empty ellipse'
     INDEX = 9
     def __init__(self, active: bool):
@@ -1463,8 +1525,8 @@ class EditorMap():
             BucketTool(False),
             LineTool(False),
             CurvyLineTool(False),
-            EmptyRectangleTool(False),
-            EmptyEllipseTool(False),
+            RectangleTool(False),
+            EllipseTool(False),
             BlurTool(False),
             JumbleTool(False),
             EyedropTool(False)
@@ -1516,7 +1578,7 @@ class EditorMap():
         self._iterate_through_tiles(render_instance, screen_instance, gl_context, True, True)
 
         # perform edits to the map
-        self._draw(screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton)
+        self._tool(screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton)
 
     def _zoom(self, render_instance, keys_class_instance, screen_instance, gl_context, window_resize, horizontal_scroll, vertical_scroll):
         if window_resize:
@@ -1658,7 +1720,7 @@ class EditorMap():
                 top += self.tile_wh[1]
             left += self.tile_wh[0]
 
-    def _draw(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton):
+    def _tool(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton):
         try:
             match int(self.current_tool):
                 case MarqueeRectangleTool.INDEX:
@@ -1712,6 +1774,7 @@ class EditorMap():
                             reload_tiles = {}
                             draw_angle = math.degrees(math.atan2(self.current_tool.last_xy[1] - topest_brush_pixel, leftest_brush_pixel - self.current_tool.last_xy[0])) % 360
                             map_edit = self.map_edits[-1].change_dict
+                            max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
                             for brush_offset_x, column in enumerate(self.current_tool.circle):
                                 for brush_offset_y, draw in enumerate(column):
                                     if draw == self.current_tool.NOT_DRAW_PIXEL:
@@ -1723,18 +1786,20 @@ class EditorMap():
                                                 # get the tile and pixel being edited
                                                 tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
                                                 tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
-                                                tile = self.tile_array[tile_x][tile_y]
-                                                # check whether the tile is already loaded
-                                                if tile.pg_image is None:
-                                                    tile.load(render_instance, screen_instance, gl_context)
-                                                else:
-                                                    reload_tiles[tile.image_reference] = tile
-                                                # make the edit
-                                                original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
-                                                tile.edits[(pixel_x, pixel_y)] = resulting_color
-                                                # record what was edited for ctrl-Z
-                                                map_edit[tile_name] = original_pixel_color
+                                                # don't try to draw outside of map bounds
+                                                if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                                    tile = self.tile_array[tile_x][tile_y]
+                                                    # check whether the tile is already loaded
+                                                    if tile.pg_image is None:
+                                                        tile.load(render_instance, screen_instance, gl_context)
+                                                    else:
+                                                        reload_tiles[tile.image_reference] = tile
+                                                    # make the edit
+                                                    original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                    tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                    # record what was edited for ctrl-Z
+                                                    map_edit[tile_name] = original_pixel_color
                                         # draw bresenham pixels
                                         else:
                                             # stamp the point if bresenham isn't needed
@@ -1743,18 +1808,20 @@ class EditorMap():
                                                     # get the tile and pixel being edited
                                                     tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
                                                     tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
-                                                    tile = self.tile_array[tile_x][tile_y]
-                                                    # check whether the tile is already loaded
-                                                    if tile.pg_image is None:
-                                                        tile.load(render_instance, screen_instance, gl_context)
-                                                    else:
-                                                        reload_tiles[tile.image_reference] = tile
-                                                    # make the edit
-                                                    original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
-                                                    tile.edits[(pixel_x, pixel_y)] = resulting_color
-                                                    # record what was edited for ctrl-Z
-                                                    map_edit[tile_name] = original_pixel_color
+                                                    # don't try to draw outside of map bounds
+                                                    if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                                        tile = self.tile_array[tile_x][tile_y]
+                                                        # check whether the tile is already loaded
+                                                        if tile.pg_image is None:
+                                                            tile.load(render_instance, screen_instance, gl_context)
+                                                        else:
+                                                            reload_tiles[tile.image_reference] = tile
+                                                        # make the edit
+                                                        original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                        tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                        # record what was edited for ctrl-Z
+                                                        map_edit[tile_name] = original_pixel_color
                                                 continue
                                             # draw bresenham points if necessary
                                             for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.last_xy[0]+brush_offset_x, self.current_tool.last_xy[1]+brush_offset_y, leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y):
@@ -1762,18 +1829,20 @@ class EditorMap():
                                                     # get the tile and pixel being edited
                                                     tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
                                                     tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
-                                                    tile = self.tile_array[tile_x][tile_y]
-                                                    # check whether the tile is already loaded
-                                                    if tile.pg_image is None:
-                                                        tile.load(render_instance, screen_instance, gl_context)
-                                                    else:
-                                                        reload_tiles[tile.image_reference] = tile
-                                                    # make the edit
-                                                    original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
-                                                    tile.edits[(pixel_x, pixel_y)] = resulting_color
-                                                    # record what was edited for ctrl-Z
-                                                    map_edit[tile_name] = original_pixel_color
+                                                    # don't try to draw outside of map bounds
+                                                    if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                                        tile = self.tile_array[tile_x][tile_y]
+                                                        # check whether the tile is already loaded
+                                                        if tile.pg_image is None:
+                                                            tile.load(render_instance, screen_instance, gl_context)
+                                                        else:
+                                                            reload_tiles[tile.image_reference] = tile
+                                                        # make the edit
+                                                        original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                        tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                        # record what was edited for ctrl-Z
+                                                        map_edit[tile_name] = original_pixel_color
 
                             for tile in reload_tiles.values():
                                 render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image, ltwh)
@@ -1798,10 +1867,10 @@ class EditorMap():
                 case CurvyLineTool.INDEX:
                     pass
 
-                case EmptyRectangleTool.INDEX:
+                case RectangleTool.INDEX:
                     pass
 
-                case EmptyEllipseTool.INDEX:
+                case EllipseTool.INDEX:
                     pass
 
                 case BlurTool.INDEX:

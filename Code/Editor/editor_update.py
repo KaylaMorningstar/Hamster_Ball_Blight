@@ -1,7 +1,7 @@
 import math
 from copy import deepcopy
 from Code.utilities import CaseBreak, point_is_in_ltwh, move_number_to_desired_range, percent_to_rgba, base10_to_hex, add_characters_to_front_of_string, get_time, switch_to_base10, rgba_to_glsl, get_rect_minus_borders, round_scaled, COLORS
-from Code.Editor.editor_utilities import MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, EmptyRectangleTool, EmptyEllipseTool, BlurTool, JumbleTool, EyedropTool
+from Code.Editor.editor_utilities import MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
 
 
 def update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
@@ -689,10 +689,10 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
             case CurvyLineTool.INDEX:
                 pass
 
-            case EmptyRectangleTool.INDEX:
+            case RectangleTool.INDEX:
                 pass
 
-            case EmptyEllipseTool.INDEX:
+            case EllipseTool.INDEX:
                 pass
 
             case BlurTool.INDEX:
