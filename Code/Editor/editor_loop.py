@@ -121,6 +121,7 @@ class EditorSingleton():
         # footer
         self.footer_color = COLORS['BLUE']
         self.footer_ltwh = [0, 0, 0, self.header_height]
+        self.footer_text_pixel_size = 3
         #
         # add color
         # add/remove color

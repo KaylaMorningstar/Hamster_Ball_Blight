@@ -311,6 +311,7 @@ IMAGE_PATHS = {
     'cursor_i_beam': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_i_beam.png'],
     # common
     'editor_circle': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\common\\circle.png'],
+    'level_dimensions': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\common\\level_dimensions.png'],
     # editor tools on right side of screen
     'Marquee rectangle': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Marquee rectangle.png'],
     'Lasso':             [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Lasso.png'],

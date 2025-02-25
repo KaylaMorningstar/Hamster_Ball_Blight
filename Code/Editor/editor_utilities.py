@@ -1598,7 +1598,7 @@ class EditorMap():
             self._calculate_zoom(render_instance, keys_class_instance, horizontal_scroll, vertical_scroll)
 
     def _calculate_zoom(self, render_instance, keys_class_instance, horizontal_scroll, vertical_scroll):
-        original_cursor_x, original_cursor_y = self._get_cursor_position_on_map(keys_class_instance)
+        original_cursor_x, original_cursor_y = self.get_cursor_position_on_map(keys_class_instance)
         cursor_percent_x = (keys_class_instance.cursor_x_pos.value - self.image_space_ltwh[0]) / self.image_space_ltwh[2]
         cursor_percent_y = (keys_class_instance.cursor_y_pos.value - self.image_space_ltwh[1]) / self.image_space_ltwh[3]
 
@@ -1738,7 +1738,7 @@ class EditorMap():
 
                 case PencilTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
-                    pos_x, pos_y = self._get_cursor_position_on_map(keys_class_instance)
+                    pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     ltrb = self._get_ltrb_pixels_on_map()
 
                     # get the leftest pixel that needs to be drawn
@@ -1894,7 +1894,7 @@ class EditorMap():
                     cursors.add_cursor_this_frame('cursor_eyedrop')
 
                     # get the tile being hovered over
-                    pos_x, pos_y = self._get_cursor_position_on_map(keys_class_instance)
+                    pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     tile_x, pixel_x = divmod(pos_x, self.initial_tile_wh[0])
                     tile_y, pixel_y = divmod(pos_y, self.initial_tile_wh[1])
                     tile = self.tile_array[tile_x][tile_y]
@@ -1967,7 +1967,7 @@ class EditorMap():
             self.map_offset_xy[1] += keys_class_instance.cursor_y_pos.delta
             return
 
-    def _get_cursor_position_on_map(self, keys_class_instance):
+    def get_cursor_position_on_map(self, keys_class_instance):
         # x = 0, y = 0 is top-left; x = image_space_ltwh[2], y = image_space_ltwh[3] is bottom-right; x = -1, y = -1 is invalid
         cursor_x, cursor_y = keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value
         left = math.floor(((cursor_x - self.image_space_ltwh[0]) / self.pixel_scale) - (self.map_offset_xy[0] / self.pixel_scale))

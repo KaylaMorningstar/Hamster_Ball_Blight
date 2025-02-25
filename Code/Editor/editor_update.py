@@ -1,6 +1,6 @@
 import math
 from copy import deepcopy
-from Code.utilities import CaseBreak, point_is_in_ltwh, move_number_to_desired_range, percent_to_rgba, base10_to_hex, add_characters_to_front_of_string, get_time, switch_to_base10, rgba_to_glsl, get_rect_minus_borders, round_scaled, COLORS
+from Code.utilities import CaseBreak, point_is_in_ltwh, move_number_to_desired_range, percent_to_rgba, base10_to_hex, add_characters_to_front_of_string, get_time, switch_to_base10, rgba_to_glsl, get_rect_minus_borders, round_scaled, get_text_height, get_text_width, COLORS
 from Code.Editor.editor_utilities import MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
 
 
@@ -654,6 +654,8 @@ def update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
 def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     # Singleton.tool_attribute_ltwh
     current_tool = Singleton.map.current_tool
+    # information in footer
+    information_lt = [Singleton.palette_padding, Singleton.footer_ltwh[1]]
     # Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.tool_attribute_ltwh, COLORS['RED'])
 
     try:
@@ -665,6 +667,7 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 pass
 
             case PencilTool.INDEX:
+                # brush style
                 # brush thickness
                 Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'brush_shape_circle', [Singleton.tool_attribute_ltwh[0], Singleton.tool_attribute_ltwh[1] + PencilTool.TEXT_PIXEL_THICKNESS, Render.renderable_objects['brush_shape_circle'].ORIGINAL_WIDTH, Render.renderable_objects['brush_shape_circle'].ORIGINAL_HEIGHT])
                 current_tool.brush_thickness_text_input.background_ltwh[0] = Singleton.tool_attribute_ltwh[0] + Render.renderable_objects['brush_shape_circle'].ORIGINAL_WIDTH + PencilTool.TEXT_PIXEL_THICKNESS
@@ -673,6 +676,28 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 new_brush_thickness = current_tool.brush_thickness_text_input.current_string
                 if current_tool.brush_thickness_is_valid(new_brush_thickness):
                     current_tool.update_brush_thickness(Render, Screen, gl_context, int(new_brush_thickness))
+                
+                # cursor x, y position
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
+                    # crosshair image
+                    CROSSHAIR_PADDING = 4
+                    crosshair_ltwh = [information_lt[0], information_lt[1] + CROSSHAIR_PADDING, Singleton.footer_ltwh[3] - (2 * CROSSHAIR_PADDING), Singleton.footer_ltwh[3] - (2 * CROSSHAIR_PADDING)]
+                    Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'cursor_crosshair', crosshair_ltwh)
+                    information_lt[0] = crosshair_ltwh[0] + crosshair_ltwh[2]
+                    # position of cursor on map
+                    CROSSHAIR_IMAGE_SEPARATION = 12
+                    cursor_x, cursor_y = Singleton.map.get_cursor_position_on_map(Keys)
+                    Render.draw_string_of_characters(Screen, gl_context, f"{cursor_x} {cursor_y}", [information_lt[0] + CROSSHAIR_IMAGE_SEPARATION, information_lt[1] + ((Singleton.footer_ltwh[3] - (get_text_height(Singleton.footer_text_pixel_size) - (2 * Singleton.footer_text_pixel_size))) // 2)], Singleton.footer_text_pixel_size, COLORS['BLACK'])
+                    SEPARATION = 16
+                    information_lt[0] = information_lt[0] + CROSSHAIR_IMAGE_SEPARATION + get_text_width(Render, f"{cursor_x} {cursor_y}", Singleton.footer_text_pixel_size) + SEPARATION
+                # level dimensions image
+                LEVEL_DIMENSIONS_PADDING = 2
+                level_dimensions_padding = [information_lt[0], information_lt[1] + LEVEL_DIMENSIONS_PADDING, Singleton.footer_ltwh[3] - (2 * LEVEL_DIMENSIONS_PADDING), Singleton.footer_ltwh[3] - (2 * LEVEL_DIMENSIONS_PADDING)]
+                Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'level_dimensions', level_dimensions_padding)
+                LEVEL_DIMENSION_SEPARATION = 12
+                information_lt[0] = information_lt[0] + level_dimensions_padding[2] + LEVEL_DIMENSION_SEPARATION
+                # level dimension
+                Render.draw_string_of_characters(Screen, gl_context, f"{Singleton.map.original_map_wh[0]} {Singleton.map.original_map_wh[1]}", [information_lt[0], information_lt[1] + ((Singleton.footer_ltwh[3] - (get_text_height(Singleton.footer_text_pixel_size) - (2 * Singleton.footer_text_pixel_size))) // 2)], Singleton.footer_text_pixel_size, COLORS['BLACK'])
 
             case SprayTool.INDEX:
                 pass
