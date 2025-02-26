@@ -6,6 +6,7 @@ from abc import ABC
 from array import array
 from bresenham import bresenham
 import numpy as np
+from typing import Any
 
 
 class TextInput():
@@ -1334,6 +1335,7 @@ class LassoTool(EditorTool):
 class PencilTool(EditorTool):
     NAME = 'Pencil'
     INDEX = 2
+
     _MIN_BRUSH_THICKNESS = 1
     _MAX_BRUSH_THICKNESS = 64
     CIRCLE_REFERENCE = 'pencil_tool_circle'
@@ -1351,10 +1353,10 @@ class PencilTool(EditorTool):
     DRAW_PIXEL = 1
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
-        self.state = 0  # (NOT_DRAWING = 0, DRAWING = 1)
+        self.state = PencilTool.NOT_DRAWING  # (NOT_DRAWING = 0, DRAWING = 1)
         self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
+        self.circle: list[list[int | list[float, float]]]
         self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
-        self.circle: list[list[bool]]
         self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', PencilTool.TEXT_PIXEL_THICKNESS) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.TEXT_PIXEL_THICKNESS) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.TEXT_PIXEL_THICKNESS), get_text_height(PencilTool.TEXT_PIXEL_THICKNESS)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.TEXT_PIXEL_THICKNESS, PencilTool.TEXT_PIXEL_THICKNESS, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
         self.last_xy: array = array('i', [0, 0])
         super().__init__(active)
@@ -1379,7 +1381,7 @@ class PencilTool(EditorTool):
                     pygame_circle_image.set_at((left, top), (0, 0, 0, 0))
         render_instance.add_moderngl_texture_with_surface(screen_instance, gl_context, pygame_circle_image, PencilTool.CIRCLE_REFERENCE)
 
-    def brush_thickness_is_valid(self, brush_thickness):
+    def brush_thickness_is_valid(self, brush_thickness: Any):
         try:
             int(brush_thickness)
         except:
@@ -1394,8 +1396,86 @@ class PencilTool(EditorTool):
 class SprayTool(EditorTool):
     NAME = 'Spray'
     INDEX = 3
-    def __init__(self, active: bool):
+
+    _MIN_SPRAY_SIZE = 1
+    _MAX_SPRAY_SIZE = 64
+    SPRAY_OUTLINE_REFERENCE = 'spray_tool_outline'
+    _MIN_SPRAY_THICKNESS = 1
+    _MAX_SPRAY_THICKNESS = 64
+    _MIN_SPRAY_SPEED = 1
+    _MAX_SPRAY_SPEED = 16
+
+    OUTLINE_THICKNESS = 1
+
+    NOT_SPRAYING = 0
+    SPRAYING = 1
+
+    def __init__(self, active: bool, render_instance, screen_instance, gl_context):
+        self.state = SprayTool.NOT_SPRAYING  # (NOT_SPRAYING = 0, SPRAYING = 1)
+        self._spray_size: int = 64
+        self._spray_thickness: int = SprayTool._MIN_SPRAY_THICKNESS
+        self._spray_speed: int = SprayTool._MIN_SPRAY_SPEED
+        self.outline: list[list[int | list[bool]]]
+        self.image_wh: list[int, int] = [self._spray_size + (2 * SprayTool.OUTLINE_THICKNESS), self._spray_size + (2 * SprayTool.OUTLINE_THICKNESS)]
+        self.update_spray_size(render_instance, screen_instance, gl_context, self._spray_size)
         super().__init__(active)
+
+    @property
+    def spray_size(self):
+        return self._spray_size
+
+    @property
+    def spray_thickness(self):
+        return self._spray_thickness
+
+    @property
+    def spray_speed(self):
+        return self._spray_speed
+
+    def update_spray_size(self, render_instance, screen_instance, gl_context, brush_size: int):
+        try:
+            render_instance.remove_moderngl_texture_from_renderable_objects_dict(SprayTool.SPRAY_OUTLINE_REFERENCE)
+        except:
+            pass
+        self._brush_thickness = move_number_to_desired_range(SprayTool._MIN_SPRAY_THICKNESS, brush_size, SprayTool._MAX_SPRAY_THICKNESS)
+        self.outline = get_perfect_circle_with_edges(self._spray_size)
+        self.image_wh[0], self.image_wh[1] = self._spray_size + (2 * SprayTool.OUTLINE_THICKNESS), self._spray_size + (2 * SprayTool.OUTLINE_THICKNESS)
+        pygame_circle_image = pygame.Surface((self.image_wh[0], self.image_wh[1]), pygame.SRCALPHA)
+        # set all pixels to empty
+        for image_left_index in range(self.image_wh[0]):
+            for image_top_index in range(self.image_wh[1]):
+                pygame_circle_image.set_at((image_left_index, image_top_index), (0, 0, 0, 0))
+        # set pixels to create outline image
+        for left_index, row in enumerate(self.outline):
+            for top_index, ltrb in enumerate(row):
+                if not isinstance(ltrb, list):
+                    continue
+                pixel_x, pixel_y = top_index + SprayTool.OUTLINE_THICKNESS, left_index + SprayTool.OUTLINE_THICKNESS
+                left, top, right, bottom = ltrb
+                if left:
+                    for offset_x in range(1, SprayTool.OUTLINE_THICKNESS + 1):
+                        pygame_circle_image.set_at((pixel_x-offset_x, pixel_y), (255, 255, 255, 255))
+                if top:
+                    for offset_y in range(1, SprayTool.OUTLINE_THICKNESS + 1):
+                        pygame_circle_image.set_at((pixel_x, pixel_y-offset_y), (255, 255, 255, 255))
+                if right:
+                    for offset_x in range(1, SprayTool.OUTLINE_THICKNESS + 1):
+                        pygame_circle_image.set_at((pixel_x+offset_x, pixel_y), (255, 255, 255, 255))
+                if bottom:
+                    for offset_y in range(1, SprayTool.OUTLINE_THICKNESS + 1):
+                        pygame_circle_image.set_at((pixel_x, pixel_y+offset_y), (255, 255, 255, 255))
+        render_instance.add_moderngl_texture_with_surface(screen_instance, gl_context, pygame_circle_image, SprayTool.SPRAY_OUTLINE_REFERENCE)
+
+    def spray_thickness_is_valid(self, brush_thickness: Any):
+        try:
+            int(brush_thickness)
+        except:
+            return False
+        if not (SprayTool._MIN_SPRAY_THICKNESS <= int(brush_thickness) <= SprayTool._MAX_SPRAY_THICKNESS):
+            return False
+        if int(brush_thickness) == self._brush_thickness:
+            return False
+        return True
 
 
 class HandTool(EditorTool):
@@ -1522,7 +1602,7 @@ class EditorMap():
             MarqueeRectangleTool(False),
             LassoTool(False),
             PencilTool(False, render_instance, screen_instance, gl_context),
-            SprayTool(False),
+            SprayTool(False, render_instance, screen_instance, gl_context),
             HandTool(True),
             BucketTool(False),
             LineTool(False),
@@ -1785,11 +1865,11 @@ class EditorMap():
                             max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
                             for brush_offset_x, column in enumerate(self.current_tool.circle):
                                 for brush_offset_y, draw in enumerate(column):
-                                    if draw == self.current_tool.NOT_DRAW_PIXEL:
+                                    if draw == PencilTool.NOT_DRAW_PIXEL:
                                         continue
                                     else:
                                         # draw brush pixels
-                                        if (draw == self.current_tool.DRAW_PIXEL):
+                                        if (draw == PencilTool.DRAW_PIXEL):
                                             if map_edit.get(tile_name := (edited_pixel_x := leftest_brush_pixel+brush_offset_x, edited_pixel_y := topest_brush_pixel+brush_offset_y)) is None:
                                                 # get the tile and pixel being edited
                                                 tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
@@ -1861,7 +1941,36 @@ class EditorMap():
                     self.current_tool.last_xy[1] = topest_brush_pixel
 
                 case SprayTool.INDEX:
-                    pass
+                    cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
+                    pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
+                    ltrb = self._get_ltrb_pixels_on_map()
+
+                    # get the leftest pixel that needs to be drawn
+                    pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
+                    if pixel_offset_x == 1:
+                        pixel_offset_x = 0
+                    pixel_offset_x *= self.pixel_scale
+                    leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
+                    leftest_spray_pixel = pos_x - ((self.current_tool.image_wh[0] - 1) // 2)
+                    pixel_x = leftest_pixel + ((leftest_spray_pixel - ltrb[0]) * self.pixel_scale)
+
+                    # get the topest pixel that needs to be drawn
+                    pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
+                    if pixel_offset_y == 1:
+                        pixel_offset_y = 0
+                    pixel_offset_y *= self.pixel_scale
+                    topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
+                    topest_spray_pixel = pos_y - ((self.current_tool.image_wh[1] - 1) // 2)
+                    pixel_y = topest_pixel + ((topest_spray_pixel - ltrb[1]) * self.pixel_scale)
+
+                    ltwh = [pixel_x, pixel_y, self.current_tool.image_wh[0] * self.pixel_scale, self.current_tool.image_wh[1] * self.pixel_scale]
+
+                    # condition if cursor is on the map
+                    if cursor_on_map:
+                        cursors.add_cursor_this_frame('cursor_big_crosshair')
+                        render_instance.store_draw(SprayTool.SPRAY_OUTLINE_REFERENCE, render_instance.invert_white, {'object_name': SprayTool.SPRAY_OUTLINE_REFERENCE, 'ltwh': ltwh})
+                        self.stored_draw_keys.append(SprayTool.SPRAY_OUTLINE_REFERENCE)
+                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                 case HandTool.INDEX:
                     pass
