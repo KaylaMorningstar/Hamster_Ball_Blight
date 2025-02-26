@@ -379,14 +379,20 @@ class RenderObjects():
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
         renderable_object.texture.use(0)
-        gl_context.blend_equation = moderngl.FUNC_ADD
-        gl_context.blend_func = (
-            moderngl.ONE_MINUS_DST_COLOR, moderngl.ONE_MINUS_SRC_ALPHA,
-            moderngl.ZERO, moderngl.ONE
-            )
+
+
+
+        # gl_context.blend_equation = moderngl.FUNC_ADD
+        # gl_context.blend_func = (
+        #     moderngl.ONE_MINUS_DST_COLOR, moderngl.ONE_MINUS_SRC_ALPHA
+        #     )
+        # renderer.render(mode=moderngl.TRIANGLE_STRIP)
+        # gl_context.blend_equation = moderngl.FUNC_ADD
+        # gl_context.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
+
+
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
-        gl_context.blend_equation = moderngl.FUNC_ADD
-        gl_context.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
+
         quads.release()
         renderer.release()
     #
@@ -1178,6 +1184,52 @@ class DrawCheckerboard():
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
 
 
+# class DrawInvertWhite():
+#     def __init__(self, gl_context):
+#         self.VERTICE_SHADER = '''
+#         #version 330 core
+
+#         uniform float aspect;
+
+#         in vec2 vert;
+#         in vec2 texcoord;
+#         out vec2 uvs;
+
+#         void main() {
+#             uvs = texcoord;
+#             gl_Position = vec4(
+#             vert.x / aspect, 
+#             vert.y, 0.0, 1.0
+#             );
+#         }
+#         '''
+#         self.FRAGMENT_SHADER = '''
+#         #version 330 core
+
+#         uniform sampler2D tex;
+#         uniform float red;
+
+#         in vec2 uvs;
+#         out vec4 f_color;
+
+#         void main() {
+#             float grey_scale = (0.3333 * texture(tex, uvs).r) + (0.3333 * texture(tex, uvs).g) + (0.3333 * texture(tex, uvs).b);
+#             f_color = vec4(
+#                 texture(tex, uvs).r,
+#                 texture(tex, uvs).g,
+#                 texture(tex, uvs).b,
+#                 texture(tex, uvs).a
+#                 );
+#             float factor = 1.0 * f_color.a;
+#             f_color.rgb *= factor;
+#             f_color.rgb *= grey_scale;
+#             f_color = f_color;
+#         }
+#         '''
+#         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
+
 class DrawInvertWhite():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
@@ -1199,25 +1251,22 @@ class DrawInvertWhite():
         '''
         self.FRAGMENT_SHADER = '''
         #version 330 core
+        #extension GL_EXT_shader_framebuffer_fetch : require
 
         uniform sampler2D tex;
-        uniform float red;
 
         in vec2 uvs;
         out vec4 f_color;
 
         void main() {
-            float grey_scale = (0.3333 * texture(tex, uvs).r) + (0.3333 * texture(tex, uvs).g) + (0.3333 * texture(tex, uvs).b);
-            f_color = vec4(
-                texture(tex, uvs).r,
-                texture(tex, uvs).g,
-                texture(tex, uvs).b,
-                texture(tex, uvs).a
-                );
-            float factor = 1.0 * f_color.a;
-            f_color.rgb *= factor;
-            f_color.rgb *= grey_scale;
-            f_color = f_color;
+            vec3 destColor = gl_LastFragData[0].rgb;
+            float luminosity = dot(destColor, vec3(0.299, 0.587, 0.114));
+            f_color = vec4(texture(tex, uvs).rgba);
+            if (luminosity < 0.5) {
+                f_color.rgb = vec3(1.0, 1.0, 1.0);
+            } else {
+                f_color.rgb = vec3(0.0, 0.0, 0.0);
+            }
         }
         '''
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
