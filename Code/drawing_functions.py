@@ -77,6 +77,7 @@ class RenderObjects():
         self.programs['checkerboard'] = DrawCheckerboard(gl_context)
         self.programs['text'] = DrawText(gl_context)
         self.programs['invert_white'] = DrawInvertWhite(gl_context)
+        self.programs['circle_outline'] = DrawCircleOutline(gl_context)
     #
     def write_pixels(self, name: str, ltwh: tuple[int, int, int, int], rgba: tuple[int, int, int, int]):
         self.renderable_objects[name].texture.write(np.array(rgba_to_bgra(rgba), dtype=np.uint8).tobytes(), viewport=ltwh)
@@ -371,6 +372,22 @@ class RenderObjects():
         # 'invert_white', DrawInvertWhite
         program = self.programs['invert_white'].program
         renderable_object = self.renderable_objects[object_name]
+        topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
+        topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
+        topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
+        bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
+        program['aspect'] = Screen.aspect
+        quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
+        renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
+        renderable_object.texture.use(0)
+        renderer.render(mode=moderngl.TRIANGLE_STRIP)
+        quads.release()
+        renderer.release()
+    #
+    def editor_circle_outline(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], circle_size: int):
+        # 'circle_outline', DrawCircleOutline
+        program = self.programs['circle_outline'].program
+        renderable_object = self.renderable_objects['white_pixel']
         topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
         topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
         topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
@@ -1172,6 +1189,48 @@ class DrawCheckerboard():
 
 
 class DrawInvertWhite():
+    def __init__(self, gl_context):
+        self.VERTICE_SHADER = '''
+        #version 330 core
+
+        uniform float aspect;
+
+        in vec2 vert;
+        in vec2 texcoord;
+        out vec2 uvs;
+
+        void main() {
+            uvs = texcoord;
+            gl_Position = vec4(
+            vert.x / aspect, 
+            vert.y, 0.0, 1.0
+            );
+        }
+        '''
+        self.FRAGMENT_SHADER = '''
+        #version 330 core
+        #extension GL_EXT_shader_framebuffer_fetch : require
+
+        uniform sampler2D tex;
+
+        in vec2 uvs;
+        out vec4 f_color;
+
+        void main() {
+            vec3 destination_color = gl_LastFragData[0].rgb;
+            float luminosity = dot(destination_color, vec3(0.299, 0.587, 0.114));
+            f_color = vec4(texture(tex, uvs).rgba);
+            if (luminosity < 0.5) {
+                f_color.rgb = vec3(1.0, 1.0, 1.0);
+            } else {
+                f_color.rgb = vec3(0.0, 0.0, 0.0);
+            }
+        }
+        '''
+        self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
+class DrawCircleOutline():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
         #version 330 core

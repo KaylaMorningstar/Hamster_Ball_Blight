@@ -1405,18 +1405,16 @@ class SprayTool(EditorTool):
     _MIN_SPRAY_SPEED = 1
     _MAX_SPRAY_SPEED = 16
 
-    OUTLINE_THICKNESS = 1
-
     NOT_SPRAYING = 0
     SPRAYING = 1
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = SprayTool.NOT_SPRAYING  # (NOT_SPRAYING = 0, SPRAYING = 1)
-        self._spray_size: int = 64
+        self._spray_size: int = 4
         self._spray_thickness: int = SprayTool._MIN_SPRAY_THICKNESS
         self._spray_speed: int = SprayTool._MIN_SPRAY_SPEED
         self.outline: list[list[int | list[bool]]]
-        self.image_wh: list[int, int] = [self._spray_size + (2 * SprayTool.OUTLINE_THICKNESS), self._spray_size + (2 * SprayTool.OUTLINE_THICKNESS)]
+        self.image_wh: list[int, int] = [0, 0]
         self.update_spray_size(render_instance, screen_instance, gl_context, self._spray_size)
         super().__init__(active)
 
@@ -1433,38 +1431,39 @@ class SprayTool(EditorTool):
         return self._spray_speed
 
     def update_spray_size(self, render_instance, screen_instance, gl_context, brush_size: int):
-        try:
-            render_instance.remove_moderngl_texture_from_renderable_objects_dict(SprayTool.SPRAY_OUTLINE_REFERENCE)
-        except:
-            pass
-        self._brush_thickness = move_number_to_desired_range(SprayTool._MIN_SPRAY_THICKNESS, brush_size, SprayTool._MAX_SPRAY_THICKNESS)
-        self.outline = get_perfect_circle_with_edges(self._spray_size)
-        self.image_wh[0], self.image_wh[1] = self._spray_size + (2 * SprayTool.OUTLINE_THICKNESS), self._spray_size + (2 * SprayTool.OUTLINE_THICKNESS)
-        pygame_circle_image = pygame.Surface((self.image_wh[0], self.image_wh[1]), pygame.SRCALPHA)
-        # set all pixels to empty
-        for image_left_index in range(self.image_wh[0]):
-            for image_top_index in range(self.image_wh[1]):
-                pygame_circle_image.set_at((image_left_index, image_top_index), (0, 0, 0, 0))
-        # set pixels to create outline image
-        for left_index, row in enumerate(self.outline):
-            for top_index, ltrb in enumerate(row):
-                if not isinstance(ltrb, list):
-                    continue
-                pixel_x, pixel_y = top_index + SprayTool.OUTLINE_THICKNESS, left_index + SprayTool.OUTLINE_THICKNESS
-                left, top, right, bottom = ltrb
-                if left:
-                    for offset_x in range(1, SprayTool.OUTLINE_THICKNESS + 1):
-                        pygame_circle_image.set_at((pixel_x-offset_x, pixel_y), (255, 255, 255, 255))
-                if top:
-                    for offset_y in range(1, SprayTool.OUTLINE_THICKNESS + 1):
-                        pygame_circle_image.set_at((pixel_x, pixel_y-offset_y), (255, 255, 255, 255))
-                if right:
-                    for offset_x in range(1, SprayTool.OUTLINE_THICKNESS + 1):
-                        pygame_circle_image.set_at((pixel_x+offset_x, pixel_y), (255, 255, 255, 255))
-                if bottom:
-                    for offset_y in range(1, SprayTool.OUTLINE_THICKNESS + 1):
-                        pygame_circle_image.set_at((pixel_x, pixel_y+offset_y), (255, 255, 255, 255))
-        render_instance.add_moderngl_texture_with_surface(screen_instance, gl_context, pygame_circle_image, SprayTool.SPRAY_OUTLINE_REFERENCE)
+        pass
+        # try:
+        #     render_instance.remove_moderngl_texture_from_renderable_objects_dict(SprayTool.SPRAY_OUTLINE_REFERENCE)
+        # except:
+        #     pass
+        # self._brush_thickness = move_number_to_desired_range(SprayTool._MIN_SPRAY_THICKNESS, brush_size, SprayTool._MAX_SPRAY_THICKNESS)
+        # self.outline = get_perfect_circle_with_edges(self._spray_size)
+        # self.image_wh[0], self.image_wh[1] = self._spray_size + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS), self._spray_size + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS)
+        # pygame_circle_image = pygame.Surface((self.image_wh[0], self.image_wh[1]), pygame.SRCALPHA)
+        # # set all pixels to empty
+        # for image_left_index in range(self.image_wh[0]):
+        #     for image_top_index in range(self.image_wh[1]):
+        #         pygame_circle_image.set_at((image_left_index, image_top_index), (0, 0, 0, 0))
+        # # set pixels to create outline image
+        # for left_index, row in enumerate(self.outline):
+        #     for top_index, ltrb in enumerate(row):
+        #         if not isinstance(ltrb, list):
+        #             continue
+        #         pixel_x, pixel_y = top_index + EditorMap.CIRCLE_OUTLINE_THICKNESS, left_index + EditorMap.CIRCLE_OUTLINE_THICKNESS
+        #         left, top, right, bottom = ltrb
+        #         if left:
+        #             for offset_x in range(1, EditorMap.CIRCLE_OUTLINE_THICKNESS + 1):
+        #                 pygame_circle_image.set_at((pixel_x-offset_x, pixel_y), (255, 255, 255, 255))
+        #         if top:
+        #             for offset_y in range(1, EditorMap.CIRCLE_OUTLINE_THICKNESS + 1):
+        #                 pygame_circle_image.set_at((pixel_x, pixel_y-offset_y), (255, 255, 255, 255))
+        #         if right:
+        #             for offset_x in range(1, EditorMap.CIRCLE_OUTLINE_THICKNESS + 1):
+        #                 pygame_circle_image.set_at((pixel_x+offset_x, pixel_y), (255, 255, 255, 255))
+        #         if bottom:
+        #             for offset_y in range(1, EditorMap.CIRCLE_OUTLINE_THICKNESS + 1):
+        #                 pygame_circle_image.set_at((pixel_x, pixel_y+offset_y), (255, 255, 255, 255))
+        # render_instance.add_moderngl_texture_with_surface(screen_instance, gl_context, pygame_circle_image, SprayTool.SPRAY_OUTLINE_REFERENCE)
 
     def spray_thickness_is_valid(self, brush_thickness: Any):
         try:
@@ -1558,6 +1557,8 @@ class EditorMap():
         [1, 64],
         [1, 128],
     ]
+    CIRCLE_OUTLINE_THICKNESS = 4
+    CIRCLE_OUTLINE_REFERENCE = 'editor_circle_outline'
     _MAX_LOAD_TIME = 0.02
 
     _NOT_HELD = 0
@@ -1616,7 +1617,8 @@ class EditorMap():
         self.current_tool: EditorTool = self.tools[5]
         self.map_edits: list[EditorMap.PixelChange | EditorMap.ObjectChange] = []
         #
-        self.stored_draw_keys = []
+        self.stored_draw_keys: list = []
+        self.stored_circle_outlines: dict = {}
       
     class PixelChange():
         def __init__(self, new_rgba: array):
@@ -1945,6 +1947,10 @@ class EditorMap():
                     pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     ltrb = self._get_ltrb_pixels_on_map()
 
+                    if self.current_tool.spray_size % 2 == 0:
+                        half_spray_size = self.current_tool.spray_size // 2
+                    else:
+                        half_spray_size = (self.current_tool.spray_size + 1) // 2
                     # get the leftest pixel that needs to be drawn
                     pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
                     if pixel_offset_x == 1:
@@ -1952,7 +1958,7 @@ class EditorMap():
                     pixel_offset_x *= self.pixel_scale
                     leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
                     leftest_spray_pixel = pos_x - ((self.current_tool.image_wh[0] - 1) // 2)
-                    pixel_x = leftest_pixel + ((leftest_spray_pixel - ltrb[0]) * self.pixel_scale)
+                    pixel_x = leftest_pixel + ((leftest_spray_pixel - ltrb[0] - half_spray_size) * self.pixel_scale) - EditorMap.CIRCLE_OUTLINE_THICKNESS
 
                     # get the topest pixel that needs to be drawn
                     pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
@@ -1961,15 +1967,18 @@ class EditorMap():
                     pixel_offset_y *= self.pixel_scale
                     topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
                     topest_spray_pixel = pos_y - ((self.current_tool.image_wh[1] - 1) // 2)
-                    pixel_y = topest_pixel + ((topest_spray_pixel - ltrb[1]) * self.pixel_scale)
+                    pixel_y = topest_pixel + ((topest_spray_pixel - ltrb[1] - half_spray_size) * self.pixel_scale) - EditorMap.CIRCLE_OUTLINE_THICKNESS
 
-                    ltwh = [pixel_x, pixel_y, self.current_tool.image_wh[0] * self.pixel_scale, self.current_tool.image_wh[1] * self.pixel_scale]
+                    ltwh = [pixel_x, pixel_y, (self.current_tool.spray_size * self.pixel_scale) + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS), (self.current_tool.spray_size * self.pixel_scale) + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS)]
+                    print(ltwh)
 
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
-                        render_instance.store_draw(SprayTool.SPRAY_OUTLINE_REFERENCE, render_instance.invert_white, {'object_name': SprayTool.SPRAY_OUTLINE_REFERENCE, 'ltwh': ltwh})
-                        self.stored_draw_keys.append(SprayTool.SPRAY_OUTLINE_REFERENCE)
+                        # render_instance.store_draw(SprayTool.SPRAY_OUTLINE_REFERENCE, render_instance.invert_white, {'object_name': SprayTool.SPRAY_OUTLINE_REFERENCE, 'ltwh': ltwh})
+                        # self.stored_draw_keys.append(SprayTool.SPRAY_OUTLINE_REFERENCE)
+                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.spray_size})
+                        self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
                     current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                 case HandTool.INDEX:

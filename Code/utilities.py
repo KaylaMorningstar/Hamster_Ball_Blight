@@ -214,6 +214,7 @@ IMAGE_PATHS = {
     # pixels
     'black_pixel': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\pixels\\black_pixel.png'],
     'blank_pixel': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\pixels\\blank_pixel.png'],
+    'white_pixel': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\pixels\\white_pixel.png'],
     # lower case letters
     'a': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\lower_case\\a.png'],
     'b': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\lower_case\\b.png'],
