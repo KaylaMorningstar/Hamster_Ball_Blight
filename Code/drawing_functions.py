@@ -393,6 +393,7 @@ class RenderObjects():
         topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
         bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
         program['aspect'] = Screen.aspect
+        # program['circle_size'] = circle_size
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
         renderable_object.texture.use(0)
@@ -1253,6 +1254,9 @@ class DrawCircleOutline():
         #version 330 core
         #extension GL_EXT_shader_framebuffer_fetch : require
 
+        const vec3 BLACK = vec3(0.0, 0.0, 0.0);
+        const vec3 WHITE = vec3(1.0, 1.0, 1.0);
+
         uniform sampler2D tex;
 
         in vec2 uvs;
@@ -1262,10 +1266,11 @@ class DrawCircleOutline():
             vec3 destination_color = gl_LastFragData[0].rgb;
             float luminosity = dot(destination_color, vec3(0.299, 0.587, 0.114));
             f_color = vec4(texture(tex, uvs).rgba);
+
             if (luminosity < 0.5) {
-                f_color.rgb = vec3(1.0, 1.0, 1.0);
+                f_color.rgb = WHITE;
             } else {
-                f_color.rgb = vec3(0.0, 0.0, 0.0);
+                f_color.rgb = BLACK;
             }
         }
         '''
