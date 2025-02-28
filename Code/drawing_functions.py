@@ -397,7 +397,7 @@ class RenderObjects():
         program['height'] = ltwh[3]
         program['circle_size'] = circle_size
         program['circle_pixel_size'] = circle_pixel_size
-        # program['circle_outline_thickness'] = circle_outline_thickness
+        program['circle_outline_thickness'] = circle_outline_thickness
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
         renderable_object.texture.use(0)
@@ -1267,6 +1267,7 @@ class DrawCircleOutline():
 
         uniform float circle_size;
         uniform float circle_pixel_size;
+        uniform float circle_outline_thickness;
 
         in vec2 uvs;
         out vec4 f_color;
@@ -1280,12 +1281,10 @@ class DrawCircleOutline():
             float pixel_center = width / 2;
             float pixel_x = round(uvs.x * (width - 1)) + 0.5;
             float pixel_y = round(uvs.y * (height - 1)) + 0.5;
-            float pixel_radial_distance = sqrt(pow(abs(pixel_x - pixel_center), 2) + pow(abs(pixel_y - pixel_center), 2));
-            float pixel_circle_radius = (circle_size * circle_pixel_size) / 2;
 
             float editor_center = circle_size / 2;
-            float editor_pixel_x = floor(pixel_x / circle_pixel_size) + 0.5;
-            float editor_pixel_y = floor(pixel_y / circle_pixel_size) + 0.5;
+            float editor_pixel_x = floor((pixel_x - circle_outline_thickness) / circle_pixel_size) + 0.5;
+            float editor_pixel_y = floor((pixel_y - circle_outline_thickness) / circle_pixel_size) + 0.5;
             float editor_radial_distance = pow(abs(editor_pixel_x - editor_center), 2) + pow(abs(editor_pixel_y - editor_center), 2);
             float editor_circle_radius = pow(((circle_size - 0.5) / 2), 2);
 

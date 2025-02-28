@@ -1557,7 +1557,7 @@ class EditorMap():
         [1, 64],
         [1, 128],
     ]
-    CIRCLE_OUTLINE_THICKNESS = 0
+    CIRCLE_OUTLINE_THICKNESS = 4
     CIRCLE_OUTLINE_REFERENCE = 'editor_circle_outline'
     _MAX_LOAD_TIME = 0.02
 
