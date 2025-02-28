@@ -1557,7 +1557,8 @@ class EditorMap():
         [1, 64],
         [1, 128],
     ]
-    CIRCLE_OUTLINE_THICKNESS = 4
+    CIRCLE_OUTLINE_THICKNESS_ZOOMED_IN = 1
+    CIRCLE_OUTLINE_THICKNESS_ZOOMED_OUT = 2
     CIRCLE_OUTLINE_REFERENCE = 'editor_circle_outline'
     _MAX_LOAD_TIME = 0.02
 
@@ -1946,6 +1947,7 @@ class EditorMap():
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
                     pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     ltrb = self._get_ltrb_pixels_on_map()
+                    circle_outline_thickness = EditorMap.CIRCLE_OUTLINE_THICKNESS_ZOOMED_OUT if EditorMap._ZOOM[self.zoom_index][0] != 1 else EditorMap.CIRCLE_OUTLINE_THICKNESS_ZOOMED_IN
 
                     if self.current_tool.spray_size % 2 == 0:
                         half_spray_size = self.current_tool.spray_size // 2
@@ -1958,7 +1960,7 @@ class EditorMap():
                     pixel_offset_x *= self.pixel_scale
                     leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
                     leftest_spray_pixel = pos_x - ((self.current_tool.image_wh[0] - 1) // 2)
-                    pixel_x = leftest_pixel + ((leftest_spray_pixel - ltrb[0] - half_spray_size) * self.pixel_scale) - EditorMap.CIRCLE_OUTLINE_THICKNESS
+                    pixel_x = leftest_pixel + ((leftest_spray_pixel - ltrb[0] - half_spray_size) * self.pixel_scale) - circle_outline_thickness
 
                     # get the topest pixel that needs to be drawn
                     pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
@@ -1967,16 +1969,16 @@ class EditorMap():
                     pixel_offset_y *= self.pixel_scale
                     topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
                     topest_spray_pixel = pos_y - ((self.current_tool.image_wh[1] - 1) // 2)
-                    pixel_y = topest_pixel + ((topest_spray_pixel - ltrb[1] - half_spray_size) * self.pixel_scale) - EditorMap.CIRCLE_OUTLINE_THICKNESS
+                    pixel_y = topest_pixel + ((topest_spray_pixel - ltrb[1] - half_spray_size) * self.pixel_scale) - circle_outline_thickness
 
-                    ltwh = [pixel_x, pixel_y, int((self.current_tool.spray_size * self.pixel_scale) + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS)), int((self.current_tool.spray_size * self.pixel_scale) + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS))]
+                    ltwh = [pixel_x, pixel_y, int((self.current_tool.spray_size * self.pixel_scale) + (2 * circle_outline_thickness)), int((self.current_tool.spray_size * self.pixel_scale) + (2 * circle_outline_thickness))]
 
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
                         # render_instance.store_draw(SprayTool.SPRAY_OUTLINE_REFERENCE, render_instance.invert_white, {'object_name': SprayTool.SPRAY_OUTLINE_REFERENCE, 'ltwh': ltwh})
                         # self.stored_draw_keys.append(SprayTool.SPRAY_OUTLINE_REFERENCE)
-                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.spray_size, 'circle_outline_thickness': EditorMap.CIRCLE_OUTLINE_THICKNESS, 'circle_pixel_size': self.pixel_scale})
+                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.spray_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale})
                         self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
                     current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 

@@ -1267,7 +1267,7 @@ class DrawCircleOutline():
 
         uniform float circle_size;
         uniform float circle_pixel_size;
-        uniform float circle_outline_thickness;
+        uniform int circle_outline_thickness;
 
         in vec2 uvs;
         out vec4 f_color;
@@ -1288,9 +1288,100 @@ class DrawCircleOutline():
             float editor_radial_distance = pow(abs(editor_pixel_x - editor_center), 2) + pow(abs(editor_pixel_y - editor_center), 2);
             float editor_circle_radius = pow(((circle_size - 0.5) / 2), 2);
 
+            // condition if the current point is outside of the circle
             if (editor_radial_distance >= editor_circle_radius) {
-                f_color.rgb = BLACK;
+                float one_pixel_uv_size = 1 / width;
+                for (int i = 1; i <= circle_outline_thickness; i++) {
+                    // check if the right side is inside the circle
+                    float pixel_x_i = pixel_x + i;
+                    float pixel_y_i = pixel_y;
+                    float editor_pixel_x_i = floor((pixel_x_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+                    float editor_pixel_y_i = floor((pixel_y_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+                    float editor_radial_distance_i = pow(abs(editor_pixel_x_i - editor_center), 2) + pow(abs(editor_pixel_y_i - editor_center), 2);
+                    if (editor_radial_distance_i < editor_circle_radius) {
+                        if (luminosity < 0.5) {
+                            f_color.rgb = WHITE;
+                        } else {
+                            f_color.rgb = BLACK;
+                        }
+                    }
+
+                    // check if the left side is inside the circle
+                    pixel_x_i = pixel_x - i;
+                    pixel_y_i = pixel_y;
+                    editor_pixel_x_i = floor((pixel_x_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+                    editor_pixel_y_i = floor((pixel_y_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+                    editor_radial_distance_i = pow(abs(editor_pixel_x_i - editor_center), 2) + pow(abs(editor_pixel_y_i - editor_center), 2);
+                    if (editor_radial_distance_i < editor_circle_radius) {
+                        if (luminosity < 0.5) {
+                            f_color.rgb = WHITE;
+                        } else {
+                            f_color.rgb = BLACK;
+                        }
+                    }
+                    
+                    // check if the top side is inside the circle
+                    pixel_x_i = pixel_x;
+                    pixel_y_i = pixel_y - 1;
+                    editor_pixel_x_i = floor((pixel_x_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+                    editor_pixel_y_i = floor((pixel_y_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+                    editor_radial_distance_i = pow(abs(editor_pixel_x_i - editor_center), 2) + pow(abs(editor_pixel_y_i - editor_center), 2);
+                    if (editor_radial_distance_i < editor_circle_radius) {
+                        if (luminosity < 0.5) {
+                            f_color.rgb = WHITE;
+                        } else {
+                            f_color.rgb = BLACK;
+                        }
+                    }
+
+                    // check if the bottom side is inside the circle
+                    pixel_x_i = pixel_x;
+                    pixel_y_i = pixel_y + 1;
+                    editor_pixel_x_i = floor((pixel_x_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+                    editor_pixel_y_i = floor((pixel_y_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+                    editor_radial_distance_i = pow(abs(editor_pixel_x_i - editor_center), 2) + pow(abs(editor_pixel_y_i - editor_center), 2);
+                    if (editor_radial_distance_i < editor_circle_radius) {
+                        if (luminosity < 0.5) {
+                            f_color.rgb = WHITE;
+                        } else {
+                            f_color.rgb = BLACK;
+                        }
+                    }
+                }
             }
         }
         '''
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
+
+        # void main() {
+        #     vec3 destination_color = gl_LastFragData[0].rgb;
+        #     float luminosity = dot(destination_color, vec3(0.299, 0.587, 0.114));
+        #     f_color = vec4(texture(tex, uvs).rgba);
+        #     f_color.rgb = destination_color;
+
+        #     float pixel_center = width / 2;
+        #     float pixel_x = round(uvs.x * (width - 1)) + 0.5;
+        #     float pixel_y = round(uvs.y * (height - 1)) + 0.5;
+
+        #     float editor_center = circle_size / 2;
+        #     float editor_pixel_x = floor((pixel_x - circle_outline_thickness) / circle_pixel_size) + 0.5;
+        #     float editor_pixel_y = floor((pixel_y - circle_outline_thickness) / circle_pixel_size) + 0.5;
+        #     float editor_radial_distance = pow(abs(editor_pixel_x - editor_center), 2) + pow(abs(editor_pixel_y - editor_center), 2);
+        #     float editor_circle_radius = pow(((circle_size - 0.5) / 2), 2);
+
+        #     float one_pixel_uv_size = 1 / width;
+
+        #     if (editor_radial_distance >= editor_circle_radius) {
+        #         f_color.rgb = BLACK;
+        #     }
+        # }
+
+
+            # for (int i = 1; i <= circle_outline_thickness; i++) {
+            #     int i2 = i - steps / 3;
+            #     int i2y = i2 / 2;
+            #     float s = step(0.001, texture(surface, vec2(uv_adj.x - float(i2y) / pixel_dimensions.x, uv_adj.y - float(i2) / pixel_dimensions.y)).r);
+            #     shadow += s * 0.3;
+            # }
