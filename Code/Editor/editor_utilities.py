@@ -1354,7 +1354,7 @@ class PencilTool(EditorTool):
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = PencilTool.NOT_DRAWING  # (NOT_DRAWING = 0, DRAWING = 1)
-        self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
+        self._brush_thickness: int = 4
         self.circle: list[list[int | list[float, float]]]
         self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
         self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', PencilTool.TEXT_PIXEL_THICKNESS) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.TEXT_PIXEL_THICKNESS) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.TEXT_PIXEL_THICKNESS), get_text_height(PencilTool.TEXT_PIXEL_THICKNESS)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.TEXT_PIXEL_THICKNESS, PencilTool.TEXT_PIXEL_THICKNESS, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
@@ -1410,7 +1410,7 @@ class SprayTool(EditorTool):
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = SprayTool.NOT_SPRAYING  # (NOT_SPRAYING = 0, SPRAYING = 1)
-        self._spray_size: int = 4
+        self._spray_size: int = 64
         self._spray_thickness: int = SprayTool._MIN_SPRAY_THICKNESS
         self._spray_speed: int = SprayTool._MIN_SPRAY_SPEED
         self.outline: list[list[int | list[bool]]]
@@ -1557,7 +1557,7 @@ class EditorMap():
         [1, 64],
         [1, 128],
     ]
-    CIRCLE_OUTLINE_THICKNESS = 4
+    CIRCLE_OUTLINE_THICKNESS = 0
     CIRCLE_OUTLINE_REFERENCE = 'editor_circle_outline'
     _MAX_LOAD_TIME = 0.02
 
@@ -1969,15 +1969,14 @@ class EditorMap():
                     topest_spray_pixel = pos_y - ((self.current_tool.image_wh[1] - 1) // 2)
                     pixel_y = topest_pixel + ((topest_spray_pixel - ltrb[1] - half_spray_size) * self.pixel_scale) - EditorMap.CIRCLE_OUTLINE_THICKNESS
 
-                    ltwh = [pixel_x, pixel_y, (self.current_tool.spray_size * self.pixel_scale) + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS), (self.current_tool.spray_size * self.pixel_scale) + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS)]
-                    print(ltwh)
+                    ltwh = [pixel_x, pixel_y, int((self.current_tool.spray_size * self.pixel_scale) + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS)), int((self.current_tool.spray_size * self.pixel_scale) + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS))]
 
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
                         # render_instance.store_draw(SprayTool.SPRAY_OUTLINE_REFERENCE, render_instance.invert_white, {'object_name': SprayTool.SPRAY_OUTLINE_REFERENCE, 'ltwh': ltwh})
                         # self.stored_draw_keys.append(SprayTool.SPRAY_OUTLINE_REFERENCE)
-                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.spray_size})
+                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.spray_size, 'circle_outline_thickness': EditorMap.CIRCLE_OUTLINE_THICKNESS, 'circle_pixel_size': self.pixel_scale})
                         self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
                     current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 

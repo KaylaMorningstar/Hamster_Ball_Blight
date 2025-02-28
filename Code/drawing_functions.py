@@ -384,7 +384,7 @@ class RenderObjects():
         quads.release()
         renderer.release()
     #
-    def editor_circle_outline(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], circle_size: int):
+    def editor_circle_outline(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], circle_size: int, circle_outline_thickness: int, circle_pixel_size: float):
         # 'circle_outline', DrawCircleOutline
         program = self.programs['circle_outline'].program
         renderable_object = self.renderable_objects['white_pixel']
@@ -393,7 +393,11 @@ class RenderObjects():
         topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
         bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
         program['aspect'] = Screen.aspect
-        # program['circle_size'] = circle_size
+        program['width'] = ltwh[2]
+        program['height'] = ltwh[3]
+        program['circle_size'] = circle_size
+        program['circle_pixel_size'] = circle_pixel_size
+        # program['circle_outline_thickness'] = circle_outline_thickness
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
         renderable_object.texture.use(0)
@@ -1258,6 +1262,11 @@ class DrawCircleOutline():
         const vec3 WHITE = vec3(1.0, 1.0, 1.0);
 
         uniform sampler2D tex;
+        uniform int width;
+        uniform int height;
+
+        uniform float circle_size;
+        uniform float circle_pixel_size;
 
         in vec2 uvs;
         out vec4 f_color;
@@ -1266,10 +1275,21 @@ class DrawCircleOutline():
             vec3 destination_color = gl_LastFragData[0].rgb;
             float luminosity = dot(destination_color, vec3(0.299, 0.587, 0.114));
             f_color = vec4(texture(tex, uvs).rgba);
+            f_color.rgb = destination_color;
 
-            if (luminosity < 0.5) {
-                f_color.rgb = WHITE;
-            } else {
+            float pixel_center = width / 2;
+            float pixel_x = round(uvs.x * (width - 1)) + 0.5;
+            float pixel_y = round(uvs.y * (height - 1)) + 0.5;
+            float pixel_radial_distance = sqrt(pow(abs(pixel_x - pixel_center), 2) + pow(abs(pixel_y - pixel_center), 2));
+            float pixel_circle_radius = (circle_size * circle_pixel_size) / 2;
+
+            float editor_center = circle_size / 2;
+            float editor_pixel_x = floor(pixel_x / circle_pixel_size) + 0.5;
+            float editor_pixel_y = floor(pixel_y / circle_pixel_size) + 0.5;
+            float editor_radial_distance = pow(abs(editor_pixel_x - editor_center), 2) + pow(abs(editor_pixel_y - editor_center), 2);
+            float editor_circle_radius = pow(((circle_size - 0.5) / 2), 2);
+
+            if (editor_radial_distance >= editor_circle_radius) {
                 f_color.rgb = BLACK;
             }
         }
