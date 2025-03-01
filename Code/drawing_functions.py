@@ -20,7 +20,7 @@ def initialize_display():
 class ScreenObject():
     def __init__(self):
         self.window_resize: bool = False
-        self.ACCEPTABLE_WIDTH_RANGE = [650, 10000]
+        self.ACCEPTABLE_WIDTH_RANGE = [1000, 10000]
         self.ACCEPTABLE_HEIGHT_RANGE = [650, 10000]
         self.width = 1000
         self.height = 700
@@ -78,6 +78,7 @@ class RenderObjects():
         self.programs['text'] = DrawText(gl_context)
         self.programs['invert_white'] = DrawInvertWhite(gl_context)
         self.programs['circle_outline'] = DrawCircleOutline(gl_context)
+        self.programs['draw_circle'] = DrawCircle(gl_context)
     #
     def write_pixels(self, name: str, ltwh: tuple[int, int, int, int], rgba: tuple[int, int, int, int]):
         self.renderable_objects[name].texture.write(np.array(rgba_to_bgra(rgba), dtype=np.uint8).tobytes(), viewport=ltwh)
@@ -398,6 +399,30 @@ class RenderObjects():
         program['circle_size'] = circle_size
         program['circle_pixel_size'] = circle_pixel_size
         program['circle_outline_thickness'] = circle_outline_thickness
+        quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
+        renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
+        renderable_object.texture.use(0)
+        renderer.render(mode=moderngl.TRIANGLE_STRIP)
+        quads.release()
+        renderer.release()
+    #
+    def draw_circle(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], circle_size: int, circle_pixel_size: float, rgba):
+        # 'draw_circle', DrawCircle
+        program = self.programs['draw_circle'].program
+        renderable_object = self.renderable_objects['black_pixel']
+        topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
+        topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
+        topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
+        bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
+        program['aspect'] = Screen.aspect
+        program['width'] = ltwh[2]
+        program['height'] = ltwh[3]
+        program['circle_size'] = circle_size
+        program['circle_pixel_size'] = circle_pixel_size
+        program['red'] = rgba[0]
+        program['green'] = rgba[1]
+        program['blue'] = rgba[2]
+        program['alpha'] = rgba[3]
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
         renderable_object.texture.use(0)
@@ -1354,34 +1379,68 @@ class DrawCircleOutline():
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
 
 
+class DrawCircle():
+    def __init__(self, gl_context):
+        self.VERTICE_SHADER = '''
+        #version 330 core
 
-        # void main() {
-        #     vec3 destination_color = gl_LastFragData[0].rgb;
-        #     float luminosity = dot(destination_color, vec3(0.299, 0.587, 0.114));
-        #     f_color = vec4(texture(tex, uvs).rgba);
-        #     f_color.rgb = destination_color;
+        uniform float aspect;
 
-        #     float pixel_center = width / 2;
-        #     float pixel_x = round(uvs.x * (width - 1)) + 0.5;
-        #     float pixel_y = round(uvs.y * (height - 1)) + 0.5;
+        in vec2 vert;
+        in vec2 texcoord;
+        out vec2 uvs;
 
-        #     float editor_center = circle_size / 2;
-        #     float editor_pixel_x = floor((pixel_x - circle_outline_thickness) / circle_pixel_size) + 0.5;
-        #     float editor_pixel_y = floor((pixel_y - circle_outline_thickness) / circle_pixel_size) + 0.5;
-        #     float editor_radial_distance = pow(abs(editor_pixel_x - editor_center), 2) + pow(abs(editor_pixel_y - editor_center), 2);
-        #     float editor_circle_radius = pow(((circle_size - 0.5) / 2), 2);
+        void main() {
+            uvs = texcoord;
+            gl_Position = vec4(
+            vert.x / aspect, 
+            vert.y, 0.0, 1.0
+            );
+        }
+        '''
+        self.FRAGMENT_SHADER = '''
+        #version 330 core
+        #extension GL_EXT_shader_framebuffer_fetch : require
 
-        #     float one_pixel_uv_size = 1 / width;
+        uniform sampler2D tex;
+        uniform int width;
+        uniform int height;
 
-        #     if (editor_radial_distance >= editor_circle_radius) {
-        #         f_color.rgb = BLACK;
-        #     }
-        # }
+        uniform float circle_size;
+        uniform float circle_pixel_size;
+        uniform int circle_outline_thickness;
 
+        uniform float red;
+        uniform float green;
+        uniform float blue;
+        uniform float alpha;
 
-            # for (int i = 1; i <= circle_outline_thickness; i++) {
-            #     int i2 = i - steps / 3;
-            #     int i2y = i2 / 2;
-            #     float s = step(0.001, texture(surface, vec2(uv_adj.x - float(i2y) / pixel_dimensions.x, uv_adj.y - float(i2) / pixel_dimensions.y)).r);
-            #     shadow += s * 0.3;
-            # }
+        in vec2 uvs;
+        out vec4 f_color;
+
+        void main() {
+            vec3 destination_color = gl_LastFragData[0].rgb;
+            f_color = vec4(texture(tex, uvs).rgba);
+            f_color.rgb = destination_color;
+
+            float pixel_center = width / 2;
+            float pixel_x = round(uvs.x * (width - 1)) + 0.5;
+            float pixel_y = round(uvs.y * (height - 1)) + 0.5;
+
+            float editor_center = circle_size / 2;
+            float editor_pixel_x = floor((pixel_x - circle_outline_thickness) / circle_pixel_size) + 0.5;
+            float editor_pixel_y = floor((pixel_y - circle_outline_thickness) / circle_pixel_size) + 0.5;
+            float editor_radial_distance = pow(abs(editor_pixel_x - editor_center), 2) + pow(abs(editor_pixel_y - editor_center), 2);
+            float editor_circle_radius = pow(((circle_size - 0.5) / 2), 2);
+
+            if (editor_radial_distance < editor_circle_radius) {
+                f_color = vec4(
+                texture(tex, uvs).r + red, 
+                texture(tex, uvs).g + green, 
+                texture(tex, uvs).b + blue, 
+                texture(tex, uvs).a * alpha
+                );
+            }
+        }
+        '''
+        self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)

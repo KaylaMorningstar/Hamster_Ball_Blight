@@ -237,6 +237,9 @@ class EditorSingleton():
         #
         # tool attribute area
         self.tool_attribute_ltwh = [0, 0, 0, 0]
+        #
+        # other
+        self.stored_draws = []
 
     def get_color_spectrum_ltwh(self):
         return [self.palette_padding + self.add_color_spectrum_border_thickness, 

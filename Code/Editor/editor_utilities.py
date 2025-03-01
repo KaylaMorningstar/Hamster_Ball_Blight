@@ -1179,10 +1179,7 @@ class ScrollBar():
         self.scroll_percentage = scroll_percentage
 
 
-def get_perfect_circle_with_edge_angles(diameter: int):
-    if diameter == 1:
-        return [[array('f', [0.0, 360.0])]]
-    # get which pixels are part of the circle
+def get_tf_circle(diameter: int):
     tf_circle = []
     radius = (diameter - 0.5) / 2  # smaller than the actual radius for a better looking circle
     center = diameter / 2
@@ -1196,6 +1193,19 @@ def get_perfect_circle_with_edge_angles(diameter: int):
             else:
                 current_row.append(False)
         tf_circle.append(current_row)
+    return tf_circle
+
+
+def get_tf_square(size: int):
+    return [[True for _ in range(size)] for _ in range(size)]
+
+
+def get_perfect_circle_with_edge_angles(diameter: int):
+    if diameter == 1:
+        return [[array('f', [0.0, 360.0])]]
+    # get which pixels are part of the circle
+    center = diameter / 2
+    tf_circle = get_tf_circle(diameter)
     # find edges
     circle = []
     for column_index, column in enumerate(tf_circle):
@@ -1304,6 +1314,8 @@ def get_perfect_circle_with_edges(diameter: int):
 class EditorTool(ABC):
     """Tool base class"""
     STARTING_TOOL_INDEX = 4
+    ATTRIBUTE_TEXT_PIXEL_SIZE = 3
+    ATTRIBUTE_TEXT_COLOR = COLORS['BLACK']
 
     def __init__(self, active: bool):
         self.active: bool = active
@@ -1340,11 +1352,21 @@ class PencilTool(EditorTool):
     _MAX_BRUSH_THICKNESS = 64
     CIRCLE_REFERENCE = 'pencil_tool_circle'
 
-    TEXT_PIXEL_THICKNESS = 3
     _TEXT_BACKGROUND_COLOR = COLORS['LIGHT_GREY']
     _TEXT_COLOR = COLORS['BLACK']
     _TEXT_HIGHLIGHT_COLOR = COLORS['WHITE']
     _HIGHLIGHT_COLOR = COLORS['RED']
+
+    BRUSH_THICKNESS = 'Brush thickness = '
+
+    BRUSH_STYLE = 'Brush style: '
+    CIRCLE_BRUSH = 1
+    SQUARE_BRUSH = 2
+    _MIN_BRUSH_STYLE = 1
+    _MAX_BRUSH_STYLE = 2
+
+    MIN_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX = 1
+    MAX_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX = 11
 
     NOT_DRAWING = 0
     DRAWING = 1
@@ -1354,16 +1376,25 @@ class PencilTool(EditorTool):
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = PencilTool.NOT_DRAWING  # (NOT_DRAWING = 0, DRAWING = 1)
+        self.BRUSH_STYLE_WIDTH = get_text_width(render_instance, PencilTool.BRUSH_STYLE, PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        self.BRUSH_THICKNESS_WIDTH = get_text_width(render_instance, PencilTool.BRUSH_THICKNESS, PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        self.brush_style = PencilTool.CIRCLE_BRUSH  # (CIRCLE_BRUSH = 1, SQUARE_BRUSH = 2)
         self._brush_thickness: int = 4
         self.circle: list[list[int | list[float, float]]]
         self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
-        self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', PencilTool.TEXT_PIXEL_THICKNESS) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.TEXT_PIXEL_THICKNESS) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.TEXT_PIXEL_THICKNESS), get_text_height(PencilTool.TEXT_PIXEL_THICKNESS)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.TEXT_PIXEL_THICKNESS, PencilTool.TEXT_PIXEL_THICKNESS, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
+        self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE, PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
         self.last_xy: array = array('i', [0, 0])
         super().__init__(active)
 
     @property
     def brush_thickness(self):
         return self._brush_thickness
+
+    def update_brush_style(self, render_instance, screen_instance, gl_context):
+        self.brush_style += 1
+        if self.brush_style > PencilTool._MAX_BRUSH_STYLE:
+            self.brush_style = PencilTool._MIN_BRUSH_STYLE
+        self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
     
     def update_brush_thickness(self, render_instance, screen_instance, gl_context, brush_thickness: int):
         try:
@@ -1371,7 +1402,13 @@ class PencilTool(EditorTool):
         except:
             pass
         self._brush_thickness = move_number_to_desired_range(PencilTool._MIN_BRUSH_THICKNESS, brush_thickness, PencilTool._MAX_BRUSH_THICKNESS)
-        self.circle = get_perfect_circle_with_edge_angles(self._brush_thickness)
+
+        match self.brush_style:
+            case PencilTool.CIRCLE_BRUSH:
+                self.circle = get_perfect_circle_with_edge_angles(self._brush_thickness)
+            case PencilTool.SQUARE_BRUSH:
+                self.circle = get_square_with_edge_angles(self._brush_thickness)
+        
         pygame_circle_image = pygame.Surface((self.brush_thickness, self.brush_thickness), pygame.SRCALPHA)
         for left, row in enumerate(self.circle):
             for top, draw in enumerate(row):
@@ -1410,9 +1447,9 @@ class SprayTool(EditorTool):
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = SprayTool.NOT_SPRAYING  # (NOT_SPRAYING = 0, SPRAYING = 1)
-        self._spray_size: int = 64
-        self._spray_thickness: int = SprayTool._MIN_SPRAY_THICKNESS
-        self._spray_speed: int = SprayTool._MIN_SPRAY_SPEED
+        self._spray_size: int = 64  # width of the spray tool
+        self._spray_thickness: int = SprayTool._MIN_SPRAY_THICKNESS  # width of each drop of spray
+        self._spray_speed: int = SprayTool._MIN_SPRAY_SPEED  # number of spray drops
         self.outline: list[list[int | list[bool]]]
         self.image_wh: list[int, int] = [0, 0]
         self.update_spray_size(render_instance, screen_instance, gl_context, self._spray_size)

@@ -1,7 +1,7 @@
 import math
 from copy import deepcopy
 from Code.utilities import CaseBreak, point_is_in_ltwh, move_number_to_desired_range, percent_to_rgba, base10_to_hex, add_characters_to_front_of_string, get_time, switch_to_base10, rgba_to_glsl, get_rect_minus_borders, round_scaled, get_text_height, get_text_width, COLORS
-from Code.Editor.editor_utilities import MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
+from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
 
 
 def update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
@@ -667,16 +667,61 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 pass
 
             case PencilTool.INDEX:
+                tool_attribute_lt = [Singleton.tool_attribute_ltwh[0], Singleton.tool_attribute_ltwh[1]]
+                center_text_offset_y = (Singleton.tool_attribute_ltwh[3] - (5 * PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)) // 2
                 # brush style
+                # text for the brush style
+                Render.draw_string_of_characters(Screen, gl_context, string=PencilTool.BRUSH_STYLE, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=PencilTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.BRUSH_STYLE_WIDTH
+                brush_style_ltwh = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
+                # square or circle toggle
+                Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=brush_style_ltwh)
+                if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
+                    current_tool.update_brush_style(Render, Screen, gl_context)
+                match current_tool.brush_style:
+                    case PencilTool.CIRCLE_BRUSH:
+                        CIRCLE_PADDING = 4
+                        circle_size = Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH - (2 * CIRCLE_PADDING)
+                        circle_brush_style_ltwh = [brush_style_ltwh[0] + CIRCLE_PADDING, brush_style_ltwh[1] + CIRCLE_PADDING, circle_size, circle_size]
+                        Render.draw_circle(Screen, gl_context, ltwh=circle_brush_style_ltwh, circle_size=circle_size, circle_pixel_size=1, rgba=COLORS['BLACK'])
+                    case PencilTool.SQUARE_BRUSH:
+                        SQUARE_PADDING = 4
+                        square_size = Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH - (2 * SQUARE_PADDING)
+                        square_brush_style_ltwh = [brush_style_ltwh[0] + SQUARE_PADDING, brush_style_ltwh[1] + SQUARE_PADDING, square_size, square_size]
+                        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=square_brush_style_ltwh, rgba=COLORS['BLACK'])
+                tool_attribute_lt[0] += Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH
+                # separate sections
+                SEPARATION_PIXELS = 6  # x2 on each side of a line
+                LINE_SEPARATOR_THICKNESS = 4
+                SEPARATOR_LINE_LTWH = [tool_attribute_lt[0] + SEPARATION_PIXELS, tool_attribute_lt[1], LINE_SEPARATOR_THICKNESS, Singleton.tool_attribute_ltwh[3]]
+                Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SEPARATOR_LINE_LTWH, rgba=COLORS['BLACK'])
+                tool_attribute_lt[0] += (2 * SEPARATION_PIXELS) + LINE_SEPARATOR_THICKNESS
                 # brush thickness
-                Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'brush_shape_circle', [Singleton.tool_attribute_ltwh[0], Singleton.tool_attribute_ltwh[1] + PencilTool.TEXT_PIXEL_THICKNESS, Render.renderable_objects['brush_shape_circle'].ORIGINAL_WIDTH, Render.renderable_objects['brush_shape_circle'].ORIGINAL_HEIGHT])
-                current_tool.brush_thickness_text_input.background_ltwh[0] = Singleton.tool_attribute_ltwh[0] + Render.renderable_objects['brush_shape_circle'].ORIGINAL_WIDTH + PencilTool.TEXT_PIXEL_THICKNESS
-                current_tool.brush_thickness_text_input.background_ltwh[1] = Singleton.tool_attribute_ltwh[1] + PencilTool.TEXT_PIXEL_THICKNESS - 1
+                # text for the brush thickness
+                Render.draw_string_of_characters(Screen, gl_context, string=PencilTool.BRUSH_THICKNESS, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=PencilTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.BRUSH_THICKNESS_WIDTH
+                # text input for brush thickness
+                current_tool.brush_thickness_text_input.background_ltwh[0] = tool_attribute_lt[0] + PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                current_tool.brush_thickness_text_input.background_ltwh[1] = tool_attribute_lt[1] + PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
                 current_tool.brush_thickness_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
                 new_brush_thickness = current_tool.brush_thickness_text_input.current_string
                 if current_tool.brush_thickness_is_valid(new_brush_thickness):
                     current_tool.update_brush_thickness(Render, Screen, gl_context, int(new_brush_thickness))
-                
+                tool_attribute_lt[0] += current_tool.brush_thickness_text_input.background_ltwh[2] + (2 * current_tool.brush_thickness_text_input.text_padding)
+                # image showing how thick the brush is
+                brush_thickness_image_ltwh = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
+                Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=brush_thickness_image_ltwh)
+                match current_tool.brush_style:
+                    case PencilTool.CIRCLE_BRUSH:
+                        attribute_brush_thickness = move_number_to_desired_range(PencilTool.MIN_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX, current_tool.brush_thickness, PencilTool.MAX_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX)
+                        CIRCLE_PADDING = 4 + ((PencilTool.MAX_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX - attribute_brush_thickness) // 2)
+                        circle_brush_style_ltwh = [brush_thickness_image_ltwh[0] + CIRCLE_PADDING, brush_thickness_image_ltwh[1] + CIRCLE_PADDING, attribute_brush_thickness, attribute_brush_thickness]
+                        Render.draw_circle(Screen, gl_context, ltwh=circle_brush_style_ltwh, circle_size=attribute_brush_thickness, circle_pixel_size=1, rgba=COLORS['BLACK'])
+                    case PencilTool.SQUARE_BRUSH:
+                        attribute_brush_thickness = move_number_to_desired_range(PencilTool.MIN_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX, current_tool.brush_thickness, PencilTool.MAX_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX)
+                        SQUARE_PADDING = 4 + ((PencilTool.MAX_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX - attribute_brush_thickness) // 2)
+                        square_brush_style_ltwh = [brush_thickness_image_ltwh[0] + SQUARE_PADDING, brush_thickness_image_ltwh[1] + SQUARE_PADDING, attribute_brush_thickness, attribute_brush_thickness]
+                        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=square_brush_style_ltwh, rgba=COLORS['BLACK'])
                 # cursor x, y position
                 if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
                     # crosshair image
