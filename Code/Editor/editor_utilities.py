@@ -1625,7 +1625,7 @@ class EditorMap():
                  render_instance,
                  base_path: str):
 
-        self.base_path: str = "C:\\Users\\Kayle\\Desktop\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\"
+        self.base_path: str = "C:\\Users\\Kayle\\Desktop\\Blight\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\"
         self.initial_tile_wh: list[int, int] = list(pygame.image.load(f"{self.base_path}t0_0.png").get_size())
         self.tile_wh: list[int, int] = deepcopy(self.initial_tile_wh)
         # internal
