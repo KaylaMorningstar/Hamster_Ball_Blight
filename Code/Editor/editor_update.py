@@ -651,11 +651,18 @@ def update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
         Render.basic_rect_ltwh_to_quad(Screen, gl_context, tool_attributes[2], tool_attributes[0])
 
 
+class FooterInfo:
+    SEPARATOR = 0
+    MAP_SIZE = 1
+    CURSOR_POSITION = 2
+    ACTIVE_COLOR = 3
+
+
 def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     # Singleton.tool_attribute_ltwh
     current_tool = Singleton.map.current_tool
     # information in footer
-    information_lt = [Singleton.palette_padding, Singleton.footer_ltwh[1]]
+    footer_information = []
     # Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.tool_attribute_ltwh, COLORS['RED'])
 
     try:
@@ -675,6 +682,8 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 tool_attribute_lt[0] += current_tool.BRUSH_STYLE_WIDTH
                 brush_style_ltwh = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
                 # square or circle toggle
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
+                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=[brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]], rgba=COLORS['LIGHT_GREY'])
                 Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=brush_style_ltwh)
                 if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
                     current_tool.update_brush_style(Render, Screen, gl_context)
@@ -722,27 +731,11 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                         SQUARE_PADDING = 4 + ((PencilTool.MAX_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX - attribute_brush_thickness) // 2)
                         square_brush_style_ltwh = [brush_thickness_image_ltwh[0] + SQUARE_PADDING, brush_thickness_image_ltwh[1] + SQUARE_PADDING, attribute_brush_thickness, attribute_brush_thickness]
                         Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=square_brush_style_ltwh, rgba=COLORS['BLACK'])
-                # cursor x, y position
+                # information stuff in footer
                 if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
-                    # crosshair image
-                    CROSSHAIR_PADDING = 4
-                    crosshair_ltwh = [information_lt[0], information_lt[1] + CROSSHAIR_PADDING, Singleton.footer_ltwh[3] - (2 * CROSSHAIR_PADDING), Singleton.footer_ltwh[3] - (2 * CROSSHAIR_PADDING)]
-                    Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'cursor_crosshair', crosshair_ltwh)
-                    information_lt[0] = crosshair_ltwh[0] + crosshair_ltwh[2]
-                    # position of cursor on map
-                    CROSSHAIR_IMAGE_SEPARATION = 12
-                    cursor_x, cursor_y = Singleton.map.get_cursor_position_on_map(Keys)
-                    Render.draw_string_of_characters(Screen, gl_context, f"{cursor_x} {cursor_y}", [information_lt[0] + CROSSHAIR_IMAGE_SEPARATION, information_lt[1] + ((Singleton.footer_ltwh[3] - (get_text_height(Singleton.footer_text_pixel_size) - (2 * Singleton.footer_text_pixel_size))) // 2)], Singleton.footer_text_pixel_size, COLORS['BLACK'])
-                    SEPARATION = 16
-                    information_lt[0] = information_lt[0] + CROSSHAIR_IMAGE_SEPARATION + get_text_width(Render, f"{cursor_x} {cursor_y}", Singleton.footer_text_pixel_size) + SEPARATION
-                # level dimensions image
-                LEVEL_DIMENSIONS_PADDING = 2
-                level_dimensions_padding = [information_lt[0], information_lt[1] + LEVEL_DIMENSIONS_PADDING, Singleton.footer_ltwh[3] - (2 * LEVEL_DIMENSIONS_PADDING), Singleton.footer_ltwh[3] - (2 * LEVEL_DIMENSIONS_PADDING)]
-                Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'level_dimensions', level_dimensions_padding)
-                LEVEL_DIMENSION_SEPARATION = 12
-                information_lt[0] = information_lt[0] + level_dimensions_padding[2] + LEVEL_DIMENSION_SEPARATION
-                # level dimension
-                Render.draw_string_of_characters(Screen, gl_context, f"{Singleton.map.original_map_wh[0]} {Singleton.map.original_map_wh[1]}", [information_lt[0], information_lt[1] + ((Singleton.footer_ltwh[3] - (get_text_height(Singleton.footer_text_pixel_size) - (2 * Singleton.footer_text_pixel_size))) // 2)], Singleton.footer_text_pixel_size, COLORS['BLACK'])
+                    footer_information.append(FooterInfo.CURSOR_POSITION)
+                    footer_information.append(FooterInfo.SEPARATOR)
+                footer_information.append(FooterInfo.MAP_SIZE)
 
             case SprayTool.INDEX:
                 pass
@@ -776,3 +769,45 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
 
     except CaseBreak:
         pass
+
+    # draw information stuff in the footer
+    information_lt = [Singleton.palette_padding, Singleton.footer_ltwh[1]]
+    for footer_info in footer_information:
+        try:
+            match footer_info:
+                case FooterInfo.SEPARATOR:
+                    SEPARATION_PIXELS = 12  # x2 on each side of a line
+                    LINE_SEPARATOR_THICKNESS = 4
+                    SEPARATOR_LINE_LTWH = [information_lt[0] + SEPARATION_PIXELS, information_lt[1], LINE_SEPARATOR_THICKNESS, Singleton.footer_ltwh[3]]
+                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SEPARATOR_LINE_LTWH, rgba=COLORS['BLACK'])
+                    information_lt[0] += (2 * SEPARATION_PIXELS) + LINE_SEPARATOR_THICKNESS
+
+                case FooterInfo.MAP_SIZE:
+                    LEVEL_DIMENSIONS_PADDING = 2
+                    level_dimensions_padding = [information_lt[0], information_lt[1] + LEVEL_DIMENSIONS_PADDING, Singleton.footer_ltwh[3] - (2 * LEVEL_DIMENSIONS_PADDING), Singleton.footer_ltwh[3] - (2 * LEVEL_DIMENSIONS_PADDING)]
+                    Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'level_dimensions', level_dimensions_padding)
+                    LEVEL_DIMENSION_SEPARATION = 12
+                    information_lt[0] = information_lt[0] + level_dimensions_padding[2] + LEVEL_DIMENSION_SEPARATION
+                    # level dimension
+                    text = f"{Singleton.map.original_map_wh[0]} {Singleton.map.original_map_wh[1]}"
+                    Render.draw_string_of_characters(Screen, gl_context, string=text, lt=[information_lt[0], information_lt[1] + ((Singleton.footer_ltwh[3] - (get_text_height(Singleton.footer_text_pixel_size) - (2 * Singleton.footer_text_pixel_size))) // 2)], text_pixel_size=Singleton.footer_text_pixel_size, rgba=COLORS['BLACK'])
+                    information_lt[0] += get_text_width(Render, text, text_pixel_size=Singleton.footer_text_pixel_size)
+
+                case FooterInfo.CURSOR_POSITION:
+                    if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
+                        # crosshair image
+                        CROSSHAIR_PADDING = 4
+                        crosshair_ltwh = [information_lt[0], information_lt[1] + CROSSHAIR_PADDING, Singleton.footer_ltwh[3] - (2 * CROSSHAIR_PADDING), Singleton.footer_ltwh[3] - (2 * CROSSHAIR_PADDING)]
+                        Render.basic_rect_ltwh_to_quad(Screen, gl_context, 'cursor_crosshair', crosshair_ltwh)
+                        information_lt[0] = crosshair_ltwh[0] + crosshair_ltwh[2]
+                        # position of cursor on map
+                        CROSSHAIR_IMAGE_SEPARATION = 12
+                        cursor_x, cursor_y = Singleton.map.get_cursor_position_on_map(Keys)
+                        Render.draw_string_of_characters(Screen, gl_context, string=f"{cursor_x} {cursor_y}", lt=[information_lt[0] + CROSSHAIR_IMAGE_SEPARATION, information_lt[1] + ((Singleton.footer_ltwh[3] - (get_text_height(Singleton.footer_text_pixel_size) - (2 * Singleton.footer_text_pixel_size))) // 2)], text_pixel_size=Singleton.footer_text_pixel_size, rgba=COLORS['BLACK'])
+                        information_lt[0] = information_lt[0] + CROSSHAIR_IMAGE_SEPARATION + get_text_width(Render, f"{cursor_x} {cursor_y}", Singleton.footer_text_pixel_size)
+            
+                case FooterInfo.ACTIVE_COLOR:
+                    pass
+
+        except CaseBreak:
+            pass
