@@ -1369,9 +1369,9 @@ class PencilTool(EditorTool):
     _TEXT_HIGHLIGHT_COLOR = COLORS['WHITE']
     _HIGHLIGHT_COLOR = COLORS['RED']
 
-    BRUSH_THICKNESS = 'Brush thickness = '
+    BRUSH_THICKNESS = 'Thickness: '
 
-    BRUSH_STYLE = 'Brush style: '
+    BRUSH_STYLE = 'Style: '
     CIRCLE_BRUSH = 1
     SQUARE_BRUSH = 2
     _MIN_BRUSH_STYLE = 1
