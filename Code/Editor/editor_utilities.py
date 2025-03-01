@@ -1241,7 +1241,19 @@ def get_square_with_edge_angles(length: int):
             if ((row_index == 0) or (row_index == length - 1) or (column_index == 0) or (column_index == length - 1)):
                 # calculate angle range that is should skip bresenham algorithm
                 angle_from_center = atan2((column_index + 0.5 - center), -(row_index + 0.5 - center))
-                angle_range = array('f', ((angle_from_center - 90) % 360, (angle_from_center + 90) % 360))
+                # right-side
+                if (315.0 <= angle_from_center <= 360.0) or (0.0 <= angle_from_center <= 45.0):
+                    angle_range = array('f', (90.0, 270.0))
+                # top-side
+                if 45.0 <= angle_from_center <= 135.0:
+                    angle_range = array('f', (180.0, 360.0))
+                # left-side
+                if 135.0 <= angle_from_center <= 225.0:
+                    angle_range = array('f', (270.0, 45.0))
+                # bottom-side
+                if 225.0 <= angle_from_center <= 315.0:
+                    angle_range = array('f', (0.0, 180.0))
+                # angle_range = array('f', ((angle_from_center - 90) % 360, (angle_from_center + 90) % 360))
                 current_row.append(angle_range)
             else:
                 current_row.append(1)
