@@ -700,7 +700,7 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                         Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=square_brush_style_ltwh, rgba=COLORS['BLACK'])
                 tool_attribute_lt[0] += Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH
                 # separate sections
-                SEPARATION_PIXELS = 6  # x2 on each side of a line
+                SEPARATION_PIXELS = 6  # 2x on each side of a line
                 LINE_SEPARATOR_THICKNESS = 4
                 SEPARATOR_LINE_LTWH = [tool_attribute_lt[0] + SEPARATION_PIXELS, tool_attribute_lt[1], LINE_SEPARATOR_THICKNESS, Singleton.tool_attribute_ltwh[3]]
                 Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SEPARATOR_LINE_LTWH, rgba=COLORS['BLACK'])
@@ -765,7 +765,12 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 pass
 
             case EyedropTool.INDEX:
-                pass
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
+                    footer_information.append(FooterInfo.ACTIVE_COLOR)
+                    footer_information.append(FooterInfo.SEPARATOR)
+                    footer_information.append(FooterInfo.CURSOR_POSITION)
+                    footer_information.append(FooterInfo.SEPARATOR)
+                footer_information.append(FooterInfo.MAP_SIZE)
 
     except CaseBreak:
         pass
@@ -804,10 +809,24 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                         CROSSHAIR_IMAGE_SEPARATION = 12
                         cursor_x, cursor_y = Singleton.map.get_cursor_position_on_map(Keys)
                         Render.draw_string_of_characters(Screen, gl_context, string=f"{cursor_x} {cursor_y}", lt=[information_lt[0] + CROSSHAIR_IMAGE_SEPARATION, information_lt[1] + ((Singleton.footer_ltwh[3] - (get_text_height(Singleton.footer_text_pixel_size) - (2 * Singleton.footer_text_pixel_size))) // 2)], text_pixel_size=Singleton.footer_text_pixel_size, rgba=COLORS['BLACK'])
-                        information_lt[0] = information_lt[0] + CROSSHAIR_IMAGE_SEPARATION + get_text_width(Render, f"{cursor_x} {cursor_y}", Singleton.footer_text_pixel_size)
+                        information_lt[0] += CROSSHAIR_IMAGE_SEPARATION + get_text_width(Render, f"{cursor_x} {cursor_y}", Singleton.footer_text_pixel_size)
             
                 case FooterInfo.ACTIVE_COLOR:
-                    pass
+                    # draw eyedropper
+                    EYEDROPPER_IMAGE_LTWH = [information_lt[0], information_lt[1] + ((Singleton.footer_ltwh[3] - Render.renderable_objects['cursor_eyedrop'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['cursor_eyedrop'].ORIGINAL_WIDTH, Render.renderable_objects['cursor_eyedrop'].ORIGINAL_HEIGHT]
+                    Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='cursor_eyedrop', ltwh=EYEDROPPER_IMAGE_LTWH)
+                    information_lt[0] += EYEDROPPER_IMAGE_LTWH[2]
+                    # draw circle with eyedropper color
+                    cursor_color = Singleton.map.get_color_of_pixel_on_map(Keys, Render, Screen, gl_context)
+                    if cursor_color is None:
+                        raise CaseBreak
+                    ACTIVE_COLOR_SEPARATION = 12
+                    glsl_cursor_color = rgba_to_glsl(cursor_color)
+                    ACTIVE_COLOR_CIRCLE_OUTLINE_LTWH = [information_lt[0] + ACTIVE_COLOR_SEPARATION, information_lt[1] + Singleton.active_color_circle_padding, Singleton.footer_active_color_circle_wh, Singleton.footer_active_color_circle_wh]
+                    Render.editor_circle_outline(Screen, gl_context, ltwh=ACTIVE_COLOR_CIRCLE_OUTLINE_LTWH, circle_size=Singleton.footer_active_color_circle_inside_wh, circle_outline_thickness=Singleton.footer_active_color_outline_thickness)
+                    ACTIVE_COLOR_CIRCLE_LTWH = [ACTIVE_COLOR_CIRCLE_OUTLINE_LTWH[0] + Singleton.footer_active_color_outline_thickness, ACTIVE_COLOR_CIRCLE_OUTLINE_LTWH[1] + Singleton.footer_active_color_outline_thickness, Singleton.footer_active_color_circle_inside_wh, Singleton.footer_active_color_circle_inside_wh]
+                    Render.basic_rect_ltwh_image_with_color(Screen, gl_context, object_name=Singleton.footer_active_color_circle_reference, ltwh=ACTIVE_COLOR_CIRCLE_LTWH, rgba=glsl_cursor_color)
+                    information_lt[0] += ACTIVE_COLOR_SEPARATION + ACTIVE_COLOR_CIRCLE_OUTLINE_LTWH[2]
 
         except CaseBreak:
             pass

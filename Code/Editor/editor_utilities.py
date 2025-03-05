@@ -2025,8 +2025,6 @@ class EditorMap():
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
-                        # render_instance.store_draw(SprayTool.SPRAY_OUTLINE_REFERENCE, render_instance.invert_white, {'object_name': SprayTool.SPRAY_OUTLINE_REFERENCE, 'ltwh': ltwh})
-                        # self.stored_draw_keys.append(SprayTool.SPRAY_OUTLINE_REFERENCE)
                         render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.spray_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale})
                         self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
                     current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
@@ -2112,6 +2110,23 @@ class EditorMap():
 
         except CaseBreak:
             pass
+
+    def get_color_of_pixel_on_map(self, keys_class_instance, render_instance, screen_instance, gl_context):
+        if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
+            return None
+
+        # get the tile being hovered over
+        pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
+        tile_x, pixel_x = divmod(pos_x, self.initial_tile_wh[0])
+        tile_y, pixel_y = divmod(pos_y, self.initial_tile_wh[1])
+        tile = self.tile_array[tile_x][tile_y]
+        # check whether the tile is already loaded
+        if tile.pg_image is None:
+            tile.load(render_instance, screen_instance, gl_context)
+        # make the edit
+        map_color = tile.pg_image.get_at((pixel_x, pixel_y))
+        map_color[3] = 255
+        return map_color
 
     def _hand(self, keys_class_instance):
         if not ((int(self.current_tool) == HandTool.INDEX) or (keys_class_instance.editor_hand.pressed)):

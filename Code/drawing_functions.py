@@ -385,7 +385,7 @@ class RenderObjects():
         quads.release()
         renderer.release()
     #
-    def editor_circle_outline(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], circle_size: int, circle_outline_thickness: int, circle_pixel_size: float):
+    def editor_circle_outline(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], circle_size: int, circle_outline_thickness: int, circle_pixel_size: float = 1):
         # 'circle_outline', DrawCircleOutline
         program = self.programs['circle_outline'].program
         renderable_object = self.renderable_objects['white_pixel']

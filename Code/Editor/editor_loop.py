@@ -1,9 +1,10 @@
 import math
 import random
+import pygame
 from copy import deepcopy
 from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, LOADED_IN_EDITOR, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
 from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes
-from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap
+from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap, get_tf_circle
 from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
 import random
 
@@ -122,6 +123,22 @@ class EditorSingleton():
         self.footer_color = COLORS['BLUE']
         self.footer_ltwh = [0, 0, 0, self.header_height]
         self.footer_text_pixel_size = 3
+        self.active_color_circle_padding = 3
+        self.footer_active_color_outline_thickness = 1
+        self.footer_active_color_circle_wh = self.footer_ltwh[3] - (2 * self.active_color_circle_padding)
+        self.footer_active_color_circle_inside_wh = self.footer_active_color_circle_wh - (2 * self.footer_active_color_outline_thickness)
+        pygame_circle_image = pygame.Surface((self.footer_active_color_circle_inside_wh, self.footer_active_color_circle_inside_wh), pygame.SRCALPHA)
+        for left, row in enumerate(get_tf_circle(self.footer_active_color_circle_inside_wh)):
+            for top, draw in enumerate(row):
+                if draw:
+                    pygame_circle_image.set_at((left, top), (0, 0, 0, 255))
+                else:
+                    pygame_circle_image.set_at((left, top), (0, 0, 0, 0))
+        self.footer_active_color_circle_reference = 'footer_active_color_circle_reference'
+        Render.add_moderngl_texture_with_surface(Screen, gl_context, pygame_circle_image, self.footer_active_color_circle_reference)
+
+
+
         #
         # add color
         # add/remove color
