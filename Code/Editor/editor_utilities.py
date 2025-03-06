@@ -1328,6 +1328,10 @@ class EditorTool(ABC):
     STARTING_TOOL_INDEX = 4
     ATTRIBUTE_TEXT_PIXEL_SIZE = 3
     ATTRIBUTE_TEXT_COLOR = COLORS['BLACK']
+    _TEXT_BACKGROUND_COLOR = COLORS['LIGHT_GREY']
+    _TEXT_COLOR = COLORS['BLACK']
+    _TEXT_HIGHLIGHT_COLOR = COLORS['WHITE']
+    _HIGHLIGHT_COLOR = COLORS['RED']
 
     def __init__(self, active: bool):
         self.active: bool = active
@@ -1337,9 +1341,6 @@ class EditorTool(ABC):
     
     def __int__(self):
         return self.INDEX
-
-    def unload_tool(self):
-        raise NotImplementedError
 
 
 class MarqueeRectangleTool(EditorTool):
@@ -1363,11 +1364,6 @@ class PencilTool(EditorTool):
     _MIN_BRUSH_THICKNESS = 1
     _MAX_BRUSH_THICKNESS = 64
     CIRCLE_REFERENCE = 'pencil_tool_circle'
-
-    _TEXT_BACKGROUND_COLOR = COLORS['LIGHT_GREY']
-    _TEXT_COLOR = COLORS['BLACK']
-    _TEXT_HIGHLIGHT_COLOR = COLORS['WHITE']
-    _HIGHLIGHT_COLOR = COLORS['RED']
 
     BRUSH_THICKNESS = 'Thickness: '
 
@@ -1446,6 +1442,10 @@ class SprayTool(EditorTool):
     NAME = 'Spray'
     INDEX = 3
 
+    SPRAY_SIZE = 'Size: '
+    SPRAY_THICKNESS = 'Drop width: '
+    SPRAY_SPEED = 'Speed: '
+
     _MIN_SPRAY_SIZE = 1
     _MAX_SPRAY_SIZE = 64
     SPRAY_OUTLINE_REFERENCE = 'spray_tool_outline'
@@ -1462,9 +1462,15 @@ class SprayTool(EditorTool):
         self._spray_size: int = 64  # width of the spray tool
         self._spray_thickness: int = SprayTool._MIN_SPRAY_THICKNESS  # width of each drop of spray
         self._spray_speed: int = SprayTool._MIN_SPRAY_SPEED  # number of spray drops
+        self.SPRAY_SIZE_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        self.SPRAY_THICKNESS_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_THICKNESS, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        self.SPRAY_SPEED_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_SPEED, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        self.spray_size_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(SprayTool._MIN_SPRAY_SIZE, SprayTool._MAX_SPRAY_SIZE + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SIZE)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR, SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_SIZE, SprayTool._MAX_SPRAY_SIZE], True, False, False, True, len(str(SprayTool._MAX_SPRAY_SIZE)), True, str(self.spray_size), ending_characters='px')
+        self.spray_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(SprayTool._MIN_SPRAY_THICKNESS, SprayTool._MAX_SPRAY_THICKNESS + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_THICKNESS)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR, SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_THICKNESS, SprayTool._MAX_SPRAY_THICKNESS], True, False, False, True, len(str(SprayTool._MAX_SPRAY_THICKNESS)), True, str(self.spray_thickness), ending_characters='px')
+        self.spray_speed_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + '', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(SprayTool._MIN_SPRAY_SPEED, SprayTool._MAX_SPRAY_SPEED + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SPEED)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR, SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_SPEED, SprayTool._MAX_SPRAY_SPEED], True, False, False, True, len(str(SprayTool._MAX_SPRAY_SPEED)), True, str(self.spray_speed), ending_characters='')
         self.outline: list[list[int | list[bool]]]
         self.image_wh: list[int, int] = [0, 0]
-        self.update_spray_size(render_instance, screen_instance, gl_context, self._spray_size)
+        # self.update_spray_size(self._spray_size)
         super().__init__(active)
 
     @property
@@ -1479,51 +1485,47 @@ class SprayTool(EditorTool):
     def spray_speed(self):
         return self._spray_speed
 
-    def update_spray_size(self, render_instance, screen_instance, gl_context, brush_size: int):
-        pass
-        # try:
-        #     render_instance.remove_moderngl_texture_from_renderable_objects_dict(SprayTool.SPRAY_OUTLINE_REFERENCE)
-        # except:
-        #     pass
-        # self._brush_thickness = move_number_to_desired_range(SprayTool._MIN_SPRAY_THICKNESS, brush_size, SprayTool._MAX_SPRAY_THICKNESS)
-        # self.outline = get_perfect_circle_with_edges(self._spray_size)
-        # self.image_wh[0], self.image_wh[1] = self._spray_size + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS), self._spray_size + (2 * EditorMap.CIRCLE_OUTLINE_THICKNESS)
-        # pygame_circle_image = pygame.Surface((self.image_wh[0], self.image_wh[1]), pygame.SRCALPHA)
-        # # set all pixels to empty
-        # for image_left_index in range(self.image_wh[0]):
-        #     for image_top_index in range(self.image_wh[1]):
-        #         pygame_circle_image.set_at((image_left_index, image_top_index), (0, 0, 0, 0))
-        # # set pixels to create outline image
-        # for left_index, row in enumerate(self.outline):
-        #     for top_index, ltrb in enumerate(row):
-        #         if not isinstance(ltrb, list):
-        #             continue
-        #         pixel_x, pixel_y = top_index + EditorMap.CIRCLE_OUTLINE_THICKNESS, left_index + EditorMap.CIRCLE_OUTLINE_THICKNESS
-        #         left, top, right, bottom = ltrb
-        #         if left:
-        #             for offset_x in range(1, EditorMap.CIRCLE_OUTLINE_THICKNESS + 1):
-        #                 pygame_circle_image.set_at((pixel_x-offset_x, pixel_y), (255, 255, 255, 255))
-        #         if top:
-        #             for offset_y in range(1, EditorMap.CIRCLE_OUTLINE_THICKNESS + 1):
-        #                 pygame_circle_image.set_at((pixel_x, pixel_y-offset_y), (255, 255, 255, 255))
-        #         if right:
-        #             for offset_x in range(1, EditorMap.CIRCLE_OUTLINE_THICKNESS + 1):
-        #                 pygame_circle_image.set_at((pixel_x+offset_x, pixel_y), (255, 255, 255, 255))
-        #         if bottom:
-        #             for offset_y in range(1, EditorMap.CIRCLE_OUTLINE_THICKNESS + 1):
-        #                 pygame_circle_image.set_at((pixel_x, pixel_y+offset_y), (255, 255, 255, 255))
-        # render_instance.add_moderngl_texture_with_surface(screen_instance, gl_context, pygame_circle_image, SprayTool.SPRAY_OUTLINE_REFERENCE)
-
-    def spray_thickness_is_valid(self, brush_thickness: Any):
+    def spray_size_is_valid(self, spray_size: Any):
         try:
-            int(brush_thickness)
+            int(spray_size)
         except:
             return False
-        if not (SprayTool._MIN_SPRAY_THICKNESS <= int(brush_thickness) <= SprayTool._MAX_SPRAY_THICKNESS):
+        if not (SprayTool._MIN_SPRAY_SIZE <= int(spray_size) <= SprayTool._MAX_SPRAY_SIZE):
             return False
-        if int(brush_thickness) == self._brush_thickness:
+        if int(spray_size) == self._spray_size:
             return False
         return True
+
+    def spray_thickness_is_valid(self, spray_thickness: Any):
+        try:
+            int(spray_thickness)
+        except:
+            return False
+        if not (SprayTool._MIN_SPRAY_THICKNESS <= int(spray_thickness) <= SprayTool._MAX_SPRAY_THICKNESS):
+            return False
+        if int(spray_thickness) == self._spray_thickness:
+            return False
+        return True
+
+    def spray_speed_is_valid(self, spray_speed: Any):
+        try:
+            int(spray_speed)
+        except:
+            return False
+        if not (SprayTool._MIN_SPRAY_SPEED <= int(spray_speed) <= SprayTool._MAX_SPRAY_SPEED):
+            return False
+        if int(spray_speed) == self._spray_speed:
+            return False
+        return True
+
+    def update_spray_size(self, spray_size: int):
+        self._spray_size = int(spray_size)
+
+    def update_spray_thickness(self, spray_thickness: int):
+        self._spray_thickness = int(spray_thickness)
+
+    def update_spray_speed(self, spray_speed: int):
+        self._spray_speed = int(spray_speed)
 
 
 class HandTool(EditorTool):

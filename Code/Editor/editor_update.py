@@ -664,6 +664,8 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
     # information in footer
     footer_information = []
     # Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.tool_attribute_ltwh, COLORS['RED'])
+    tool_attribute_lt = [Singleton.tool_attribute_ltwh[0], Singleton.tool_attribute_ltwh[1]]
+    center_text_offset_y = (Singleton.tool_attribute_ltwh[3] - (5 * PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)) // 2
 
     try:
         match int(current_tool):
@@ -674,8 +676,6 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 pass
 
             case PencilTool.INDEX:
-                tool_attribute_lt = [Singleton.tool_attribute_ltwh[0], Singleton.tool_attribute_ltwh[1]]
-                center_text_offset_y = (Singleton.tool_attribute_ltwh[3] - (5 * PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)) // 2
                 # brush style
                 # text for the brush style
                 Render.draw_string_of_characters(Screen, gl_context, string=PencilTool.BRUSH_STYLE, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=PencilTool.ATTRIBUTE_TEXT_COLOR)
@@ -738,10 +738,66 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 footer_information.append(FooterInfo.MAP_SIZE)
 
             case SprayTool.INDEX:
-                pass
+                # spray width
+                # text
+                Render.draw_string_of_characters(Screen, gl_context, string=SprayTool.SPRAY_SIZE, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=SprayTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.SPRAY_SIZE_WIDTH
+                # text input
+                current_tool.spray_size_text_input.background_ltwh[0] = tool_attribute_lt[0] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                current_tool.spray_size_text_input.background_ltwh[1] = tool_attribute_lt[1] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
+                current_tool.spray_size_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
+                new_spray_size = current_tool.spray_size_text_input.current_string
+                if current_tool.spray_size_is_valid(new_spray_size):
+                    current_tool.update_spray_size(new_spray_size)
+                tool_attribute_lt[0] += current_tool.spray_size_text_input.background_ltwh[2]
+                # separator
+                SEPARATION_PIXELS = 6  # 2x on each side of a line
+                LINE_SEPARATOR_THICKNESS = 4
+                SEPARATOR_LINE_LTWH = [tool_attribute_lt[0] + SEPARATION_PIXELS, tool_attribute_lt[1], LINE_SEPARATOR_THICKNESS, Singleton.tool_attribute_ltwh[3]]
+                Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SEPARATOR_LINE_LTWH, rgba=COLORS['BLACK'])
+                tool_attribute_lt[0] += (2 * SEPARATION_PIXELS) + LINE_SEPARATOR_THICKNESS
+                # drop thickness
+                # text
+                Render.draw_string_of_characters(Screen, gl_context, string=SprayTool.SPRAY_THICKNESS, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=SprayTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.SPRAY_THICKNESS_WIDTH
+                # text input
+                current_tool.spray_thickness_text_input.background_ltwh[0] = tool_attribute_lt[0] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                current_tool.spray_thickness_text_input.background_ltwh[1] = tool_attribute_lt[1] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
+                current_tool.spray_thickness_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
+                new_spray_thickness = current_tool.spray_thickness_text_input.current_string
+                if current_tool.spray_thickness_is_valid(new_spray_thickness):
+                    current_tool.update_spray_thickness(new_spray_thickness)
+                tool_attribute_lt[0] += current_tool.spray_thickness_text_input.background_ltwh[2]
+                # separator
+                SEPARATION_PIXELS = 6  # 2x on each side of a line
+                LINE_SEPARATOR_THICKNESS = 4
+                SEPARATOR_LINE_LTWH = [tool_attribute_lt[0] + SEPARATION_PIXELS, tool_attribute_lt[1], LINE_SEPARATOR_THICKNESS, Singleton.tool_attribute_ltwh[3]]
+                Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SEPARATOR_LINE_LTWH, rgba=COLORS['BLACK'])
+                tool_attribute_lt[0] += (2 * SEPARATION_PIXELS) + LINE_SEPARATOR_THICKNESS
+                # spray speed
+                # text
+                Render.draw_string_of_characters(Screen, gl_context, string=SprayTool.SPRAY_SPEED, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=SprayTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.SPRAY_SPEED_WIDTH
+                # text input
+                current_tool.spray_speed_text_input.background_ltwh[0] = tool_attribute_lt[0] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                current_tool.spray_speed_text_input.background_ltwh[1] = tool_attribute_lt[1] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
+                current_tool.spray_speed_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
+                new_spray_speed = current_tool.spray_speed_text_input.current_string
+                if current_tool.spray_speed_is_valid(new_spray_speed):
+                    current_tool.update_spray_speed(new_spray_speed)
+                tool_attribute_lt[0] += current_tool.spray_speed_text_input.background_ltwh[2]
+                # information stuff in footer
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
+                    footer_information.append(FooterInfo.CURSOR_POSITION)
+                    footer_information.append(FooterInfo.SEPARATOR)
+                footer_information.append(FooterInfo.MAP_SIZE)
 
             case HandTool.INDEX:
-                pass
+                # information stuff in footer
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
+                    footer_information.append(FooterInfo.CURSOR_POSITION)
+                    footer_information.append(FooterInfo.SEPARATOR)
+                footer_information.append(FooterInfo.MAP_SIZE)
 
             case BucketTool.INDEX:
                 pass
@@ -765,6 +821,7 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 pass
 
             case EyedropTool.INDEX:
+                # information stuff in footer
                 if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
                     footer_information.append(FooterInfo.ACTIVE_COLOR)
                     footer_information.append(FooterInfo.SEPARATOR)
