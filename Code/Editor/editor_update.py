@@ -775,17 +775,60 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SEPARATOR_LINE_LTWH, rgba=COLORS['BLACK'])
                 tool_attribute_lt[0] += (2 * SEPARATION_PIXELS) + LINE_SEPARATOR_THICKNESS
                 # spray speed
-                # text
-                Render.draw_string_of_characters(Screen, gl_context, string=SprayTool.SPRAY_SPEED, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=SprayTool.ATTRIBUTE_TEXT_COLOR)
-                tool_attribute_lt[0] += current_tool.SPRAY_SPEED_WIDTH
-                # text input
-                current_tool.spray_speed_text_input.background_ltwh[0] = tool_attribute_lt[0] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE
-                current_tool.spray_speed_text_input.background_ltwh[1] = tool_attribute_lt[1] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
-                current_tool.spray_speed_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
-                new_spray_speed = current_tool.spray_speed_text_input.current_string
-                if current_tool.spray_speed_is_valid(new_spray_speed):
-                    current_tool.update_spray_speed(new_spray_speed)
-                tool_attribute_lt[0] += current_tool.spray_speed_text_input.background_ltwh[2]
+                enable_text_input = True
+                SEPARATION_BETWEEN_TEXT_INPUT_AND_BUTTON = 8
+                match current_tool.speed_type:
+                    case SprayTool.SPEED_IS_DROPS:
+                        text_input = current_tool.spray_speed_text_input
+                    case SprayTool.SPEED_IS_TIME:
+                        text_input = current_tool.spray_time_text_input
+                SPEED_STYLE_BUTTON_LTWH = [tool_attribute_lt[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2) + current_tool.SPRAY_SPEED_WIDTH + text_input.background_ltwh[2] + SEPARATION_BETWEEN_TEXT_INPUT_AND_BUTTON, tool_attribute_lt[1], Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]]
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, SPEED_STYLE_BUTTON_LTWH):
+                    if Keys.editor_primary.newly_pressed:
+                        enable_text_input = False
+                        current_tool.update_speed_type()
+                        match current_tool.speed_type:
+                            case SprayTool.SPEED_IS_DROPS:
+                                text_input = current_tool.spray_speed_text_input
+                            case SprayTool.SPEED_IS_TIME:
+                                text_input = current_tool.spray_time_text_input
+                        SPEED_STYLE_BUTTON_LTWH = [tool_attribute_lt[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2) + current_tool.SPRAY_SPEED_WIDTH + text_input.background_ltwh[2] + SEPARATION_BETWEEN_TEXT_INPUT_AND_BUTTON, tool_attribute_lt[1], Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]]
+                    if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, SPEED_STYLE_BUTTON_LTWH):
+                        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SPEED_STYLE_BUTTON_LTWH, rgba=COLORS['LIGHT_GREY'])
+                
+                match current_tool.speed_type:
+                    case SprayTool.SPEED_IS_DROPS:
+                        # text
+                        Render.draw_string_of_characters(Screen, gl_context, string=SprayTool.SPRAY_SPEED, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=SprayTool.ATTRIBUTE_TEXT_COLOR)
+                        tool_attribute_lt[0] += current_tool.SPRAY_SPEED_WIDTH
+                        # text input
+                        text_input.background_ltwh[0] = tool_attribute_lt[0] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                        text_input.background_ltwh[1] = tool_attribute_lt[1] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
+                        text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = enable_text_input)
+                        new_spray_speed = text_input.current_string
+                        if current_tool.spray_speed_is_valid(new_spray_speed):
+                            current_tool.update_spray_speed(new_spray_speed)
+                            text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = enable_text_input)
+                        tool_attribute_lt[0] += text_input.background_ltwh[2] + SEPARATION_BETWEEN_TEXT_INPUT_AND_BUTTON
+                        # toggleable image of drops
+                        SPEED_IS_DROPS_IMAGE_LTWH = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
+                        Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=SPEED_IS_DROPS_IMAGE_LTWH)
+                    case SprayTool.SPEED_IS_TIME:
+                        # text
+                        Render.draw_string_of_characters(Screen, gl_context, string=SprayTool.SPRAY_SPEED, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=SprayTool.ATTRIBUTE_TEXT_COLOR)
+                        tool_attribute_lt[0] += current_tool.SPRAY_SPEED_WIDTH
+                        # text input
+                        text_input.background_ltwh[0] = tool_attribute_lt[0] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                        text_input.background_ltwh[1] = tool_attribute_lt[1] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
+                        text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = enable_text_input)
+                        new_spray_speed = text_input.current_string
+                        if current_tool.spray_speed_is_valid(new_spray_speed):
+                            current_tool.update_spray_speed(new_spray_speed)
+                        tool_attribute_lt[0] += text_input.background_ltwh[2] + SEPARATION_BETWEEN_TEXT_INPUT_AND_BUTTON
+                        # toggleable image of stop watch
+                        SPEED_IS_TIME_IMAGE_LTWH = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_clock'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_clock'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_clock'].ORIGINAL_HEIGHT]
+                        Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_clock', ltwh=SPEED_IS_TIME_IMAGE_LTWH)
+
                 # information stuff in footer
                 if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
                     footer_information.append(FooterInfo.CURSOR_POSITION)

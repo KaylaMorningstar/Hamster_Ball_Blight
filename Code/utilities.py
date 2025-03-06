@@ -329,8 +329,7 @@ IMAGE_PATHS = {
     'Eyedropper':        [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Eyedropper.png'],
     # tool attributes
     'tool_attribute_outline': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tool_attributes\\tool_attribute_outline.png'],
-    # 'brush_shape_circle': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tool_attributes\\circle.png'],
-    # 'brush_shape_square': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tool_attributes\\square.png'],
+    'tool_attribute_clock': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tool_attributes\\clock.png']
     # test
     # 'map': [[LOADED_IN_EDITOR], 'C:\\Users\\Kayle\\Desktop\\OLD_HAMSTER\\HAMSTER_BALL_BLITZ\\data\\Images\\Forest\\Forest1.png']
 }
