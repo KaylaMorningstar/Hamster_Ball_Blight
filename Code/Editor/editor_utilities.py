@@ -5,8 +5,8 @@ from copy import deepcopy
 from abc import ABC
 from array import array
 from bresenham import bresenham
-import numpy as np
 from typing import Any
+from random import choice
 
 
 class TextInput():
@@ -1196,6 +1196,21 @@ def get_tf_circle(diameter: int):
     return tf_circle
 
 
+def get_circle_tf_indexes(diameter: int):
+    true_indexes = []
+    radius = (diameter - 0.5) / 2  # smaller than the actual radius for a better looking circle
+    center = diameter / 2
+    for row_index, row in enumerate(range(diameter)):
+        row += 0.5
+        for column_index, column in enumerate(range(diameter)):
+            column += 0.5
+            if (column - center) ** 2 + (row - center) ** 2 <= radius ** 2:
+                true_indexes.append([column_index, row_index])
+            else:
+                continue
+    return true_indexes
+
+
 def get_tf_square(size: int):
     return [[True for _ in range(size)] for _ in range(size)]
 
@@ -1459,9 +1474,14 @@ class SprayTool(EditorTool):
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = SprayTool.NOT_SPRAYING  # (NOT_SPRAYING = 0, SPRAYING = 1)
-        self._spray_size: int = 64  # width of the spray tool
-        self._spray_thickness: int = SprayTool._MIN_SPRAY_THICKNESS  # width of each drop of spray
-        self._spray_speed: int = SprayTool._MIN_SPRAY_SPEED  # number of spray drops
+        self.spray_circle_true_indexes: list[list[int, int]]
+        self.drop_thickness_true_indexes: list[list[int, int]]
+        self._spray_size: int  # width of the spray tool
+        self.update_spray_size(SprayTool._MIN_SPRAY_SIZE)
+        self._spray_thickness: int  # width of each drop of spray
+        self.update_spray_thickness(SprayTool._MIN_SPRAY_THICKNESS)
+        self._spray_speed: int  # number of spray drops
+        self.update_spray_speed(SprayTool._MIN_SPRAY_SPEED)
         self.SPRAY_SIZE_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         self.SPRAY_THICKNESS_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_THICKNESS, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         self.SPRAY_SPEED_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_SPEED, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
@@ -1470,7 +1490,7 @@ class SprayTool(EditorTool):
         self.spray_speed_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + '', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(SprayTool._MIN_SPRAY_SPEED, SprayTool._MAX_SPRAY_SPEED + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SPEED)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR, SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_SPEED, SprayTool._MAX_SPRAY_SPEED], True, False, False, True, len(str(SprayTool._MAX_SPRAY_SPEED)), True, str(self.spray_speed), ending_characters='')
         self.outline: list[list[int | list[bool]]]
         self.image_wh: list[int, int] = [0, 0]
-        # self.update_spray_size(self._spray_size)
+        self.last_xy: array = array('i', [-1, -1])
         super().__init__(active)
 
     @property
@@ -1518,14 +1538,20 @@ class SprayTool(EditorTool):
             return False
         return True
 
-    def update_spray_size(self, spray_size: int):
+    def update_spray_size(self, spray_size):
         self._spray_size = int(spray_size)
+        self.spray_circle_true_indexes = get_circle_tf_indexes(self._spray_size)
 
-    def update_spray_thickness(self, spray_thickness: int):
+    def update_spray_thickness(self, spray_thickness):
         self._spray_thickness = int(spray_thickness)
+        self.drop_thickness_true_indexes = get_circle_tf_indexes(self._spray_thickness)
 
-    def update_spray_speed(self, spray_speed: int):
+    def update_spray_speed(self, spray_speed):
         self._spray_speed = int(spray_speed)
+
+    def reset_last_xy(self):
+        self.last_xy[0] = -1
+        self.last_xy[1] = -1
 
 
 class HandTool(EditorTool):
@@ -1931,11 +1957,10 @@ class EditorMap():
                                                 # don't try to draw outside of map bounds
                                                 if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
                                                     tile = self.tile_array[tile_x][tile_y]
-                                                    # check whether the tile is already loaded
+                                                    # load the tile if it isn't loaded
                                                     if tile.pg_image is None:
                                                         tile.load(render_instance, screen_instance, gl_context)
-                                                    else:
-                                                        reload_tiles[tile.image_reference] = tile
+                                                    reload_tiles[tile.image_reference] = tile
                                                     # make the edit
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                                     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
@@ -1953,11 +1978,10 @@ class EditorMap():
                                                     # don't try to draw outside of map bounds
                                                     if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
                                                         tile = self.tile_array[tile_x][tile_y]
-                                                        # check whether the tile is already loaded
+                                                        # load the tile if it isn't loaded
                                                         if tile.pg_image is None:
                                                             tile.load(render_instance, screen_instance, gl_context)
-                                                        else:
-                                                            reload_tiles[tile.image_reference] = tile
+                                                        reload_tiles[tile.image_reference] = tile
                                                         # make the edit
                                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                                         tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
@@ -1974,11 +1998,10 @@ class EditorMap():
                                                     # don't try to draw outside of map bounds
                                                     if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
                                                         tile = self.tile_array[tile_x][tile_y]
-                                                        # check whether the tile is already loaded
+                                                        # load the tile if it isn't loaded
                                                         if tile.pg_image is None:
                                                             tile.load(render_instance, screen_instance, gl_context)
-                                                        else:
-                                                            reload_tiles[tile.image_reference] = tile
+                                                        reload_tiles[tile.image_reference] = tile
                                                         # make the edit
                                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                                         tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
@@ -2030,6 +2053,62 @@ class EditorMap():
                         render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.spray_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale})
                         self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
                     current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
+
+                    # change drawing state
+                    if (self.current_tool.state == SprayTool.NOT_SPRAYING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
+                        self.current_tool.reset_last_xy()
+                        self.current_tool.state = SprayTool.SPRAYING
+                        self.map_edits.append(self.PixelChange(new_rgba=current_color_rgba))
+                    elif (self.current_tool.state == SprayTool.SPRAYING) and keys_class_instance.editor_primary.released:
+                        self.current_tool.state = SprayTool.NOT_SPRAYING
+
+                    try:
+                        match self.current_tool.state:
+                            case SprayTool.NOT_SPRAYING:
+                                pass
+                            case SprayTool.SPRAYING:
+                                # don't draw if the cursor hasn't moved
+                                if (pos_x == self.current_tool.last_xy[0]) and (pos_y == self.current_tool.last_xy[1]):
+                                    raise CaseBreak
+                                # setup for spraying
+                                reload_tiles = {}
+                                map_edit = self.map_edits[-1].change_dict
+                                max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
+                                outline_left, outline_top = pos_x - ((self.current_tool.spray_size - 1) // 2), pos_y - ((self.current_tool.spray_size - 1) // 2)
+                                # pick random indexes to spray
+                                for _ in range(self.current_tool.spray_speed):
+                                    spray_offset_x, spray_offset_y = choice(self.current_tool.spray_circle_true_indexes)
+                                    drop_center_x, drop_center_y = outline_left + spray_offset_x, outline_top + spray_offset_y
+                                    drop_left, drop_top = drop_center_x - ((self.current_tool.spray_thickness - 1) // 2), drop_center_y - ((self.current_tool.spray_thickness - 1) // 2)
+                                    # get the pixe being drawn
+                                    for (drop_offset_x, drop_offset_y) in self.current_tool.drop_thickness_true_indexes:
+                                        if map_edit.get(tile_name := (edited_pixel_x := drop_left+drop_offset_x, edited_pixel_y := drop_top+drop_offset_y)) is None:
+                                            # get the tile and pixel being edited
+                                            tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                            tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                            # don't try to draw outside of map bounds
+                                            if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                                tile = self.tile_array[tile_x][tile_y]
+                                                # load the tile if it isn't loaded
+                                                if tile.pg_image is None:
+                                                    tile.load(render_instance, screen_instance, gl_context)
+                                                reload_tiles[tile.image_reference] = tile
+                                                # make the edit
+                                                original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                # record what was edited for ctrl-Z
+                                                map_edit[tile_name] = original_pixel_color
+
+                                for tile in reload_tiles.values():
+                                    render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image, ltwh)
+                                    tile.save()
+
+                                # update values to use next loop
+                                self.current_tool.last_xy[0] = pos_x
+                                self.current_tool.last_xy[1] = pos_y
+                    except CaseBreak:
+                        pass
 
                 case HandTool.INDEX:
                     pass
