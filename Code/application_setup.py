@@ -240,6 +240,8 @@ class KeysClass():
             'SHIFT': lambda: self.keys[pygame.K_RSHIFT] or self.keys[pygame.K_LSHIFT],
             'CONTROL': lambda: self.keys[pygame.K_RCTRL] or self.keys[pygame.K_LCTRL],
             'ALT': lambda: self.keys[pygame.K_RALT] or self.keys[pygame.K_LALT],
+            '\\': lambda: self.keys[pygame.K_BACKSLASH],
+            '/': lambda: self.keys[pygame.K_SLASH],
             # mouse clicks
             'LEFT_CLICK': lambda: self.left_click,
             'MIDDLE_CLICK': lambda: self.middle_click,
@@ -361,6 +363,8 @@ class KeysClass():
             if self.keys[pygame.K_x]: return 'x'
             if self.keys[pygame.K_y]: return 'y'
             if self.keys[pygame.K_z]: return 'z'
+            if self.keys[pygame.K_SLASH]: return '/'
+            if self.keys[pygame.K_BACKSLASH]: return '\\'
         else:
             if self.keys[pygame.K_0]: return ')'
             if self.keys[pygame.K_1]: return '!'

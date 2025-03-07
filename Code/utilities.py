@@ -5,7 +5,7 @@ import time
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 
-
+ONE_FRAME_AT_60_FPS = 1/ 60
 OFF_SCREEN = -99999
 FILE_TYPES = {
     (FILE_ANY := '*'): '*',
@@ -303,6 +303,8 @@ IMAGE_PATHS = {
     ';': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\semi_colon.png'],
     '_': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\underscore.png'],
     '#': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\pound.png'],
+    '\\': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\back_slash.png'],
+    '/': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\forward_slash.png'],
     # cursors
     'cursor_arrow': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_arrow.png'],
     'cursor_crosshair': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_crosshair.png'],
