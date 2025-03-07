@@ -1,6 +1,6 @@
 import pygame
 import pyperclip
-from Code.utilities import move_number_to_desired_range
+from Code.utilities import move_number_to_desired_range, get_time
 from Code.Editor.editor_loop import editor_loop, EditorSingleton
 from typing import Callable
 from Code.utilities import COLORS

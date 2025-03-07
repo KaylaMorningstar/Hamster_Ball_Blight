@@ -1472,6 +1472,7 @@ class SprayTool(EditorTool):
     _MAX_SPRAY_TIME = 0.5  # s
     _SPRAY_TIME_INCREMENT = 0.001  # s
     _SPRAY_TIME_ROUND_DIGITS = 3
+    MAX_DROPS_PER_FRAME = 24
 
     NOT_SPRAYING = 0
     SPRAYING = 1
@@ -1508,6 +1509,7 @@ class SprayTool(EditorTool):
         self.outline: list[list[int | list[bool]]]
         self.image_wh: list[int, int] = [0, 0]
         self.last_xy: array = array('i', [-1, -1])
+        self.last_drop_time = get_time()
         super().__init__(active)
 
     @property
@@ -1564,9 +1566,9 @@ class SprayTool(EditorTool):
             float(spray_time)
         except:
             return False
-        if not (SprayTool._MIN_SPRAY_TIME <= int(spray_time) <= SprayTool._MAX_SPRAY_TIME):
+        if not (SprayTool._MIN_SPRAY_TIME <= float(spray_time) <= SprayTool._MAX_SPRAY_TIME):
             return False
-        if int(spray_time) == self._spray_time:
+        if float(spray_time) == self._spray_time:
             return False
         return True
 
@@ -2102,6 +2104,7 @@ class EditorMap():
                     if (self.current_tool.state == SprayTool.NOT_SPRAYING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
                         self.current_tool.reset_last_xy()
                         self.current_tool.state = SprayTool.SPRAYING
+                        self.current_tool.last_drop_time = get_time() - (1 / 60)  # 1 / 60 is roughly 1 frame
                         self.map_edits.append(self.PixelChange(new_rgba=current_color_rgba))
                     elif (self.current_tool.state == SprayTool.SPRAYING) and keys_class_instance.editor_primary.released:
                         self.current_tool.state = SprayTool.NOT_SPRAYING
@@ -2111,8 +2114,8 @@ class EditorMap():
                             case SprayTool.NOT_SPRAYING:
                                 pass
                             case SprayTool.SPRAYING:
-                                # don't draw if the cursor hasn't moved
-                                if (pos_x == self.current_tool.last_xy[0]) and (pos_y == self.current_tool.last_xy[1]):
+                                # don't draw if spraying drops and the cursor hasn't moved
+                                if (self.current_tool.speed_type == SprayTool.SPEED_IS_DROPS) and (pos_x == self.current_tool.last_xy[0]) and (pos_y == self.current_tool.last_xy[1]):
                                     raise CaseBreak
                                 # setup for spraying
                                 reload_tiles = {}
@@ -2120,7 +2123,17 @@ class EditorMap():
                                 max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
                                 outline_left, outline_top = pos_x - ((self.current_tool.spray_size - 1) // 2), pos_y - ((self.current_tool.spray_size - 1) // 2)
                                 # pick random indexes to spray
-                                for _ in range(self.current_tool.spray_speed):
+                                match self.current_tool.speed_type:
+                                    case SprayTool.SPEED_IS_DROPS:
+                                        number_of_drops = self.current_tool.spray_speed
+                                    case SprayTool.SPEED_IS_TIME:
+                                        current_time = get_time()
+                                        number_of_drops, remainder = divmod(current_time - self.current_tool.last_drop_time, self.current_tool.spray_time)
+                                        number_of_drops = int(number_of_drops)
+                                        number_of_drops = move_number_to_desired_range(0, number_of_drops, SprayTool.MAX_DROPS_PER_FRAME)
+                                        print(number_of_drops)
+                                        self.current_tool.last_drop_time = current_time - remainder
+                                for _ in range(number_of_drops):
                                     spray_offset_x, spray_offset_y = choice(self.current_tool.spray_circle_true_indexes)
                                     drop_center_x, drop_center_y = outline_left + spray_offset_x, outline_top + spray_offset_y
                                     drop_left, drop_top = drop_center_x - ((self.current_tool.spray_thickness - 1) // 2), drop_center_y - ((self.current_tool.spray_thickness - 1) // 2)

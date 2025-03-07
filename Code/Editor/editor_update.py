@@ -821,9 +821,9 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                         text_input.background_ltwh[0] = tool_attribute_lt[0] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE
                         text_input.background_ltwh[1] = tool_attribute_lt[1] + SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
                         text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = enable_text_input)
-                        new_spray_speed = text_input.current_string
-                        if current_tool.spray_speed_is_valid(new_spray_speed):
-                            current_tool.update_spray_speed(new_spray_speed)
+                        new_spray_time = text_input.current_string
+                        if current_tool.spray_time_is_valid(new_spray_time):
+                            current_tool.update_spray_time(new_spray_time)
                         tool_attribute_lt[0] += text_input.background_ltwh[2] + SEPARATION_BETWEEN_TEXT_INPUT_AND_BUTTON
                         # toggleable image of stop watch
                         SPEED_IS_TIME_IMAGE_LTWH = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_clock'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_clock'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_clock'].ORIGINAL_HEIGHT]
