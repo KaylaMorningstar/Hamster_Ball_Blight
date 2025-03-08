@@ -807,12 +807,14 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                         text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = enable_text_input)
                         new_spray_speed = text_input.current_string
                         if current_tool.spray_speed_is_valid(new_spray_speed):
-                            current_tool.update_spray_speed(new_spray_speed)
+                            current_tool.update_spray_speed(new_spray_speed, Render, Screen, gl_context)
                             text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = enable_text_input)
                         tool_attribute_lt[0] += text_input.background_ltwh[2] + SEPARATION_BETWEEN_TEXT_INPUT_AND_BUTTON
                         # toggleable image of drops
                         SPEED_IS_DROPS_IMAGE_LTWH = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
                         Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=SPEED_IS_DROPS_IMAGE_LTWH)
+                        SPEED_IS_DROPS_DROPS_LTWH = [SPEED_IS_DROPS_IMAGE_LTWH[0] + SprayTool.SPEED_IS_DROPS_ATTRIBUTE_DROP_PADDING, SPEED_IS_DROPS_IMAGE_LTWH[1] + SprayTool.SPEED_IS_DROPS_ATTRIBUTE_DROP_PADDING, SPEED_IS_DROPS_IMAGE_LTWH[2] - (2 * SprayTool.SPEED_IS_DROPS_ATTRIBUTE_DROP_PADDING), SPEED_IS_DROPS_IMAGE_LTWH[3] - (2 * SprayTool.SPEED_IS_DROPS_ATTRIBUTE_DROP_PADDING)]
+                        Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name=SprayTool.SPEED_IS_DROPS_ATTRIBUTE_IMAGE_REFERENCE, ltwh=SPEED_IS_DROPS_DROPS_LTWH)
                     case SprayTool.SPEED_IS_TIME:
                         # text
                         Render.draw_string_of_characters(Screen, gl_context, string=SprayTool.SPRAY_SPEED, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=SprayTool.ATTRIBUTE_TEXT_COLOR)

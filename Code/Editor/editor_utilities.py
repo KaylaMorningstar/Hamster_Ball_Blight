@@ -6,7 +6,7 @@ from abc import ABC
 from array import array
 from bresenham import bresenham
 from typing import Any
-from random import choice
+from random import choice, shuffle
 
 
 class TextInput():
@@ -1474,8 +1474,6 @@ class SprayTool(EditorTool):
     _SPRAY_TIME_ROUND_DIGITS = 3
     MAX_DROPS_PER_FRAME = 24
 
-
-
     NOT_SPRAYING = 0
     SPRAYING = 1
 
@@ -1484,29 +1482,43 @@ class SprayTool(EditorTool):
     _MIN_TIME_TYPE = 0
     _MAX_TIME_TYPE = 1
 
+    SPEED_IS_DROPS_ATTRIBUTE_DROP_PADDING = 2
+    _SPEED_DROPS_INDEXES = [x for x in range(1, _MAX_SPRAY_SPEED + 1)]
+    shuffle(_SPEED_DROPS_INDEXES)
+    _SPEED_DROPS_ATTRIBUTE_XY = {'3_2': None, '9_1': None, '13_2': None, '7_4': None, '11_4': None, '1_5': None, '5_6': None, '10_7': None, '2_8': None, '7_9': None, '13_8': None, '1_11': None, '10_11': None, '4_10': None, '6_13': None, '12_13': None}
+    for key in _SPEED_DROPS_ATTRIBUTE_XY.keys():
+        _SPEED_DROPS_ATTRIBUTE_XY[key] = _SPEED_DROPS_INDEXES.pop()
+    SPEED_IS_DROPS_ATTRIBUTE_IMAGE_REFERENCE = 'speed_is_drops_attribute_image'
+
     DROPS = ' drops'
     DROP = ' drop'
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = SprayTool.NOT_SPRAYING  # (NOT_SPRAYING = 0, SPRAYING = 1)
+        # surfaces used while spraying
         self.spray_circle_true_indexes: list[list[int, int]]
         self.drop_thickness_true_indexes: list[list[int, int]]
+        # attributes
         self._spray_size: int = SprayTool._MIN_SPRAY_SIZE # width of the spray tool
         self._spray_thickness: int = SprayTool._MIN_SPRAY_THICKNESS  # width of each drop of spray
         self._spray_speed: int = SprayTool._MIN_SPRAY_SPEED  # number of spray drops
         self._spray_time: int = SprayTool._MIN_SPRAY_TIME  # time between drops in seconds
+        # tool attribute word width
         self.SPRAY_SIZE_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         self.SPRAY_THICKNESS_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_THICKNESS, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         self.SPRAY_SPEED_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_SPEED, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        # text inputs for attributes
         self.spray_size_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(spray_size) + 'px', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for spray_size in range(SprayTool._MIN_SPRAY_SIZE, SprayTool._MAX_SPRAY_SIZE + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SIZE)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR, SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_SIZE, SprayTool._MAX_SPRAY_SIZE], True, False, False, True, len(str(SprayTool._MAX_SPRAY_SIZE)), True, str(self.spray_size), ending_characters='px')
         self.spray_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(spray_thickness) + 'px', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for spray_thickness in range(SprayTool._MIN_SPRAY_THICKNESS, SprayTool._MAX_SPRAY_THICKNESS + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_THICKNESS)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR, SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_THICKNESS, SprayTool._MAX_SPRAY_THICKNESS], True, False, False, True, len(str(SprayTool._MAX_SPRAY_THICKNESS)), True, str(self.spray_thickness), ending_characters='px')
-        speed_text_input_width = max(max([get_text_width(render_instance, str(spray_speed) + SprayTool.DROPS, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for spray_speed in range(SprayTool._MIN_SPRAY_SPEED, SprayTool._MAX_SPRAY_SPEED + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SPEED)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), max([get_text_width(render_instance, str(round(brush_size * SprayTool._SPRAY_TIME_INCREMENT, SprayTool._SPRAY_TIME_ROUND_DIGITS)) + ' drops/sec', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(round((SprayTool._MAX_SPRAY_TIME - SprayTool._MIN_SPRAY_TIME + SprayTool._SPRAY_TIME_INCREMENT) / SprayTool._SPRAY_TIME_INCREMENT))]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SPEED)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE))
+        speed_text_input_width = max(max([get_text_width(render_instance, str(spray_speed) + SprayTool.DROPS, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for spray_speed in range(SprayTool._MIN_SPRAY_SPEED, SprayTool._MAX_SPRAY_SPEED + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SPEED)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), max([get_text_width(render_instance, str(brush_size) + ' drops/sec', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(SprayTool._MIN_SPRAY_TIME, SprayTool._MAX_SPRAY_TIME + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SPEED)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE))
         self.spray_speed_text_input = TextInput([0, 0, speed_text_input_width, get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR, SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_SPEED, SprayTool._MAX_SPRAY_SPEED], True, False, False, True, len(str(SprayTool._MAX_SPRAY_SPEED)), True, str(self.spray_speed), ending_characters=SprayTool.DROPS)
         self.spray_time_text_input = TextInput([0, 0, speed_text_input_width, get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR,SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_TIME, SprayTool._MAX_SPRAY_TIME], True, False, False, True, len(str(SprayTool._MAX_SPRAY_TIME)), True, str(self.spray_time), ending_characters=' drops/sec')
+        # update tool attribute values
         self.update_spray_size(SprayTool._MIN_SPRAY_SIZE)
         self.update_spray_thickness(SprayTool._MIN_SPRAY_THICKNESS)
-        self.update_spray_speed(SprayTool._MIN_SPRAY_SPEED)
+        self.update_spray_speed(SprayTool._MIN_SPRAY_SPEED, render_instance, screen_instance, gl_context)
         self.update_spray_time(SprayTool._MIN_SPRAY_TIME)
+        # attributes needed to make 'speed' tool attribute work
         self.speed_type = SprayTool._MIN_TIME_TYPE
         self.outline: list[list[int | list[bool]]]
         self.image_wh: list[int, int] = [0, 0]
@@ -1583,12 +1595,33 @@ class SprayTool(EditorTool):
         self._spray_thickness = int(spray_thickness)
         self.drop_thickness_true_indexes = get_circle_tf_indexes(self._spray_thickness)
 
-    def update_spray_speed(self, spray_speed):
+    def update_spray_speed(self, spray_speed, render_instance, screen_instance, gl_context):
+        # update the spray speed
         self._spray_speed = int(spray_speed)
+        # update label as drop vs. drops
         if self._spray_speed == 1:
             self.spray_speed_text_input.ending_characters = SprayTool.DROP
         else:
             self.spray_speed_text_input.ending_characters = SprayTool.DROPS
+        # update the drops in the image
+        try:
+            render_instance.remove_moderngl_texture_from_renderable_objects_dict(SprayTool.SPEED_IS_DROPS_ATTRIBUTE_IMAGE_REFERENCE)
+        except:
+            pass
+        pygame_image_wh = render_instance.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH - (2 * SprayTool.SPEED_IS_DROPS_ATTRIBUTE_DROP_PADDING)
+        pygame_image = pygame.Surface((pygame_image_wh, pygame_image_wh), pygame.SRCALPHA)
+        for column in range(pygame_image_wh):
+            for row in range(pygame_image_wh):
+                if SprayTool._SPEED_DROPS_ATTRIBUTE_XY.get(f"{column}_{row}") is None:
+                    continue
+                if SprayTool._SPEED_DROPS_ATTRIBUTE_XY[f"{column}_{row}"] > self._spray_speed:
+                    continue
+                pygame_image.set_at((column, row), (0, 0, 0, 255))
+                pygame_image.set_at((column+1, row), (0, 0, 0, 255))
+                pygame_image.set_at((column-1, row), (0, 0, 0, 255))
+                pygame_image.set_at((column, row+1), (0, 0, 0, 255))
+                pygame_image.set_at((column, row-1), (0, 0, 0, 255))
+        render_instance.add_moderngl_texture_with_surface(screen_instance, gl_context, pygame_image, SprayTool.SPEED_IS_DROPS_ATTRIBUTE_IMAGE_REFERENCE)
 
     def update_spray_time(self, spray_time):
         self._spray_time = int(spray_time)
