@@ -433,14 +433,33 @@ class RenderObjects():
     #
     def draw_line(self, Screen: ScreenObject, gl_context: moderngl.Context, x1: int, y1: int, x2: int, y2: int, thickness: int, rgba, pixel_size: int = 1):
         # 'draw_line', DrawLine
-        ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
         # dot, horizontal, or vertical
-        if (ltwh[2] == 0) or (ltwh[3] == 0):
+        if (x1 == x2) or (y1 == y2):
+            if (x1 > x2):
+                x1 += 1
+            if (y1 > y2):
+                y1 += 1
+            ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
             if (ltwh[2] == 0):
                 ltwh[2] = 1
             if (ltwh[3] == 0):
                 ltwh[3] = 1
             self.basic_rect_ltwh_image_with_color(Screen, gl_context, 'black_pixel', ltwh, rgba)
+            return
+        # octant 1 or 2
+        if (y1 > y2) and (x1 < x2):
+            y1 += 1
+        # octant 3 or 4
+        if (y1 > y2) and (x1 > x2):
+            x1 += 1
+            y1 += 1
+        # octant 5 or 6
+        if (y1 < y2) and (x1 > x2):
+            x1 += 1
+        # octant 7 or 8
+        if (y1 < y2) and (x1 < x2):
+            pass
+        ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
         program = self.programs['draw_line'].program
         renderable_object = self.renderable_objects['black_pixel']
         topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
@@ -1666,3 +1685,218 @@ class DrawLine():
             # texture(tex, uvs).b + blue, 
             # texture(tex, uvs).a + alpha
             # );
+
+
+
+    # def draw_line(self, Screen: ScreenObject, gl_context: moderngl.Context, x1: int, y1: int, x2: int, y2: int, thickness: int, rgba, pixel_size: int = 1):
+    #     # 'draw_line', DrawLine
+    #     ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
+    #     # dot, horizontal, or vertical
+    #     if (ltwh[2] == 0) or (ltwh[3] == 0):
+    #         if (ltwh[2] == 0):
+    #             ltwh[2] = 1
+    #         if (ltwh[3] == 0):
+    #             ltwh[3] = 1
+    #         self.basic_rect_ltwh_image_with_color(Screen, gl_context, 'black_pixel', ltwh, rgba)
+    #     program = self.programs['draw_line'].program
+    #     renderable_object = self.renderable_objects['black_pixel']
+    #     topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
+    #     topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
+    #     topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
+    #     bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
+    #     program['aspect'] = Screen.aspect
+    #     program['red'] = rgba[0]
+    #     program['green'] = rgba[1]
+    #     program['blue'] = rgba[2]
+    #     program['alpha'] = rgba[3]
+    #     program['left'] = ltwh[0]
+    #     program['top'] = ltwh[1]
+    #     program['width'] = ltwh[2]
+    #     program['height'] = ltwh[3]
+    #     program['px1'] = x1
+    #     program['py1'] = y1
+    #     program['px2'] = x2
+    #     program['py2'] = y2
+    #     quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
+    #     renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
+    #     renderable_object.texture.use(0)
+    #     renderer.render(mode=moderngl.TRIANGLE_STRIP)
+    #     quads.release()
+    #     renderer.release()
+
+
+# class DrawLine():
+#     def __init__(self, gl_context):
+#         self.VERTICE_SHADER = '''
+#         #version 330 core
+
+#         uniform float aspect;
+
+#         in vec2 vert;
+#         in vec2 texcoord;
+#         out vec2 uvs;
+
+#         void main() {
+#             uvs = texcoord;
+#             gl_Position = vec4(
+#             vert.x / aspect, 
+#             vert.y, 0.0, 1.0
+#             );
+#         }
+#         '''
+#         self.FRAGMENT_SHADER = '''
+#         #version 330 core
+#         #extension GL_EXT_shader_framebuffer_fetch : require
+
+#         const vec3 BLACK = vec3(0.0, 0.0, 0.0);
+#         const vec3 WHITE = vec3(1.0, 1.0, 1.0);
+#         const vec3 RED = vec3(1.0, 0.0, 0.0);
+#         const vec3 GREEN = vec3(0.0, 1.0, 0.0);
+#         const vec3 BLUE = vec3(0.0, 0.0, 1.0);
+#         const vec3 YELLOW = vec3(1.0, 1.0, 0.0);
+#         const vec3 PINK = vec3(1.0, 0.0, 1.0);
+#         const vec3 CYAN = vec3(0.0, 1.0, 1.0);
+
+#         uniform sampler2D tex;
+#         uniform float red;
+#         uniform float green;
+#         uniform float blue;
+#         uniform float alpha;
+
+#         uniform int left;
+#         uniform int top;
+#         uniform int width;
+#         uniform int height;
+
+#         uniform float px1;
+#         uniform float py1;
+#         uniform float px2;
+#         uniform float py2;
+
+#         in vec2 uvs;
+#         out vec4 f_color;
+
+#         void main() {
+#             float red2 = red;
+#             float green2 = green;
+#             float blue2 = blue;
+#             float alpha2 = alpha;
+        
+#             // set all pixels to the destination color
+#             vec3 destination_color = gl_LastFragData[0].rgb;
+#             f_color = vec4(texture(tex, uvs).rgba);
+#             f_color.rgb = destination_color;
+
+#             // move xy-coordinates to top-left
+#             float x1 = px1 - left;
+#             float y1 = py1 - top;
+#             float x2 = px2 - left;
+#             float y2 = py2 - top;
+
+#             // get which pixel this is
+#             float index_x = round(uvs.x * (width - 1));
+#             float index_y = round(uvs.y * (height - 1));
+#             float pixel_x = index_x + 0.5;
+#             float pixel_y = index_y + 0.5;
+
+#             // items needed for all octants
+#             float delta_x = x2 - x1;
+#             float delta_y = y2 - y1;
+#             float slope = delta_y / delta_x;
+#             float inverse_slope = delta_x / delta_y;
+
+#             // octants
+#             // .3.2.
+#             // 4...1
+#             // 5...8
+#             // .6.7.
+
+#             // octants 1, 2, 5, 6
+#             if (slope < 0) {
+#                 // octants 1, 5
+#                 if (abs(x2 - x1) >= abs(y2 - y1)) {
+
+#                     // octant 1
+#                     if (y2 < y1) {
+#                         float calculated_y = (slope * (pixel_x - x1)) + y1;
+#                         if ((calculated_y - 0.5 <= pixel_y) && (calculated_y + 0.5 > pixel_y)) {
+#                             f_color.rgb = RED;
+#                         }
+#                     }
+
+#                     // octant 5
+#                     if (y2 > y1) {
+#                         float calculated_y = (slope * (pixel_x - x1)) + y1;
+#                         if ((calculated_y - 0.5 <= pixel_y) && (calculated_y + 0.5 > pixel_y)) {
+#                             f_color.rgb = RED;
+#                         }
+#                     }
+
+#                 }
+#                 // octants 2, 6
+#                 if (abs(y2 - y1) > abs(x2 - x1)) {
+
+#                     // octant 2
+#                     if (y2 < y1) {
+#                         float calculated_x = (inverse_slope * (pixel_y - y1)) + x1;
+#                         if ((calculated_x - 0.5 <= pixel_x) && (calculated_x + 0.5 > pixel_x)) {
+#                             f_color.rgb = RED;
+#                         }
+#                     }
+
+#                     // octant 6
+#                     if (y2 > y1) {
+#                         float calculated_x = (inverse_slope * (pixel_y - y1)) + x1;
+#                         if ((calculated_x - 0.5 <= pixel_x) && (calculated_x + 0.5 > pixel_x)) {
+#                             f_color.rgb = RED;
+#                         }
+#                     }
+
+#                 }
+#             }
+
+#             // octants 3, 4, 7, 8
+#             if (slope > 0) {
+#                 // octants 4, 8
+#                 if (abs(x2 - x1) >= abs(y2 - y1)) {
+
+#                     // octant 4
+#                     if (y2 < y1) {
+#                         float calculated_y = (slope * (pixel_x - x1)) + y1;
+#                         if ((calculated_y - 0.5 <= pixel_y) && (calculated_y + 0.5 > pixel_y)) {
+#                             f_color.rgb = RED;
+#                         }
+#                     }
+
+#                     // octant 8
+#                     if (y2 > y1) {
+#                         float calculated_y = (slope * (pixel_x - x1)) + y1;
+#                         if ((calculated_y - 0.5 <= pixel_y) && (calculated_y + 0.5 > pixel_y)) {
+#                             f_color.rgb = RED;
+#                         }
+#                     }
+
+#                 }
+#                 // octants 3, 7
+#                 if (abs(y2 - y1) > abs(x2 - x1)) {
+
+#                     // octant 3
+#                     if (y2 < y1) {
+#                         float calculated_x = (inverse_slope * (pixel_y - y1)) + x1;
+#                         if ((calculated_x - 0.5 <= pixel_x) && (calculated_x + 0.5 > pixel_x)) {
+#                             f_color.rgb = RED;
+#                         }
+#                     }
+
+#                     // octant 7
+#                     if (y2 > y1) {
+#                         float calculated_x = (inverse_slope * (pixel_y - y1)) + x1;
+#                         if ((calculated_x - 0.5 <= pixel_x) && (calculated_x + 0.5 > pixel_x)) {
+#                             f_color.rgb = RED;
+#                         }
+#                     }
+#                 }
+#             }
+#         }
+#         '''
+#         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
