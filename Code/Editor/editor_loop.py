@@ -333,10 +333,15 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
 
     # # dot
     # Render.draw_line(Screen, gl_context, x1=left_x, y1=top_y, x2=left_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
-    # # horizontal
+    # # horizontal >
     # Render.draw_line(Screen, gl_context, x1=left_x, y1=top_y, x2=right_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
-    # # vertical
+    # # horizontal <
+    # Render.draw_line(Screen, gl_context, x1=right_x, y1=top_y, x2=left_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
+    # # vertical ↓
     # Render.draw_line(Screen, gl_context, x1=left_x, y1=top_y, x2=left_x, y2=bottom_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
+    # # vertical ^
+    # Render.draw_line(Screen, gl_context, x1=left_x, y1=bottom_y, x2=left_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
+
     # # octant 1 & 2
     # Render.draw_line(Screen, gl_context, x1=left_x, y1=bottom_y, x2=right_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
     # # octant 3 & 4

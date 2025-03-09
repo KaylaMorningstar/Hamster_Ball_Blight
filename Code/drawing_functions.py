@@ -433,12 +433,17 @@ class RenderObjects():
     #
     def draw_line(self, Screen: ScreenObject, gl_context: moderngl.Context, x1: int, y1: int, x2: int, y2: int, thickness: int, rgba, pixel_size: int = 1):
         # 'draw_line', DrawLine
+        # this function is inclusive of (x1, y1), (x2, y2)
         # dot, horizontal, or vertical
         if (x1 == x2) or (y1 == y2):
-            if (x1 > x2):
+            if (x1 < x2):  # >
+                x2 += 1
+            if (x1 > x2):  # <
                 x1 += 1
-            if (y1 > y2):
+            if (y1 > y2):  # ^
                 y1 += 1
+            if (y1 < y2):  # ↓
+                y2 += 1
             ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
             if (ltwh[2] == 0):
                 ltwh[2] = 1
@@ -449,6 +454,7 @@ class RenderObjects():
         # octant 1 or 2
         if (y1 > y2) and (x1 < x2):
             y1 += 1
+            x2 += 1
         # octant 3 or 4
         if (y1 > y2) and (x1 > x2):
             x1 += 1
@@ -456,9 +462,11 @@ class RenderObjects():
         # octant 5 or 6
         if (y1 < y2) and (x1 > x2):
             x1 += 1
+            y2 += 1
         # octant 7 or 8
         if (y1 < y2) and (x1 < x2):
-            pass
+            x2 += 1
+            y2 += 1
         ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
         program = self.programs['draw_line'].program
         renderable_object = self.renderable_objects['black_pixel']
@@ -1690,14 +1698,33 @@ class DrawLine():
 
     # def draw_line(self, Screen: ScreenObject, gl_context: moderngl.Context, x1: int, y1: int, x2: int, y2: int, thickness: int, rgba, pixel_size: int = 1):
     #     # 'draw_line', DrawLine
-    #     ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
     #     # dot, horizontal, or vertical
-    #     if (ltwh[2] == 0) or (ltwh[3] == 0):
+    #     if (x1 == x2) or (y1 == y2):
+    #         if (x1 > x2):
+    #             x1 += 1
+    #         if (y1 > y2):
+    #             y1 += 1
+    #         ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
     #         if (ltwh[2] == 0):
     #             ltwh[2] = 1
     #         if (ltwh[3] == 0):
     #             ltwh[3] = 1
     #         self.basic_rect_ltwh_image_with_color(Screen, gl_context, 'black_pixel', ltwh, rgba)
+    #         return
+    #     # octant 1 or 2
+    #     if (y1 > y2) and (x1 < x2):
+    #         y1 += 1
+    #     # octant 3 or 4
+    #     if (y1 > y2) and (x1 > x2):
+    #         x1 += 1
+    #         y1 += 1
+    #     # octant 5 or 6
+    #     if (y1 < y2) and (x1 > x2):
+    #         x1 += 1
+    #     # octant 7 or 8
+    #     if (y1 < y2) and (x1 < x2):
+    #         pass
+    #     ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
     #     program = self.programs['draw_line'].program
     #     renderable_object = self.renderable_objects['black_pixel']
     #     topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
