@@ -437,36 +437,36 @@ class RenderObjects():
         # dot, horizontal, or vertical
         if (x1 == x2) or (y1 == y2):
             if (x1 < x2):  # >
-                x2 += 1
+                x2 += pixel_size
             if (x1 > x2):  # <
-                x1 += 1
+                x1 += pixel_size
             if (y1 > y2):  # ^
-                y1 += 1
+                y1 += pixel_size
             if (y1 < y2):  # ↓
-                y2 += 1
+                y2 += pixel_size
             ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
             if (ltwh[2] == 0):
-                ltwh[2] = 1
+                ltwh[2] = pixel_size
             if (ltwh[3] == 0):
-                ltwh[3] = 1
+                ltwh[3] = pixel_size
             self.basic_rect_ltwh_image_with_color(Screen, gl_context, 'black_pixel', ltwh, rgba)
             return
         # octant 1 or 2
         if (y1 > y2) and (x1 < x2):
-            y1 += 1
-            x2 += 1
+            y1 += pixel_size
+            x2 += pixel_size
         # octant 3 or 4
         if (y1 > y2) and (x1 > x2):
-            x1 += 1
-            y1 += 1
+            x1 += pixel_size
+            y1 += pixel_size
         # octant 5 or 6
         if (y1 < y2) and (x1 > x2):
-            x1 += 1
-            y2 += 1
+            x1 += pixel_size
+            y2 += pixel_size
         # octant 7 or 8
         if (y1 < y2) and (x1 < x2):
-            x2 += 1
-            y2 += 1
+            x2 += pixel_size
+            y2 += pixel_size
         ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
         program = self.programs['draw_line'].program
         renderable_object = self.renderable_objects['black_pixel']
@@ -487,6 +487,7 @@ class RenderObjects():
         program['py1'] = y1
         program['px2'] = x2
         program['py2'] = y2
+        program['pixel_size'] = pixel_size
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
         renderable_object.texture.use(0)
@@ -1558,6 +1559,8 @@ class DrawLine():
         uniform float px2;
         uniform float py2;
 
+        uniform float pixel_size;
+
         in vec2 uvs;
         out vec4 f_color;
 
@@ -1573,16 +1576,18 @@ class DrawLine():
             f_color.rgb = destination_color;
 
             // move xy-coordinates to top-left
-            float x1 = px1 - left;
-            float y1 = py1 - top;
-            float x2 = px2 - left;
-            float y2 = py2 - top;
+            float x1 = (px1 - left) / pixel_size;
+            float y1 = (py1 - top) / pixel_size;
+            float x2 = (px2 - left) / pixel_size;
+            float y2 = (py2 - top) / pixel_size;
 
             // get which pixel this is
             float index_x = round(uvs.x * (width - 1));
             float index_y = round(uvs.y * (height - 1));
             float pixel_x = index_x + 0.5;
             float pixel_y = index_y + 0.5;
+            float editor_pixel_x = floor(pixel_x / pixel_size) + 0.5;
+            float editor_pixel_y = floor(pixel_y / pixel_size) + 0.5;
 
             // items needed for all octants
             float delta_x = x2 - x1;
@@ -1603,16 +1608,16 @@ class DrawLine():
 
                     // octant 1
                     if (y2 < y1) {
-                        float calculated_y = (slope * (pixel_x - x1)) + y1;
-                        if ((calculated_y - 0.5 <= pixel_y) && (calculated_y + 0.5 > pixel_y)) {
+                        float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
+                        if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
                             f_color.rgb = RED;
                         }
                     }
 
                     // octant 5
                     if (y2 > y1) {
-                        float calculated_y = (slope * (pixel_x - x1)) + y1;
-                        if ((calculated_y - 0.5 <= pixel_y) && (calculated_y + 0.5 > pixel_y)) {
+                        float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
+                        if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
                             f_color.rgb = RED;
                         }
                     }
@@ -1623,16 +1628,16 @@ class DrawLine():
 
                     // octant 2
                     if (y2 < y1) {
-                        float calculated_x = (inverse_slope * (pixel_y - y1)) + x1;
-                        if ((calculated_x - 0.5 <= pixel_x) && (calculated_x + 0.5 > pixel_x)) {
+                        float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
+                        if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
                             f_color.rgb = RED;
                         }
                     }
 
                     // octant 6
                     if (y2 > y1) {
-                        float calculated_x = (inverse_slope * (pixel_y - y1)) + x1;
-                        if ((calculated_x - 0.5 <= pixel_x) && (calculated_x + 0.5 > pixel_x)) {
+                        float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
+                        if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
                             f_color.rgb = RED;
                         }
                     }
@@ -1647,16 +1652,16 @@ class DrawLine():
 
                     // octant 4
                     if (y2 < y1) {
-                        float calculated_y = (slope * (pixel_x - x1)) + y1;
-                        if ((calculated_y - 0.5 <= pixel_y) && (calculated_y + 0.5 > pixel_y)) {
+                        float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
+                        if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
                             f_color.rgb = RED;
                         }
                     }
 
                     // octant 8
                     if (y2 > y1) {
-                        float calculated_y = (slope * (pixel_x - x1)) + y1;
-                        if ((calculated_y - 0.5 <= pixel_y) && (calculated_y + 0.5 > pixel_y)) {
+                        float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
+                        if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
                             f_color.rgb = RED;
                         }
                     }
@@ -1667,16 +1672,16 @@ class DrawLine():
 
                     // octant 3
                     if (y2 < y1) {
-                        float calculated_x = (inverse_slope * (pixel_y - y1)) + x1;
-                        if ((calculated_x - 0.5 <= pixel_x) && (calculated_x + 0.5 > pixel_x)) {
+                        float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
+                        if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
                             f_color.rgb = RED;
                         }
                     }
 
                     // octant 7
                     if (y2 > y1) {
-                        float calculated_x = (inverse_slope * (pixel_y - y1)) + x1;
-                        if ((calculated_x - 0.5 <= pixel_x) && (calculated_x + 0.5 > pixel_x)) {
+                        float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
+                        if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
                             f_color.rgb = RED;
                         }
                     }

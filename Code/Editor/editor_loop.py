@@ -325,10 +325,11 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     right_x = Singleton.map.image_space_ltwh[0] + Singleton.map.image_space_ltwh[2]
     top_y = Singleton.map.image_space_ltwh[1]
     bottom_y = Singleton.map.image_space_ltwh[1] + Singleton.map.image_space_ltwh[3]
+    pixel_size = 10
 
     if Keys.editor_primary.newly_pressed:
         Singleton.xy = [Keys.cursor_x_pos.value, Keys.cursor_y_pos.value]
-    Render.draw_line(Screen, gl_context, x1=Singleton.xy[0], y1=Singleton.xy[1], x2=Keys.cursor_x_pos.value, y2=Keys.cursor_y_pos.value, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
+    Render.draw_line(Screen, gl_context, x1=round_scaled(Singleton.xy[0], pixel_size), y1=round_scaled(Singleton.xy[1], pixel_size), x2=round_scaled(Keys.cursor_x_pos.value, pixel_size), y2=round_scaled(Keys.cursor_y_pos.value, pixel_size), thickness=1, rgba=COLORS['RED'], pixel_size=pixel_size)
     # Render.draw_line(Screen, gl_context, x1=left_x, y1=top_y, x2=Keys.cursor_x_pos.value, y2=Keys.cursor_y_pos.value, thickness=1, rgba=COLORS['RED'], pixel_size=1)
 
     # # dot
