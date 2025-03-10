@@ -2,7 +2,7 @@ import math
 import random
 import pygame
 from copy import deepcopy
-from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, LOADED_IN_EDITOR, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
+from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, ceil_scaled, floor_scaled, LOADED_IN_EDITOR, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
 from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap, get_tf_circle
 from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
@@ -329,7 +329,7 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
 
     if Keys.editor_primary.newly_pressed:
         Singleton.xy = [Keys.cursor_x_pos.value, Keys.cursor_y_pos.value]
-    Render.draw_line(Screen, gl_context, x1=round_scaled(Singleton.xy[0], pixel_size), y1=round_scaled(Singleton.xy[1], pixel_size), x2=round_scaled(Keys.cursor_x_pos.value, pixel_size), y2=round_scaled(Keys.cursor_y_pos.value, pixel_size), thickness=1, rgba=COLORS['RED'], pixel_size=pixel_size)
+    Render.draw_line(Screen, gl_context, x1=floor_scaled(Singleton.xy[0], pixel_size), y1=floor_scaled(Singleton.xy[1], pixel_size), x2=floor_scaled(Keys.cursor_x_pos.value, pixel_size), y2=floor_scaled(Keys.cursor_y_pos.value, pixel_size), thickness=1, rgba=COLORS['RED'], pixel_size=pixel_size)
     # Render.draw_line(Screen, gl_context, x1=left_x, y1=top_y, x2=Keys.cursor_x_pos.value, y2=Keys.cursor_y_pos.value, thickness=1, rgba=COLORS['RED'], pixel_size=1)
 
     # # dot

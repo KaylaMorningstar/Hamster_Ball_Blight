@@ -68,6 +68,14 @@ def round_scaled(value: float | int, scale: float | int):
     return scale * round(value / scale)
 
 
+def ceil_scaled(value: float | int, scale: float | int):
+    return scale * math.ceil(value / scale)
+
+
+def floor_scaled(value: float | int, scale: float | int):
+    return scale * math.floor(value / scale)
+
+
 def switch_to_base10(string: str, base: int):
     return int(string, base)
 
