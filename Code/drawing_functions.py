@@ -435,6 +435,7 @@ class RenderObjects():
         # 'draw_line', DrawLine
         # this function is inclusive of (x1, y1), (x2, y2)
         # dot, horizontal, or vertical
+        print(thickness)
         if (x1 == x2) or (y1 == y2):
             if (x1 < x2):  # >
                 x2 += pixel_size
