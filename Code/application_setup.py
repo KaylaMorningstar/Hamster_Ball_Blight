@@ -83,7 +83,7 @@ class CursorClass():
         self.reset_current_cursor()
     #
     def update_cursor(self, Screen, gl_context, Render, Keys):
-        self.add_cursor_this_frame('black_pixel')
+        # self.add_cursor_this_frame('black_pixel')
         match self.current_cursor[0]:
             case 'cursor_arrow' | 'cursor_crosshair' | 'cursor_nesw' | 'cursor_eyedrop':
                 Render.basic_rect_ltwh_to_quad(Screen, gl_context, self.current_cursor[0], [Keys.cursor_x_pos.value + self.cursors[self.current_cursor[0]][0], Keys.cursor_y_pos.value + self.cursors[self.current_cursor[0]][1], Render.renderable_objects[self.current_cursor[0]].ORIGINAL_WIDTH, Render.renderable_objects[self.current_cursor[0]].ORIGINAL_HEIGHT])

@@ -1657,8 +1657,83 @@ class BucketTool(EditorTool):
 class LineTool(EditorTool):
     NAME = 'Line'
     INDEX = 6
-    def __init__(self, active: bool):
+
+    _MIN_BRUSH_THICKNESS = 1
+    _MAX_BRUSH_THICKNESS = 64
+    CIRCLE_REFERENCE = 'line_tool_circle'
+    LINE_REFERENCE = 'line_tool_line'
+
+    BRUSH_THICKNESS = 'Thickness: '
+
+    BRUSH_STYLE = 'Style: '
+    CIRCLE_BRUSH = 1
+    SQUARE_BRUSH = 2
+    _MIN_BRUSH_STYLE = 1
+    _MAX_BRUSH_STYLE = 2
+
+    MIN_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX = 1
+    MAX_BRUSH_THICKNESS_TO_FIT_IN_ATTRIBUTE_BOX = 11
+
+    NOT_DRAWING = 0
+    DRAWING = 1
+
+    NOT_DRAW_PIXEL = 0
+    DRAW_PIXEL = 1
+
+    def __init__(self, active: bool, render_instance, screen_instance, gl_context):
+        self.state = LineTool.NOT_DRAWING  # (NOT_DRAWING = 0, DRAWING = 1)
+        self.BRUSH_STYLE_WIDTH = get_text_width(render_instance, LineTool.BRUSH_STYLE, LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        self.BRUSH_THICKNESS_WIDTH = get_text_width(render_instance, LineTool.BRUSH_THICKNESS, LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        self.brush_style = LineTool.CIRCLE_BRUSH  # (CIRCLE_BRUSH = 1, SQUARE_BRUSH = 2)
+        self._brush_thickness: int = LineTool._MIN_BRUSH_THICKNESS
+        self.circle: list[list[int | list[float, float]]]
+        self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
+        self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(LineTool._MIN_BRUSH_THICKNESS, LineTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(LineTool._MAX_BRUSH_THICKNESS)) - 1) * LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], LineTool._TEXT_BACKGROUND_COLOR, LineTool._TEXT_COLOR, LineTool._TEXT_HIGHLIGHT_COLOR, LineTool._HIGHLIGHT_COLOR, LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE, LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [LineTool._MIN_BRUSH_THICKNESS, LineTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(LineTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
+        self.start_xy: array = array('i', [0, 0])
         super().__init__(active)
+
+    @property
+    def brush_thickness(self):
+        return self._brush_thickness
+
+    def update_brush_style(self, render_instance, screen_instance, gl_context):
+        self.brush_style += 1
+        if self.brush_style > LineTool._MAX_BRUSH_STYLE:
+            self.brush_style = LineTool._MIN_BRUSH_STYLE
+        self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
+    
+    def update_brush_thickness(self, render_instance, screen_instance, gl_context, brush_thickness: int):
+        try:
+            render_instance.remove_moderngl_texture_from_renderable_objects_dict(LineTool.CIRCLE_REFERENCE)
+        except:
+            pass
+        self._brush_thickness = move_number_to_desired_range(LineTool._MIN_BRUSH_THICKNESS, brush_thickness, LineTool._MAX_BRUSH_THICKNESS)
+
+        match self.brush_style:
+            case LineTool.CIRCLE_BRUSH:
+                self.circle = get_perfect_circle_with_edge_angles(self._brush_thickness)
+            case LineTool.SQUARE_BRUSH:
+                self.circle = get_square_with_edge_angles(self._brush_thickness)
+        
+        pygame_circle_image = pygame.Surface((self.brush_thickness, self.brush_thickness), pygame.SRCALPHA)
+        for left, row in enumerate(self.circle):
+            for top, draw in enumerate(row):
+                if draw:
+                    pygame_circle_image.set_at((left, top), (0, 0, 0, 255))
+                else:
+                    pygame_circle_image.set_at((left, top), (0, 0, 0, 0))
+        render_instance.add_moderngl_texture_with_surface(screen_instance, gl_context, pygame_circle_image, LineTool.CIRCLE_REFERENCE)
+
+    def brush_thickness_is_valid(self, brush_thickness: Any):
+        try:
+            int(brush_thickness)
+        except:
+            return False
+        if not (LineTool._MIN_BRUSH_THICKNESS <= int(brush_thickness) <= LineTool._MAX_BRUSH_THICKNESS):
+            return False
+        if int(brush_thickness) == self._brush_thickness:
+            return False
+        return True
 
 
 class CurvyLineTool(EditorTool):
@@ -1720,6 +1795,8 @@ class EditorMap():
         [1, 64],
         [1, 128],
     ]
+    _MIN_ZOOM = min([(final / initial) for initial, final in _ZOOM])
+    _MAX_ZOOM = max([(final / initial) for initial, final in _ZOOM])
     CIRCLE_OUTLINE_THICKNESS_ZOOMED_IN = 1
     CIRCLE_OUTLINE_THICKNESS_ZOOMED_OUT = 2
     CIRCLE_OUTLINE_REFERENCE = 'editor_circle_outline'
@@ -1770,7 +1847,7 @@ class EditorMap():
             SprayTool(False, render_instance, screen_instance, gl_context),
             HandTool(True),
             BucketTool(False),
-            LineTool(False),
+            LineTool(False, render_instance, screen_instance, gl_context),
             CurvyLineTool(False),
             RectangleTool(False),
             EllipseTool(False),
@@ -2219,7 +2296,58 @@ class EditorMap():
                     pass
 
                 case LineTool.INDEX:
-                    pass
+                    cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
+                    pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
+                    ltrb = self._get_ltrb_pixels_on_map()
+
+                    # get the leftest pixel that needs to be drawn
+                    pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
+                    if pixel_offset_x == 1:
+                        pixel_offset_x = 0
+                    pixel_offset_x *= self.pixel_scale
+                    leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
+                    leftest_brush_pixel = pos_x - ((self.current_tool.brush_thickness - 1) // 2)
+                    pixel_x = leftest_pixel + ((leftest_brush_pixel - ltrb[0]) * self.pixel_scale)
+
+                    # get the topest pixel that needs to be drawn
+                    pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
+                    if pixel_offset_y == 1:
+                        pixel_offset_y = 0
+                    pixel_offset_y *= self.pixel_scale
+                    topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
+                    topest_brush_pixel = pos_y - ((self.current_tool.brush_thickness - 1) // 2)
+                    pixel_y = topest_pixel + ((topest_brush_pixel - ltrb[1]) * self.pixel_scale)
+
+                    ltwh = [pixel_x, pixel_y, self.current_tool.brush_thickness * self.pixel_scale, self.current_tool.brush_thickness * self.pixel_scale]
+
+                    # condition if cursor is on the map
+                    if cursor_on_map:
+                        cursors.add_cursor_this_frame('cursor_big_crosshair')
+                        render_instance.store_draw(LineTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color})
+                        self.stored_draw_keys.append(LineTool.CIRCLE_REFERENCE)
+                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
+
+                    # change drawing state
+                    if (self.current_tool.state == LineTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
+                        self.current_tool.state = LineTool.DRAWING
+                        self.current_tool.start_xy[0] = pos_x
+                        self.current_tool.start_xy[1] = pos_y
+                        self.map_edits.append(self.PixelChange(new_rgba=current_color_rgba))
+                    elif (self.current_tool.state == LineTool.DRAWING) and keys_class_instance.editor_primary.released:
+                        self.current_tool.state = LineTool.NOT_DRAWING
+
+                    match self.current_tool.state:
+                        case PencilTool.NOT_DRAWING:
+                            pass
+                        case PencilTool.DRAWING:
+                            reload_tiles = {}
+                            x1 = int(pixel_x)
+                            y1 = int(pixel_y)
+                            x2 = int(x1 + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale))
+                            y2 = int(y1 + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale))
+                            pixel_size = int(move_number_to_desired_range(1, self.pixel_scale, EditorMap._MAX_ZOOM))
+                            render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': 1, 'rgba': COLORS['RED'], 'pixel_size': pixel_size})
+                            self.stored_draw_keys.append(LineTool.LINE_REFERENCE)
 
                 case CurvyLineTool.INDEX:
                     pass
