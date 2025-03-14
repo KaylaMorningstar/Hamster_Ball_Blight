@@ -320,34 +320,3 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     update_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
-
-    left_x = Singleton.map.image_space_ltwh[0]
-    right_x = Singleton.map.image_space_ltwh[0] + Singleton.map.image_space_ltwh[2]
-    top_y = Singleton.map.image_space_ltwh[1]
-    bottom_y = Singleton.map.image_space_ltwh[1] + Singleton.map.image_space_ltwh[3]
-    pixel_size = 10
-
-    if Keys.editor_primary.newly_pressed:
-        Singleton.xy = [Keys.cursor_x_pos.value, Keys.cursor_y_pos.value]
-    # Render.draw_line(Screen, gl_context, x1=floor_scaled(Singleton.xy[0], pixel_size), y1=floor_scaled(Singleton.xy[1], pixel_size), x2=floor_scaled(Keys.cursor_x_pos.value, pixel_size), y2=floor_scaled(Keys.cursor_y_pos.value, pixel_size), thickness=1, rgba=COLORS['RED'], pixel_size=pixel_size)
-    # Render.draw_line(Screen, gl_context, x1=left_x, y1=top_y, x2=Keys.cursor_x_pos.value, y2=Keys.cursor_y_pos.value, thickness=1, rgba=COLORS['RED'], pixel_size=1)
-
-    # # dot
-    # Render.draw_line(Screen, gl_context, x1=left_x, y1=top_y, x2=left_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
-    # # horizontal >
-    # Render.draw_line(Screen, gl_context, x1=left_x, y1=top_y, x2=right_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
-    # # horizontal <
-    # Render.draw_line(Screen, gl_context, x1=right_x, y1=top_y, x2=left_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
-    # # vertical ↓
-    # Render.draw_line(Screen, gl_context, x1=left_x, y1=top_y, x2=left_x, y2=bottom_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
-    # # vertical ^
-    # Render.draw_line(Screen, gl_context, x1=left_x, y1=bottom_y, x2=left_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
-
-    # # octant 1 & 2
-    # Render.draw_line(Screen, gl_context, x1=left_x, y1=bottom_y, x2=right_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
-    # # octant 3 & 4
-    # Render.draw_line(Screen, gl_context, x1=right_x, y1=bottom_y, x2=left_x, y2=top_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
-    # # octant 5 & 6
-    # Render.draw_line(Screen, gl_context, x1=right_x, y1=top_y, x2=left_x, y2=bottom_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
-    # # octant 7 & 8
-    # Render.draw_line(Screen, gl_context, x1=left_x, y1=top_y, x2=right_x, y2=bottom_y, thickness=1, rgba=COLORS['BLACK'], pixel_size=1)
