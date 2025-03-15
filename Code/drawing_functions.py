@@ -1637,7 +1637,7 @@ class DrawLine():
                 }
 
                 float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
-                if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
+                if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y) && (x1 <= editor_pixel_x) && (editor_pixel_x <= x2)) {
                     f_color.rgb = RED;
                 }
             }
@@ -1660,7 +1660,7 @@ class DrawLine():
                 }
 
                 float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
-                if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
+                if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x) && (y1 >= editor_pixel_y) && (editor_pixel_y >= y2)) {
                     f_color.rgb = RED;
                 }
             }
@@ -1681,7 +1681,7 @@ class DrawLine():
                 }
 
                 float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
-                if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
+                if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x) && (y1 >= editor_pixel_y) && (editor_pixel_y >= y2)) {
                     f_color.rgb = RED;
                 }
             }
@@ -1702,7 +1702,7 @@ class DrawLine():
                 }
 
                 float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
-                if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
+                if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y) && (x1 >= editor_pixel_x) && (editor_pixel_x >= x2)) {
                     f_color.rgb = RED;
                 }
             }
@@ -1725,7 +1725,7 @@ class DrawLine():
                 }
 
                 float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
-                if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
+                if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y) && (x1 >= editor_pixel_x) && (editor_pixel_x >= x2)) {
                     f_color.rgb = RED;
                 }
             }
@@ -1748,7 +1748,7 @@ class DrawLine():
                 }
 
                 float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
-                if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
+                if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x) && (y1 <= editor_pixel_y) && (editor_pixel_y <= y2)) {
                     f_color.rgb = RED;
                 }
             }
@@ -1769,7 +1769,7 @@ class DrawLine():
                 }
 
                 float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
-                if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
+                if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x) && (y1 <= editor_pixel_y) && (editor_pixel_y <= y2)) {
                     f_color.rgb = RED;
                 }
             }
@@ -1790,7 +1790,7 @@ class DrawLine():
                 }
 
                 float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
-                if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
+                if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y) && (x1 <= editor_pixel_x) && (editor_pixel_x <= x2)) {
                     f_color.rgb = RED;
                 }
             }
