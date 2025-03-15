@@ -431,7 +431,7 @@ class RenderObjects():
         quads.release()
         renderer.release()
     #
-    def draw_line(self, Screen: ScreenObject, gl_context: moderngl.Context, x1: int, y1: int, x2: int, y2: int, thickness: int, rgba, pixel_size: int = 1):
+    def draw_line(self, Screen: ScreenObject, gl_context: moderngl.Context, x1: int, y1: int, x2: int, y2: int, thickness: int, rgba, pixel_size: int | float = 1):
         # 'draw_line', DrawLine
         # this function is inclusive of (x1, y1), (x2, y2)
         # dot, horizontal, or vertical
@@ -467,8 +467,11 @@ class RenderObjects():
         if (y1 < y2) and (x1 < x2):
             x2 += pixel_size
             y2 += pixel_size
-        print((x1, y1), (x2, y2))
-        ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
+        # get the ltwh
+        if thickness % 2 == 0:
+            ltwh = [min(x1, x2) - (((thickness - 1) // 2) * pixel_size), min(y1, y2) - (((thickness - 1) // 2) * pixel_size), abs(x2 - x1) + (2 * (((thickness // 2) - 0.5) * pixel_size)), abs(y2 - y1) + (2 * (((thickness // 2) - 0.5) * pixel_size))]
+        if thickness % 2 == 1:
+            ltwh = [min(x1, x2) - ((thickness // 2) * pixel_size), min(y1, y2) - ((thickness // 2) * pixel_size), abs(x2 - x1) + (2 * ((thickness // 2) * pixel_size)), abs(y2 - y1) + (2 * ((thickness // 2) * pixel_size))]
         program = self.programs['draw_line'].program
         renderable_object = self.renderable_objects['black_pixel']
         topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
@@ -1551,10 +1554,10 @@ class DrawLine():
         uniform float blue;
         uniform float alpha;
 
-        uniform int left;
-        uniform int top;
-        uniform int width;
-        uniform int height;
+        uniform float left;
+        uniform float top;
+        uniform float width;
+        uniform float height;
 
         uniform float thickness;
 
