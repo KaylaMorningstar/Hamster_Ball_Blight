@@ -1838,7 +1838,7 @@ class DrawLine():
                 float bottom_line_x = x1 + left_top_edge_offset + outer_line_x1;
                 float bottom_line_y = y1 + left_top_edge_offset + outer_line_y1;
                 float bottom_line_intercept = (slope * -bottom_line_x) + bottom_line_y;
-                bool above_bottom_line = editor_pixel_y - 0.5 < (slope * editor_pixel_x) + bottom_line_intercept;
+                bool above_bottom_line = editor_pixel_y - 0.5 <= (slope * editor_pixel_x) + bottom_line_intercept;
 
                 float top_line_x = x1 + left_top_edge_offset + outer_line_x2;
                 float top_line_y = y1 + left_top_edge_offset + outer_line_y2;
@@ -1847,10 +1847,10 @@ class DrawLine():
 
                 float perpendicular_slope = (top_line_y - bottom_line_y + 0.5) / (top_line_x - bottom_line_x + 0.5);
                 float perpendicular_intercept_stamp1 = (perpendicular_slope * -bottom_line_x) + bottom_line_y;
-                bool right_of_stamp1 = editor_pixel_y >= (perpendicular_slope * editor_pixel_x) + perpendicular_intercept_stamp1;
+                bool right_of_stamp1 = editor_pixel_y + 0.5 >= (perpendicular_slope * editor_pixel_x) + perpendicular_intercept_stamp1;
 
                 float perpendicular_intercept_stamp2 = (perpendicular_slope * -(bottom_line_x + delta_x - 1)) + (bottom_line_y + delta_y - 1);
-                bool left_of_stamp2 = editor_pixel_y <= (perpendicular_slope * editor_pixel_x) + perpendicular_intercept_stamp2;
+                bool left_of_stamp2 = editor_pixel_y - 0.5 < (perpendicular_slope * editor_pixel_x) + perpendicular_intercept_stamp2;
 
                 if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2)) {
                     f_color.rgb = RED;
