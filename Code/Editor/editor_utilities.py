@@ -1243,6 +1243,29 @@ def get_perfect_circle_with_edge_angles(diameter: int):
     return circle
 
 
+def get_perfect_circle_edge_angles_for_drawing_lines(diameter: int):
+    # get which pixels are part of the circle
+    center = diameter / 2
+    tf_circle = get_tf_circle(diameter)
+    # [column_index, row_index, angle, [lower_angle, upper_angle]]
+    circle = []
+    for column_index, column in enumerate(tf_circle):
+        for row_index, draw in enumerate(column):
+            if draw:
+                # pixels on the edge of circle
+                if ((row_index == 0) or (row_index == len(tf_circle) - 1) or (column_index == 0) or (column_index == len(tf_circle) - 1) or 
+                    (not tf_circle[row_index-1][column_index]) or (not tf_circle[row_index+1][column_index]) or (not tf_circle[row_index][column_index-1]) or (not tf_circle[row_index][column_index+1])):
+                    # calculate angle range that is should skip bresenham algorithm
+                    angle_from_center = atan2((column_index + 0.5 - center), -(row_index + 0.5 - center))
+                    angle_range = array('f', ((angle_from_center - 90) % 360, (angle_from_center + 90) % 360))
+                    circle.append([column_index, row_index, angle_from_center, [angle_range[0], angle_range[1]]])
+                else:
+                    continue
+            else:
+                continue
+    return circle
+
+
 def get_square_with_edge_angles(length: int):
     if length == 1:
         return [[array('f', [0.0, 360.0])]]
@@ -1687,6 +1710,7 @@ class LineTool(EditorTool):
         self.brush_style = LineTool.CIRCLE_BRUSH  # (CIRCLE_BRUSH = 1, SQUARE_BRUSH = 2)
         self._brush_thickness: int = LineTool._MIN_BRUSH_THICKNESS
         self.circle: list[list[int | list[float, float]]]
+        self.circle_for_line_drawing: list[list[int, int, float, list[float, float]]]
         self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
         self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(LineTool._MIN_BRUSH_THICKNESS, LineTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(LineTool._MAX_BRUSH_THICKNESS)) - 1) * LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], LineTool._TEXT_BACKGROUND_COLOR, LineTool._TEXT_COLOR, LineTool._TEXT_HIGHLIGHT_COLOR, LineTool._HIGHLIGHT_COLOR, LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE, LineTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [LineTool._MIN_BRUSH_THICKNESS, LineTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(LineTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
         self.start_xy: array = array('i', [0, 0])
@@ -1712,6 +1736,7 @@ class LineTool(EditorTool):
         match self.brush_style:
             case LineTool.CIRCLE_BRUSH:
                 self.circle = get_perfect_circle_with_edge_angles(self._brush_thickness)
+                self.circle_for_line_drawing = get_perfect_circle_edge_angles_for_drawing_lines(self._brush_thickness)
             case LineTool.SQUARE_BRUSH:
                 self.circle = get_square_with_edge_angles(self._brush_thickness)
         
@@ -2323,13 +2348,13 @@ class EditorMap():
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
-                        render_instance.store_draw(LineTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color})
-                        self.stored_draw_keys.append(LineTool.CIRCLE_REFERENCE)
-                        ltwh2 = deepcopy(ltwh)
-                        ltwh2[0] = pixel_x + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale)
-                        ltwh2[1] = pixel_y + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale)
-                        render_instance.store_draw('l2', render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh2, 'rgba': editor_singleton.currently_selected_color.color})
-                        self.stored_draw_keys.append('l2')
+                        # render_instance.store_draw(LineTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color})
+                        # self.stored_draw_keys.append(LineTool.CIRCLE_REFERENCE)
+                        # ltwh2 = deepcopy(ltwh)
+                        # ltwh2[0] = pixel_x + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale)
+                        # ltwh2[1] = pixel_y + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale)
+                        # render_instance.store_draw('l2', render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh2, 'rgba': editor_singleton.currently_selected_color.color})
+                        # self.stored_draw_keys.append('l2')
                     current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                     # change drawing state
@@ -2351,8 +2376,18 @@ class EditorMap():
                             x1 = int(x2 + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale))
                             y1 = int(y2 + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale))
                             pixel_size = int(move_number_to_desired_range(1, self.pixel_scale, EditorMap._MAX_ZOOM))
-                            render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': self.current_tool.brush_thickness, 'rgba': COLORS['RED'], 'pixel_size': self.pixel_scale})
+                            render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': self.current_tool.brush_thickness, 'rgba': COLORS['RED'], 'pixel_size': self.pixel_scale, 'circle_for_line_drawing': self.current_tool.circle_for_line_drawing})
                             self.stored_draw_keys.append(LineTool.LINE_REFERENCE)
+
+                    # if cursor_on_map:
+                    #     cursors.add_cursor_this_frame('cursor_big_crosshair')
+                    #     render_instance.store_draw(LineTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color})
+                    #     self.stored_draw_keys.append(LineTool.CIRCLE_REFERENCE)
+                    #     ltwh2 = deepcopy(ltwh)
+                    #     ltwh2[0] = pixel_x + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale)
+                    #     ltwh2[1] = pixel_y + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale)
+                    #     render_instance.store_draw('l2', render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh2, 'rgba': editor_singleton.currently_selected_color.color})
+                    #     self.stored_draw_keys.append('l2')
 
                 case CurvyLineTool.INDEX:
                     pass
