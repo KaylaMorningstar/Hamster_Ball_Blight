@@ -2384,16 +2384,6 @@ class EditorMap():
                             render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': self.current_tool.brush_thickness, 'rgba': COLORS['RED'], 'pixel_size': self.pixel_scale, 'circle_for_line_drawing': self.current_tool.circle_for_line_drawing})
                             self.stored_draw_keys.append(LineTool.LINE_REFERENCE)
 
-                    # if cursor_on_map:
-                    #     cursors.add_cursor_this_frame('cursor_big_crosshair')
-                    #     render_instance.store_draw(LineTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color})
-                    #     self.stored_draw_keys.append(LineTool.CIRCLE_REFERENCE)
-                    #     ltwh2 = deepcopy(ltwh)
-                    #     ltwh2[0] = pixel_x + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale)
-                    #     ltwh2[1] = pixel_y + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale)
-                    #     render_instance.store_draw('l2', render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh2, 'rgba': editor_singleton.currently_selected_color.color})
-                    #     self.stored_draw_keys.append('l2')
-
                 case CurvyLineTool.INDEX:
                     pass
 
