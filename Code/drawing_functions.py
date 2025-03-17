@@ -1661,7 +1661,7 @@ class DrawLine():
                 float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_x1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_y1), 2);
                 float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                    f_color.rgb = WHITE;
+                    f_color.rgb = RED;
                 }
 
                 float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
@@ -1669,11 +1669,37 @@ class DrawLine():
                 float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
                 float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                    f_color.rgb = WHITE;
+                    f_color.rgb = RED;
                 }
 
-                float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
-                if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
+                if (thickness == 1.0) {
+                    float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
+                    if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
+                        f_color.rgb = RED;
+                    }
+                }
+
+                float left_top_edge_offset = (mod(thickness, 2.0) == 0.0) ? -((thickness / 2) - 1) : -floor(thickness / 2);
+                float bottom_line_x = x1 + left_top_edge_offset + outer_line_x1;
+                float bottom_line_y = y1 + left_top_edge_offset + outer_line_y1;
+                float bottom_line_intercept = (slope * -bottom_line_x) + bottom_line_y;
+                bool above_bottom_line = editor_pixel_y - 0.5 <= (slope * editor_pixel_x) + bottom_line_intercept;
+
+                float top_line_x = x1 + left_top_edge_offset + outer_line_x2;
+                float top_line_y = y1 + left_top_edge_offset + outer_line_y2;
+                float top_line_intercept = (slope * -top_line_x) + top_line_y;
+                bool below_top_line = editor_pixel_y + 0.5 > (slope * editor_pixel_x) + top_line_intercept;
+
+                float perpendicular_slope = (top_line_y - bottom_line_y) / (top_line_x - bottom_line_x);
+                float perpendicular_intercept_stamp1 = (perpendicular_slope * -bottom_line_x + 1) + bottom_line_y;
+                bool right_of_stamp1 = editor_pixel_x + 0.5 >= ((1/perpendicular_slope) * (editor_pixel_y - bottom_line_y)) + bottom_line_x + 1;
+
+                float stamp2_x = x1 + delta_x - 1 + left_top_edge_offset + outer_line_x1 + 0.5;
+                float stamp2_y = y1 + delta_y + left_top_edge_offset + outer_line_y1 + 0.5;
+                float perpendicular_intercept_stamp2 = (perpendicular_slope * -stamp2_x) + stamp2_y;
+                bool left_of_stamp2 = editor_pixel_x - 0.5 < ((1/perpendicular_slope) * (editor_pixel_y - stamp2_y)) + stamp2_x;
+
+                if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
                     f_color.rgb = RED;
                 }
             }
@@ -1855,19 +1881,6 @@ class DrawLine():
                 if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
                     f_color.rgb = RED;
                 }
-
-                if ((x1 + left_top_edge_offset + outer_line_x1 + 0.5 == editor_pixel_x) && (y1 + left_top_edge_offset + outer_line_y1 + 0.5 == editor_pixel_y)) {
-                    f_color.rgb = BLUE;
-                }
-                if ((x1 + left_top_edge_offset + outer_line_x2 + 0.5 == editor_pixel_x) && (y1 + left_top_edge_offset + outer_line_y2 + 0.5 == editor_pixel_y)) {
-                    f_color.rgb = BLUE;
-                }
-                if ((x1 + delta_x - 1 + left_top_edge_offset + outer_line_x1 + 0.5 == editor_pixel_x) && (y1 + delta_y - 1 + left_top_edge_offset + outer_line_y1 + 0.5 == editor_pixel_y)) {
-                    f_color.rgb = BLUE;
-                }
-                if ((x1 + delta_x - 1 + left_top_edge_offset + outer_line_x2 + 0.5 == editor_pixel_x) && (y1 + delta_y - 1 + left_top_edge_offset + outer_line_y2 + 0.5 == editor_pixel_y)) {
-                    f_color.rgb = BLUE;
-                }
             }
         }
         '''
@@ -1898,6 +1911,7 @@ class DrawLine():
                 # if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2)) {
                 #     f_color.rgb = RED;
                 # }
+
 
                 # if ((x1 + left_top_edge_offset + outer_line_x1 + 0.5 == editor_pixel_x) && (y1 + left_top_edge_offset + outer_line_y1 + 0.5 == editor_pixel_y)) {
                 #     f_color.rgb = BLUE;
