@@ -1216,8 +1216,6 @@ def get_tf_square(size: int):
 
 
 def get_perfect_circle_with_edge_angles(diameter: int):
-    if diameter == 1:
-        return [[array('f', [0.0, 360.0])]]
     # get which pixels are part of the circle
     center = diameter / 2
     tf_circle = get_tf_circle(diameter)
@@ -1227,6 +1225,9 @@ def get_perfect_circle_with_edge_angles(diameter: int):
         current_row = []
         for row_index, draw in enumerate(column):
             if draw:
+                if diameter < 4:
+                    current_row.append(array('f', [0, 360.0]))
+                    continue
                 # pixels on the edge of circle
                 if ((row_index == 0) or (row_index == len(tf_circle) - 1) or (column_index == 0) or (column_index == len(tf_circle) - 1) or 
                     (not tf_circle[row_index-1][column_index]) or (not tf_circle[row_index+1][column_index]) or (not tf_circle[row_index][column_index-1]) or (not tf_circle[row_index][column_index+1]) or
@@ -1235,6 +1236,7 @@ def get_perfect_circle_with_edge_angles(diameter: int):
                     angle_from_center = atan2((column_index + 0.5 - center), -(row_index + 0.5 - center))
                     angle_range = array('f', ((angle_from_center - 90) % 360, (angle_from_center + 90) % 360))
                     current_row.append(angle_range)
+                    continue
                 else:
                     current_row.append(1)
             else:
@@ -1252,6 +1254,9 @@ def get_perfect_circle_edge_angles_for_drawing_lines(diameter: int):
     for column_index, column in enumerate(tf_circle):
         for row_index, draw in enumerate(column):
             if draw:
+                if diameter < 4:
+                    circle.append([column_index, row_index, atan2((column_index + 0.5 - center), -(row_index + 0.5 - center)), [0.0, 360.0]])
+                    continue
                 # pixels on the edge of circle
                 if ((row_index == 0) or (row_index == len(tf_circle) - 1) or (column_index == 0) or (column_index == len(tf_circle) - 1) or 
                     (not tf_circle[row_index-1][column_index]) or (not tf_circle[row_index+1][column_index]) or (not tf_circle[row_index][column_index-1]) or (not tf_circle[row_index][column_index+1])):
