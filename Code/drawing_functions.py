@@ -1582,15 +1582,6 @@ class DrawLine():
         #version 330 core
         #extension GL_EXT_shader_framebuffer_fetch : require
 
-        const vec3 BLACK = vec3(0.0, 0.0, 0.0);
-        const vec3 WHITE = vec3(1.0, 1.0, 1.0);
-        const vec3 RED = vec3(1.0, 0.0, 0.0);
-        const vec3 GREEN = vec3(0.0, 1.0, 0.0);
-        const vec3 BLUE = vec3(0.0, 0.0, 1.0);
-        const vec3 YELLOW = vec3(1.0, 1.0, 0.0);
-        const vec3 PINK = vec3(1.0, 0.0, 1.0);
-        const vec3 CYAN = vec3(0.0, 1.0, 1.0);
-
         uniform sampler2D tex;
         uniform float red;
         uniform float green;
@@ -1624,10 +1615,12 @@ class DrawLine():
         out vec4 f_color;
 
         void main() {
-            float red2 = red;
-            float green2 = green;
-            float blue2 = blue;
-            float alpha2 = alpha;
+            vec4 line_color = vec4(
+                texture(tex, uvs).r + red, 
+                texture(tex, uvs).g + green, 
+                texture(tex, uvs).b + blue, 
+                texture(tex, uvs).a * alpha
+            );
         
             // set all pixels to the destination color
             vec3 destination_color = gl_LastFragData[0].rgb;
@@ -1669,7 +1662,7 @@ class DrawLine():
                 float stamp1_right = stamp1_left + thickness;
                 float stamp1_bottom = stamp1_top + thickness;
                 if ((stamp1_left <= editor_pixel_x - 0.5) && (editor_pixel_x - 0.5 < stamp1_right) && (stamp1_top <= editor_pixel_y - 0.5) && (editor_pixel_y - 0.5 < stamp1_bottom)) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 float stamp2_left = x2 + thickness_left_top_adjustment;
@@ -1677,7 +1670,7 @@ class DrawLine():
                 float stamp2_right = stamp2_left + thickness;
                 float stamp2_bottom = stamp2_top + thickness;
                 if ((stamp2_left <= editor_pixel_x - 0.5) && (editor_pixel_x - 0.5 < stamp2_right) && (stamp2_top <= editor_pixel_y - 0.5) && (editor_pixel_y - 0.5 < stamp2_bottom)) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
             }
 
@@ -1688,7 +1681,7 @@ class DrawLine():
                     float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
                     float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                     if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -1698,7 +1691,7 @@ class DrawLine():
                     float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
                     float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                     if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
 
                     float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
@@ -1706,11 +1699,11 @@ class DrawLine():
                     float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
                     float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                     if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
 
                     if ((x1 <= editor_pixel_x) && (editor_pixel_x <= x2)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -1721,18 +1714,18 @@ class DrawLine():
                     float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_x1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_y1), 2);
                     float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                     if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
 
                     float center_offset_xy2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
                     float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_xy2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_xy2), 2);
                     float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                     if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
 
                     if ((x2 <= editor_pixel_x) && (editor_pixel_x <= x1)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -1742,7 +1735,7 @@ class DrawLine():
                     float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
                     float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                     if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
 
                     float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
@@ -1750,11 +1743,11 @@ class DrawLine():
                     float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
                     float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                     if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
 
                     if ((y1 <= editor_pixel_y) && (editor_pixel_y <= y2)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -1765,7 +1758,7 @@ class DrawLine():
                     float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_x1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_y1), 2);
                     float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                     if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
 
                     float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
@@ -1773,11 +1766,11 @@ class DrawLine():
                     float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
                     float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                     if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
 
                     if ((y2 <= editor_pixel_y) && (editor_pixel_y <= y1)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
             }
@@ -1788,7 +1781,7 @@ class DrawLine():
                 float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_x1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_y1), 2);
                 float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
@@ -1796,13 +1789,13 @@ class DrawLine():
                 float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
                 float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 if (thickness == 1.0) {
                     float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
                     if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -1827,7 +1820,7 @@ class DrawLine():
                 bool left_of_stamp2 = editor_pixel_x - 0.5 < ((1/perpendicular_slope) * (editor_pixel_y - stamp2_y)) + stamp2_x;
 
                 if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
             }
 
@@ -1837,7 +1830,7 @@ class DrawLine():
                 float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_x1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_y1), 2);
                 float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
@@ -1845,13 +1838,13 @@ class DrawLine():
                 float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
                 float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 if (thickness == 1.0) {
                     float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
                     if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -1876,7 +1869,7 @@ class DrawLine():
                 bool left_of_stamp2 = editor_pixel_y + 0.5 >= ((1/perpendicular_slope) * (editor_pixel_x - stamp2_x)) + stamp2_y;
 
                 if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
             }
 
@@ -1885,20 +1878,20 @@ class DrawLine():
                 float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
                 float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 float center_offset_xy2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
                 float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_xy2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_xy2), 2);
                 float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 if (thickness == 1.0) {
                     float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
                     if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -1923,7 +1916,7 @@ class DrawLine():
                 bool left_of_stamp2 = editor_pixel_y + 0.5 >= ((1/perpendicular_slope) * (editor_pixel_x - stamp2_x)) + stamp2_y;
 
                 if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
             }
 
@@ -1932,20 +1925,20 @@ class DrawLine():
                 float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
                 float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 float center_offset_xy2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
                 float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_xy2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_xy2), 2);
                 float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 if (thickness == 1.0) {
                     float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
                     if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -1970,7 +1963,7 @@ class DrawLine():
                 bool left_of_stamp2 = editor_pixel_x + 0.5 >= ((1/perpendicular_slope) * (editor_pixel_y - stamp2_y)) + stamp2_x;
 
                 if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
             }
 
@@ -1980,7 +1973,7 @@ class DrawLine():
                 float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_x1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_y1), 2);
                 float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
@@ -1988,13 +1981,13 @@ class DrawLine():
                 float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
                 float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 if (thickness == 1.0) {
                     float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
                     if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -2019,7 +2012,7 @@ class DrawLine():
                 bool left_of_stamp2 = editor_pixel_x + 0.5 >= ((1/perpendicular_slope) * (editor_pixel_y - stamp2_y)) + stamp2_x;
 
                 if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
             }
 
@@ -2029,7 +2022,7 @@ class DrawLine():
                 float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_x1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_y1), 2);
                 float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
@@ -2037,13 +2030,13 @@ class DrawLine():
                 float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
                 float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 if (thickness == 1.0) {
                     float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
                     if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -2068,7 +2061,7 @@ class DrawLine():
                 bool left_of_stamp2 = editor_pixel_y - 0.5 < ((1/perpendicular_slope) * (editor_pixel_x - stamp2_x)) + stamp2_y;
 
                 if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
             }
 
@@ -2077,20 +2070,20 @@ class DrawLine():
                 float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
                 float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 float center_offset_xy2 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
                 float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_xy2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_xy2), 2);
                 float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 if (thickness == 1.0) {
                     float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
                     if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -2115,7 +2108,7 @@ class DrawLine():
                 bool left_of_stamp2 = editor_pixel_y - 0.5 < ((1/perpendicular_slope) * (editor_pixel_x - stamp2_x)) + stamp2_y;
 
                 if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
             }
 
@@ -2124,20 +2117,20 @@ class DrawLine():
                 float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
                 float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 float center_offset_xy2 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
                 float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_xy2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_xy2), 2);
                 float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
                 if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
 
                 if (thickness == 1.0) {
                     float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
                     if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
-                        f_color.rgb = RED;
+                        f_color.rgba = line_color;
                     }
                 }
 
@@ -2162,98 +2155,9 @@ class DrawLine():
                 bool left_of_stamp2 = editor_pixel_x - 0.5 < ((1/perpendicular_slope) * (editor_pixel_y - stamp2_y)) + stamp2_x;
 
                 if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
-                    f_color.rgb = RED;
+                    f_color.rgba = line_color;
                 }
             }
         }
         '''
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
-
-
-                # float calculated_y = (slope * (editor_pixel_x - bottom_line_x)) + bottom_line_y;
-                # if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
-                #     f_color.rgb = GREEN;
-                # }
-
-                # calculated_y = (slope * (editor_pixel_x - top_line_x)) + top_line_y;
-                # if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
-                #     f_color.rgb = GREEN;
-                # }
-
-                # float calculated_x = ((1/perpendicular_slope) * (editor_pixel_y - bottom_line_y)) + bottom_line_x + 1;
-                # if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
-                #     f_color.rgb = GREEN;
-                # }
-
-                # float calculated_x = ((1/perpendicular_slope) * (editor_pixel_y - stamp2_y)) + stamp2_x;
-                # if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
-                #     f_color.rgb = GREEN;
-                # }
-
-
-                # float calculated_x = (inverse_slope * (editor_pixel_y - bottom_line_y)) + bottom_line_x;
-                # if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
-                #     f_color.rgb = GREEN;
-                # }
-
-                # float calculated_x = (inverse_slope * (editor_pixel_y - top_line_y)) + top_line_x;
-                # if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
-                #     f_color.rgb = GREEN;
-                # }
-
-                # float calculated_y = ((1/perpendicular_slope) * (editor_pixel_x - bottom_line_x)) + bottom_line_y + 1;
-                # if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
-                #     f_color.rgb = GREEN;
-                # }
-
-                # float calculated_y = ((1/perpendicular_slope) * (editor_pixel_x - stamp2_x)) + stamp2_y;
-                # if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
-                #     f_color.rgb = GREEN;
-                # }
-
-
-                # if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2)) {
-                #     f_color.rgb = RED;
-                # }
-
-
-                # if ((x1 + left_top_edge_offset + outer_line_x1 + 0.5 == editor_pixel_x) && (y1 + left_top_edge_offset + outer_line_y1 + 0.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-                # if ((x1 + left_top_edge_offset + outer_line_x2 + 0.5 == editor_pixel_x) && (y1 + left_top_edge_offset + outer_line_y2 + 0.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-                # if ((x1 + delta_x - 1 + left_top_edge_offset + outer_line_x1 + 0.5 == editor_pixel_x) && (y1 + delta_y - 1 + left_top_edge_offset + outer_line_y1 + 0.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-                # if ((x1 + delta_x - 1 + left_top_edge_offset + outer_line_x2 + 0.5 == editor_pixel_x) && (y1 + delta_y - 1 + left_top_edge_offset + outer_line_y2 + 0.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-
-
-                # if ((x1 + left_top_edge_offset + outer_line_x1 - 0.5 == editor_pixel_x) && (y1 + left_top_edge_offset + outer_line_y1 - 0.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-                # if ((x1 + left_top_edge_offset + outer_line_x2 - 0.5 == editor_pixel_x) && (y1 + left_top_edge_offset + outer_line_y2 - 0.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-                # if ((x1 + delta_x - 1 + left_top_edge_offset + outer_line_x1 + 1.5 == editor_pixel_x) && (y1 + delta_y - 1 + left_top_edge_offset + outer_line_y1 + 1.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-                # if ((x1 + delta_x - 1 + left_top_edge_offset + outer_line_x2 + 1.5 == editor_pixel_x) && (y1 + delta_y - 1 + left_top_edge_offset + outer_line_y2 + 1.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-
-
-                # if ((x1 + left_top_edge_offset + outer_line_x1 - 0.5 == editor_pixel_x) && (y1 + left_top_edge_offset + outer_line_y1 + 0.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-                # if ((x1 + left_top_edge_offset + outer_line_x2 - 0.5 == editor_pixel_x) && (y1 + left_top_edge_offset + outer_line_y2 + 0.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-                # if ((x1 + delta_x + left_top_edge_offset + outer_line_x1 + 0.5 == editor_pixel_x) && (y1 + delta_y - 1 + left_top_edge_offset + outer_line_y1 + 0.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }
-                # if ((x1 + delta_x + left_top_edge_offset + outer_line_x2 + 0.5 == editor_pixel_x) && (y1 + delta_y - 1 + left_top_edge_offset + outer_line_y2 + 0.5 == editor_pixel_y)) {
-                #     f_color.rgb = BLUE;
-                # }

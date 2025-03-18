@@ -2388,8 +2388,7 @@ class EditorMap():
                             y2 = int(pixel_y + (((self.current_tool.brush_thickness - 1) // 2) * self.pixel_scale))
                             x1 = int(x2 + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale))
                             y1 = int(y2 + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale))
-                            pixel_size = int(move_number_to_desired_range(1, self.pixel_scale, EditorMap._MAX_ZOOM))
-                            render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': self.current_tool.brush_thickness, 'rgba': COLORS['RED'], 'pixel_size': self.pixel_scale, 'circle_for_line_drawing': self.current_tool.circle_for_line_drawing, 'brush_style': self.current_tool.brush_style})
+                            render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': self.current_tool.brush_thickness, 'rgba': editor_singleton.currently_selected_color.color, 'pixel_size': self.pixel_scale, 'circle_for_line_drawing': self.current_tool.circle_for_line_drawing, 'brush_style': self.current_tool.brush_style})
                             self.stored_draw_keys.append(LineTool.LINE_REFERENCE)
 
                 case CurvyLineTool.INDEX:
