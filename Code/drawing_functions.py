@@ -435,75 +435,82 @@ class RenderObjects():
         # 'draw_line', DrawLine
         # this function is inclusive of (x1, y1), (x2, y2)
         # dot, horizontal, or vertical
-        if (x1 == x2) or (y1 == y2):
+        if horizontal_or_vertical := ((x1 == x2) or (y1 == y2)):
+            if ((x1 == x2) and (y1 == y2)):
+                ltwh = [x1 - (((thickness - 1) // 2) * pixel_size), y1 - (((thickness - 1) // 2) * pixel_size), (thickness * pixel_size), (thickness * pixel_size)]
             if (x1 < x2):  # >
                 x2 += pixel_size
+                ltwh = [min(x1, x2) - (((thickness - 1) // 2) * pixel_size), y1 - (((thickness - 1) // 2) * pixel_size), abs(x2 - x1) + ((thickness - 1) * pixel_size), (thickness * pixel_size)]
             if (x1 > x2):  # <
                 x1 += pixel_size
+                ltwh = [min(x1, x2) - (((thickness - 1) // 2) * pixel_size), y1 - (((thickness - 1) // 2) * pixel_size), abs(x2 - x1) + ((thickness - 1) * pixel_size), (thickness * pixel_size)]
             if (y1 > y2):  # ^
                 y1 += pixel_size
+                ltwh = [x1 - (((thickness - 1) // 2) * pixel_size), min(y1, y2) - (((thickness - 1) // 2) * pixel_size), (thickness * pixel_size), abs(y2 - y1) + ((thickness - 1) * pixel_size)]
             if (y1 < y2):  # ↓
                 y2 += pixel_size
-            ltwh = [min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1)]
-            if (ltwh[2] == 0):
-                ltwh[2] = pixel_size
-            if (ltwh[3] == 0):
-                ltwh[3] = pixel_size
-            self.basic_rect_ltwh_image_with_color(Screen, gl_context, 'black_pixel', ltwh, rgba)
-            return
-        # octant 1 or 2
-        if (y1 > y2) and (x1 < x2):
-            y1 += pixel_size
-            x2 += pixel_size
-        # octant 3 or 4
-        if (y1 > y2) and (x1 > x2):
-            x1 += pixel_size
-            y1 += pixel_size
-        # octant 5 or 6
-        if (y1 < y2) and (x1 > x2):
-            x1 += pixel_size
-            y2 += pixel_size
-        # octant 7 or 8
-        if (y1 < y2) and (x1 < x2):
-            x2 += pixel_size
-            y2 += pixel_size
+                ltwh = [x1 - (((thickness - 1) // 2) * pixel_size), min(y1, y2) - (((thickness - 1) // 2) * pixel_size), (thickness * pixel_size), abs(y2 - y1) + ((thickness - 1) * pixel_size)]
+            # self.basic_rect_ltwh_image_with_color(Screen, gl_context, 'black_pixel', ltwh, rgba)
+            # return
+        else:
+            # octant 1 or 2
+            if (y1 > y2) and (x1 < x2):
+                y1 += pixel_size
+                x2 += pixel_size
+            # octant 3 or 4
+            if (y1 > y2) and (x1 > x2):
+                x1 += pixel_size
+                y1 += pixel_size
+            # octant 5 or 6
+            if (y1 < y2) and (x1 > x2):
+                x1 += pixel_size
+                y2 += pixel_size
+            # octant 7 or 8
+            if (y1 < y2) and (x1 < x2):
+                x2 += pixel_size
+                y2 += pixel_size
         angle = (atan2(y2 - y1, x2 - x1) + 270) % 360
-        # get the ltwh
-        if thickness % 2 == 0:
-            ltwh = [min(x1, x2) - (((thickness - 1) // 2) * pixel_size), min(y1, y2) - (((thickness - 1) // 2) * pixel_size), abs(x2 - x1) + (2 * (((thickness // 2) - 0.5) * pixel_size)), abs(y2 - y1) + (2 * (((thickness // 2) - 0.5) * pixel_size))]
-        if thickness % 2 == 1:
-            ltwh = [min(x1, x2) - ((thickness // 2) * pixel_size), min(y1, y2) - ((thickness // 2) * pixel_size), abs(x2 - x1) + (2 * ((thickness // 2) * pixel_size)), abs(y2 - y1) + (2 * ((thickness // 2) * pixel_size))]
-        octant = (angle // 45) + 1
+        octant = ((angle // 45) + 1) if (not horizontal_or_vertical) else 0
+        if (octant != 0):
+            # get the ltwh
+            if thickness % 2 == 0:
+                ltwh = [min(x1, x2) - (((thickness - 1) // 2) * pixel_size), min(y1, y2) - (((thickness - 1) // 2) * pixel_size), abs(x2 - x1) + (2 * (((thickness // 2) - 0.5) * pixel_size)), abs(y2 - y1) + (2 * (((thickness // 2) - 0.5) * pixel_size))]
+            if thickness % 2 == 1:
+                ltwh = [min(x1, x2) - ((thickness // 2) * pixel_size), min(y1, y2) - ((thickness // 2) * pixel_size), abs(x2 - x1) + (2 * ((thickness // 2) * pixel_size)), abs(y2 - y1) + (2 * ((thickness // 2) * pixel_size))]
         # find two points on stamp 1 where bounds can be drawn for the line
-        center_x, center_y = thickness / 2, thickness / 2
-        slope = ((y2 - y1) / (x2 - x1))
-        intercept = (slope * -center_x) + center_y
-        perpendicular_slope = -(1 / slope)
         above_line_xy = [x1, y1, 0]
         below_line_xy = [x1, y1, 0]
-        for edge_pixel in circle_for_line_drawing:
-            [column_index, row_index, radial_angle, [lower_angle, upper_angle]] = edge_pixel
-            if angle_in_range(lower_angle, angle, upper_angle) or (thickness < 4):
-                pixel_x = column_index + 0.5
-                pixel_y = row_index + 0.5
-                perpendicular_intercept = (perpendicular_slope * -pixel_x) + pixel_y
-                intersection_x = (perpendicular_intercept - intercept) / (slope - perpendicular_slope)
-                intersection_y = (slope * intersection_x) + intercept
-                distance_from_line = math.sqrt(((intersection_x - pixel_x) ** 2) + ((intersection_y - pixel_y) ** 2))
-                # above line
-                if pixel_y > (slope * pixel_x) + intercept:
-                    if distance_from_line > above_line_xy[2]:
-                        above_line_xy = [column_index, row_index, distance_from_line]
-                # below line
-                else:
-                    if distance_from_line > below_line_xy[2]:
-                        below_line_xy = [column_index, row_index, distance_from_line]
+        if not horizontal_or_vertical:
+            center_x, center_y = thickness / 2, thickness / 2
+            slope = ((y2 - y1) / (x2 - x1))
+            intercept = (slope * -center_x) + center_y
+            perpendicular_slope = -(1 / slope)
+            for edge_pixel in circle_for_line_drawing:
+                [column_index, row_index, radial_angle, [lower_angle, upper_angle]] = edge_pixel
+                if angle_in_range(lower_angle, angle, upper_angle) or (thickness < 4):
+                    pixel_x = column_index + 0.5
+                    pixel_y = row_index + 0.5
+                    perpendicular_intercept = (perpendicular_slope * -pixel_x) + pixel_y
+                    intersection_x = (perpendicular_intercept - intercept) / (slope - perpendicular_slope)
+                    intersection_y = (slope * intersection_x) + intercept
+                    distance_from_line = math.sqrt(((intersection_x - pixel_x) ** 2) + ((intersection_y - pixel_y) ** 2))
+                    # above line
+                    if pixel_y > (slope * pixel_x) + intercept:
+                        if distance_from_line > above_line_xy[2]:
+                            above_line_xy = [column_index, row_index, distance_from_line]
+                    # below line
+                    else:
+                        if distance_from_line > below_line_xy[2]:
+                            below_line_xy = [column_index, row_index, distance_from_line]
         program = self.programs['draw_line'].program
         renderable_object = self.renderable_objects['black_pixel']
         topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
         topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
         topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
         bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
+        print(ltwh, (x1, y1), (x2, y2))
+        # [208.0, 57.0, 384.0, 384.0] (336, 185) (336, 185)
+        # [208.0, 57.0, 512.0, 512.0] (336, 185) (592.0, 441.0)
         program['aspect'] = Screen.aspect
         program['red'] = rgba[0]
         program['green'] = rgba[1]
@@ -1647,6 +1654,7 @@ class DrawLine():
             // 4...1
             // 5...8
             // .6.7.
+            // 0 = horizontal or vertical
 
             float fake_outer_line_x1 = outer_line_x1 / 2;
             float fake_outer_line_y1 = outer_line_y1 / 2;
@@ -1654,6 +1662,107 @@ class DrawLine():
             float fake_outer_line_y2 = outer_line_y2 / 2;
             float thickness2 = thickness / 2;
             float angle2 = angle / 2;
+
+            if (octant == 0) {
+                // draw a dot
+                if ((x1 == x2) && (y1 == y2)) {
+                    float center_offset_xy1 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+                    float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
+                    float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
+                    if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
+                        f_color.rgb = RED;
+                    }
+                }
+
+                // draw line from left to right
+                if ((x1 < x2) && (y1 == y2)) {
+                    float center_offset_xy1 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+                    float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
+                    float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
+                    if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
+                        f_color.rgb = RED;
+                    }
+
+                    float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
+                    float center_offset_y2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+                    float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
+                    float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
+                    if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
+                        f_color.rgb = RED;
+                    }
+
+                    if ((x1 <= editor_pixel_x) && (editor_pixel_x <= x2)) {
+                        f_color.rgb = RED;
+                    }
+                }
+
+                // draw line from right to left
+                if ((x1 > x2) && (y1 == y2)) {
+                    float center_offset_x1 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
+                    float center_offset_y1 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+                    float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_x1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_y1), 2);
+                    float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
+                    if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
+                        f_color.rgb = RED;
+                    }
+
+                    float center_offset_xy2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+                    float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_xy2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_xy2), 2);
+                    float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
+                    if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
+                        f_color.rgb = RED;
+                    }
+
+                    if ((x2 <= editor_pixel_x) && (editor_pixel_x <= x1)) {
+                        f_color.rgb = RED;
+                    }
+                }
+
+                // draw line from top to bottom
+                if ((x1 == x2) && (y1 < y2)) {
+                    float center_offset_xy1 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+                    float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
+                    float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
+                    if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
+                        f_color.rgb = RED;
+                    }
+
+                    float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+                    float center_offset_y2 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
+                    float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
+                    float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
+                    if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
+                        f_color.rgb = RED;
+                    }
+
+                    if ((y1 <= editor_pixel_y) && (editor_pixel_y <= y2)) {
+                        f_color.rgb = RED;
+                    }
+                }
+
+                // draw line from bottom to top
+                if ((x1 == x2) && (y1 > y2)) {
+                    float center_offset_x1 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+                    float center_offset_y1 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
+                    float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_x1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_y1), 2);
+                    float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
+                    if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
+                        f_color.rgb = RED;
+                    }
+
+                    float center_offset_x2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+                    float center_offset_y2 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+                    float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_x2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_y2), 2);
+                    float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
+                    if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
+                        f_color.rgb = RED;
+                    }
+
+                    if ((y2 <= editor_pixel_y) && (editor_pixel_y <= y1)) {
+                        f_color.rgb = RED;
+                    }
+                }
+            }
 
             if (octant == 1) {
                 float center_offset_x1 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
