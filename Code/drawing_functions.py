@@ -5,6 +5,7 @@ import pygame
 import moderngl
 import numpy as np
 from typing import Callable
+from Code.Editor.editor_utilities import LineTool, get_perfect_circle_edge_angles_for_drawing_lines, get_perfect_square_edge_angles_for_drawing_lines
 
 
 def initialize_display():
@@ -431,8 +432,14 @@ class RenderObjects():
         quads.release()
         renderer.release()
     #
-    def draw_line(self, Screen: ScreenObject, gl_context: moderngl.Context, x1: int, y1: int, x2: int, y2: int, thickness: int, rgba, pixel_size: int | float = 1, circle_for_line_drawing = 1):
+    def draw_line(self, Screen: ScreenObject, gl_context: moderngl.Context, x1: int, y1: int, x2: int, y2: int, thickness: int, rgba, pixel_size: int | float = 1, circle_for_line_drawing = None, brush_style: int = LineTool.CIRCLE_BRUSH):
         # 'draw_line', DrawLine
+        if circle_for_line_drawing is None:
+            match brush_style:
+                case LineTool.CIRCLE_BRUSH:
+                    circle_for_line_drawing = get_perfect_circle_edge_angles_for_drawing_lines(thickness)
+                case LineTool.SQUARE_BRUSH:
+                    circle_for_line_drawing = get_perfect_square_edge_angles_for_drawing_lines(thickness)
         # this function is inclusive of (x1, y1), (x2, y2)
         # dot, horizontal, or vertical
         if horizontal_or_vertical := ((x1 == x2) or (y1 == y2)):
@@ -487,7 +494,7 @@ class RenderObjects():
             perpendicular_slope = -(1 / slope)
             for edge_pixel in circle_for_line_drawing:
                 [column_index, row_index, radial_angle, [lower_angle, upper_angle]] = edge_pixel
-                if angle_in_range(lower_angle, angle, upper_angle) or (thickness < 4):
+                if angle_in_range(lower_angle, angle, upper_angle) or (thickness < 4) or (brush_style == LineTool.SQUARE_BRUSH):
                     pixel_x = column_index + 0.5
                     pixel_y = row_index + 0.5
                     perpendicular_intercept = (perpendicular_slope * -pixel_x) + pixel_y
@@ -508,9 +515,6 @@ class RenderObjects():
         topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
         topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
         bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
-        print(ltwh, (x1, y1), (x2, y2))
-        # [208.0, 57.0, 384.0, 384.0] (336, 185) (336, 185)
-        # [208.0, 57.0, 512.0, 512.0] (336, 185) (592.0, 441.0)
         program['aspect'] = Screen.aspect
         program['red'] = rgba[0]
         program['green'] = rgba[1]
@@ -530,8 +534,8 @@ class RenderObjects():
         program['outer_line_x2'] = below_line_xy[0]
         program['outer_line_y2'] = below_line_xy[1]
         program['octant'] = int(octant)
-        program['angle'] = angle
         program['pixel_size'] = pixel_size
+        program['brush_style'] = brush_style
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
         renderable_object.texture.use(0)
@@ -1611,8 +1615,10 @@ class DrawLine():
         uniform float outer_line_y2;
 
         uniform int octant;
-        uniform float angle;
         uniform float pixel_size;
+
+        // (1 = circle, 2 = square)
+        uniform int brush_style;
 
         in vec2 uvs;
         out vec4 f_color;
@@ -1656,12 +1662,24 @@ class DrawLine():
             // .6.7.
             // 0 = horizontal or vertical
 
-            float fake_outer_line_x1 = outer_line_x1 / 2;
-            float fake_outer_line_y1 = outer_line_y1 / 2;
-            float fake_outer_line_x2 = outer_line_x2 / 2;
-            float fake_outer_line_y2 = outer_line_y2 / 2;
-            float thickness2 = thickness / 2;
-            float angle2 = angle / 2;
+            if (brush_style == 2) {
+                float thickness_left_top_adjustment = (mod(thickness, 2.0) == 0.0) ? -((thickness - 2) / 2) : -((thickness - 1) / 2);
+                float stamp1_left = x1 + thickness_left_top_adjustment;
+                float stamp1_top = y1 + thickness_left_top_adjustment;
+                float stamp1_right = stamp1_left + thickness;
+                float stamp1_bottom = stamp1_top + thickness;
+                if ((stamp1_left <= editor_pixel_x - 0.5) && (editor_pixel_x - 0.5 < stamp1_right) && (stamp1_top <= editor_pixel_y - 0.5) && (editor_pixel_y - 0.5 < stamp1_bottom)) {
+                    f_color.rgb = RED;
+                }
+
+                float stamp2_left = x2 + thickness_left_top_adjustment;
+                float stamp2_top = y2 + thickness_left_top_adjustment;
+                float stamp2_right = stamp2_left + thickness;
+                float stamp2_bottom = stamp2_top + thickness;
+                if ((stamp2_left <= editor_pixel_x - 0.5) && (editor_pixel_x - 0.5 < stamp2_right) && (stamp2_top <= editor_pixel_y - 0.5) && (editor_pixel_y - 0.5 < stamp2_bottom)) {
+                    f_color.rgb = RED;
+                }
+            }
 
             if (octant == 0) {
                 // draw a dot

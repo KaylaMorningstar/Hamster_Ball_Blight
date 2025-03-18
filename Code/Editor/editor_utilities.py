@@ -1271,6 +1271,13 @@ def get_perfect_circle_edge_angles_for_drawing_lines(diameter: int):
     return circle
 
 
+def get_perfect_square_edge_angles_for_drawing_lines(length: int):
+    return [[length-1, 0, 45.0, [0.0, 360.0]],
+            [0, 0, 135.0, [0.0, 360.0]],
+            [length-1, length-1, 225.0, [0.0, 360.0]],
+            [0, length-1, 315.0, [0.0, 360.0]]]
+
+
 def get_square_with_edge_angles(length: int):
     if length == 1:
         return [[array('f', [0.0, 360.0])]]
@@ -1744,6 +1751,7 @@ class LineTool(EditorTool):
                 self.circle_for_line_drawing = get_perfect_circle_edge_angles_for_drawing_lines(self._brush_thickness)
             case LineTool.SQUARE_BRUSH:
                 self.circle = get_square_with_edge_angles(self._brush_thickness)
+                self.circle_for_line_drawing = get_perfect_square_edge_angles_for_drawing_lines(self._brush_thickness)
         
         pygame_circle_image = pygame.Surface((self.brush_thickness, self.brush_thickness), pygame.SRCALPHA)
         for left, row in enumerate(self.circle):
@@ -2381,7 +2389,7 @@ class EditorMap():
                             x1 = int(x2 + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale))
                             y1 = int(y2 + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale))
                             pixel_size = int(move_number_to_desired_range(1, self.pixel_scale, EditorMap._MAX_ZOOM))
-                            render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': self.current_tool.brush_thickness, 'rgba': COLORS['RED'], 'pixel_size': self.pixel_scale, 'circle_for_line_drawing': self.current_tool.circle_for_line_drawing})
+                            render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': self.current_tool.brush_thickness, 'rgba': COLORS['RED'], 'pixel_size': self.pixel_scale, 'circle_for_line_drawing': self.current_tool.circle_for_line_drawing, 'brush_style': self.current_tool.brush_style})
                             self.stored_draw_keys.append(LineTool.LINE_REFERENCE)
 
                 case CurvyLineTool.INDEX:
