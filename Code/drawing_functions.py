@@ -515,6 +515,7 @@ class RenderObjects():
         topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
         topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
         bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
+        print((x1, y1), (x2, y2), pixel_size)
         program['aspect'] = Screen.aspect
         program['red'] = rgba[0]
         program['green'] = rgba[1]
@@ -1581,6 +1582,10 @@ class DrawLine():
         self.FRAGMENT_SHADER = '''
         #version 330 core
         #extension GL_EXT_shader_framebuffer_fetch : require
+        #extension GL_ARB_gpu_shader_fp64 : require
+
+        const vec3 RED = vec3(1.0, 0.0, 0.0);
+        const vec3 GREEN = vec3(0.0, 1.0, 0.0);
 
         uniform sampler2D tex;
         uniform float red;
@@ -1793,8 +1798,15 @@ class DrawLine():
                 }
 
                 if (thickness == 1.0) {
-                    float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
-                    if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
+                    slope = (delta_y + 1) / (delta_x - 1);
+                    float calculated_y = (slope * (editor_pixel_x - 0.5)) + y1 - 0.5;
+                    if (mod(calculated_y, 1.0) > 0.999) {
+                        calculated_y = ceil(calculated_y);
+                    }
+                    if (mod(calculated_y, 1.0) < 0.001) {
+                        calculated_y = floor(calculated_y);
+                    }
+                    if ((calculated_y <= editor_pixel_y + 0.5) && (calculated_y > editor_pixel_y - 0.5)) {
                         f_color.rgba = line_color;
                     }
                 }
@@ -1842,8 +1854,15 @@ class DrawLine():
                 }
 
                 if (thickness == 1.0) {
-                    float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
-                    if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
+                    inverse_slope = (delta_x - 1) / (delta_y + 1);
+                    float calculated_x = (inverse_slope * (editor_pixel_y - y1 + 0.5)) + 0.5;
+                    if (mod(calculated_x, 1.0) > 0.999) {
+                        calculated_x = ceil(calculated_x);
+                    }
+                    if (mod(calculated_x, 1.0) < 0.001) {
+                        calculated_x = floor(calculated_x);
+                    }
+                    if ((calculated_x < editor_pixel_x + 0.5) && (calculated_x >= editor_pixel_x - 0.5)) {
                         f_color.rgba = line_color;
                     }
                 }
@@ -1889,8 +1908,15 @@ class DrawLine():
                 }
 
                 if (thickness == 1.0) {
-                    float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
-                    if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
+                    inverse_slope = (delta_x + 1) / (delta_y + 1);
+                    float calculated_x = (inverse_slope * (editor_pixel_y - y1 + 0.5)) + x1 - 0.5;
+                    if (mod(calculated_x, 1.0) > 0.999) {
+                        calculated_x = ceil(calculated_x);
+                    }
+                    if (mod(calculated_x, 1.0) < 0.001) {
+                        calculated_x = floor(calculated_x);
+                    }
+                    if ((calculated_x <= editor_pixel_x + 0.5) && (calculated_x > editor_pixel_x - 0.5)) {
                         f_color.rgba = line_color;
                     }
                 }
@@ -1936,8 +1962,15 @@ class DrawLine():
                 }
 
                 if (thickness == 1.0) {
-                    float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
-                    if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
+                    slope = (delta_y + 1) / (delta_x + 1);
+                    float calculated_y = (slope * (editor_pixel_x - x1 + 0.5)) + y1 - 0.5;
+                    if (mod(calculated_y, 1.0) > 0.999) {
+                        calculated_y = ceil(calculated_y);
+                    }
+                    if (mod(calculated_y, 1.0) < 0.001) {
+                        calculated_y = floor(calculated_y);
+                    }
+                    if ((calculated_y <= editor_pixel_y + 0.5) && (calculated_y > editor_pixel_y - 0.5)) {
                         f_color.rgba = line_color;
                     }
                 }
@@ -1985,8 +2018,15 @@ class DrawLine():
                 }
 
                 if (thickness == 1.0) {
-                    float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
-                    if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
+                    slope = (delta_y - 1) / (delta_x + 1);
+                    float calculated_y = (slope * (editor_pixel_x - x1 + 0.5)) + y1 + 0.5;
+                    if (mod(calculated_y, 1.0) > 0.999) {
+                        calculated_y = ceil(calculated_y);
+                    }
+                    if (mod(calculated_y, 1.0) < 0.001) {
+                        calculated_y = floor(calculated_y);
+                    }
+                    if ((calculated_y < editor_pixel_y + 0.5) && (calculated_y >= editor_pixel_y - 0.5)) {
                         f_color.rgba = line_color;
                     }
                 }
@@ -2034,8 +2074,15 @@ class DrawLine():
                 }
 
                 if (thickness == 1.0) {
-                    float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
-                    if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
+                    inverse_slope = (delta_x + 1) / (delta_y - 1);
+                    float calculated_x = (inverse_slope * (editor_pixel_y - y1 - 0.5)) + x1 - 0.5;
+                    if (mod(calculated_x, 1.0) > 0.999) {
+                        calculated_x = ceil(calculated_x);
+                    }
+                    if (mod(calculated_x, 1.0) < 0.001) {
+                        calculated_x = floor(calculated_x);
+                    }
+                    if ((calculated_x <= editor_pixel_x + 0.5) && (calculated_x > editor_pixel_x - 0.5)) {
                         f_color.rgba = line_color;
                     }
                 }
@@ -2081,8 +2128,15 @@ class DrawLine():
                 }
 
                 if (thickness == 1.0) {
-                    float calculated_x = (inverse_slope * (editor_pixel_y - y1)) + x1;
-                    if ((calculated_x - 0.5 <= editor_pixel_x) && (calculated_x + 0.5 > editor_pixel_x)) {
+                    inverse_slope = (delta_x - 1) / (delta_y - 1);
+                    float calculated_x = (inverse_slope * (editor_pixel_y - 0.5)) + 0.5;
+                    if (mod(calculated_x, 1.0) > 0.999) {
+                        calculated_x = ceil(calculated_x);
+                    }
+                    if (mod(calculated_x, 1.0) < 0.001) {
+                        calculated_x = floor(calculated_x);
+                    }
+                    if ((calculated_x < editor_pixel_x + 0.5) && (calculated_x >= editor_pixel_x - 0.5)) {
                         f_color.rgba = line_color;
                     }
                 }
@@ -2128,8 +2182,15 @@ class DrawLine():
                 }
 
                 if (thickness == 1.0) {
-                    float calculated_y = (slope * (editor_pixel_x - x1)) + y1;
-                    if ((calculated_y - 0.5 <= editor_pixel_y) && (calculated_y + 0.5 > editor_pixel_y)) {
+                    slope = (delta_y - 1) / (delta_x - 1);
+                    float calculated_y = (slope * (editor_pixel_x - 0.5)) + 0.5;
+                    if (mod(calculated_y, 1.0) > 0.999) {
+                        calculated_y = ceil(calculated_y);
+                    }
+                    if (mod(calculated_y, 1.0) < 0.001) {
+                        calculated_y = floor(calculated_y);
+                    }
+                    if ((calculated_y < editor_pixel_y + 0.5) && (calculated_y >= editor_pixel_y - 0.5)) {
                         f_color.rgba = line_color;
                     }
                 }
