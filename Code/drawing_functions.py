@@ -458,8 +458,6 @@ class RenderObjects():
             if (y1 < y2):  # ↓
                 y2 += pixel_size
                 ltwh = [x1 - (((thickness - 1) // 2) * pixel_size), min(y1, y2) - (((thickness - 1) // 2) * pixel_size), (thickness * pixel_size), abs(y2 - y1) + ((thickness - 1) * pixel_size)]
-            # self.basic_rect_ltwh_image_with_color(Screen, gl_context, 'black_pixel', ltwh, rgba)
-            # return
         else:
             # octant 1 or 2
             if (y1 > y2) and (x1 < x2):
@@ -2137,30 +2135,41 @@ class DrawLine():
                     f_color.rgba = line_color;
                 }
 
+                inverse_slope = (delta_x - 1) / (delta_y - 1);
                 if (thickness == 1.0) {
-                    inverse_slope = (delta_x - 1) / (delta_y - 1);
                     float calculated_x = (inverse_slope * (editor_pixel_y - 0.5)) + 0.5;
-                    if (mod(calculated_x, 1.0) > 0.999) {
-                        calculated_x = ceil(calculated_x);
-                    }
-                    if (mod(calculated_x, 1.0) < 0.001) {
-                        calculated_x = floor(calculated_x);
-                    }
+                    calculated_x = round_close(calculated_x);
                     if ((calculated_x < editor_pixel_x + 0.5) && (calculated_x >= editor_pixel_x - 0.5)) {
                         f_color.rgba = line_color;
                     }
                 }
 
+                // float left_top_edge_offset = (mod(thickness, 2.0) == 0.0) ? -((thickness / 2) - 1) : -floor(thickness / 2);
+                // float bottom_line_x = x1 + left_top_edge_offset + outer_line_x1;
+                // float bottom_line_y = y1 + left_top_edge_offset + outer_line_y1;
+                // float bottom_line_intercept = (inverse_slope * -bottom_line_y) + bottom_line_x;
+                // bool above_bottom_line = editor_pixel_x + 0.5 > (inverse_slope * editor_pixel_y) + bottom_line_intercept;
+
+                // float top_line_x = x1 + left_top_edge_offset + outer_line_x2;
+                // float top_line_y = y1 + left_top_edge_offset + outer_line_y2;
+                // float top_line_intercept = (inverse_slope * -top_line_y) + top_line_x;
+                // bool below_top_line = editor_pixel_x - 0.5 <= (inverse_slope * editor_pixel_y) + top_line_intercept;
+
                 float left_top_edge_offset = (mod(thickness, 2.0) == 0.0) ? -((thickness / 2) - 1) : -floor(thickness / 2);
                 float bottom_line_x = x1 + left_top_edge_offset + outer_line_x1;
                 float bottom_line_y = y1 + left_top_edge_offset + outer_line_y1;
-                float bottom_line_intercept = (inverse_slope * -bottom_line_y) + bottom_line_x;
-                bool above_bottom_line = editor_pixel_x + 0.5 > (inverse_slope * editor_pixel_y) + bottom_line_intercept;
+                float calculated_bottom_line = (inverse_slope * (editor_pixel_y - bottom_line_y - 0.5)) + bottom_line_x + 0.5;
+                calculated_bottom_line = round_close(calculated_bottom_line);
+                bool above_bottom_line = calculated_bottom_line < editor_pixel_x + 0.5;
 
                 float top_line_x = x1 + left_top_edge_offset + outer_line_x2;
                 float top_line_y = y1 + left_top_edge_offset + outer_line_y2;
-                float top_line_intercept = (inverse_slope * -top_line_y) + top_line_x;
-                bool below_top_line = editor_pixel_x - 0.5 <= (inverse_slope * editor_pixel_y) + top_line_intercept;
+                float calculated_top_line = (inverse_slope * (editor_pixel_y - top_line_y - 0.5)) + top_line_x + 0.5;
+                calculated_top_line = round_close(calculated_top_line);
+                bool below_top_line = calculated_top_line >= editor_pixel_x - 0.5;
+
+
+
 
                 float perpendicular_slope = (top_line_x - bottom_line_x) / (top_line_y - bottom_line_y);
                 float perpendicular_intercept_stamp1 = (perpendicular_slope * -bottom_line_y + 1) + bottom_line_x;

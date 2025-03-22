@@ -1773,6 +1773,34 @@ class LineTool(EditorTool):
         if int(brush_thickness) == self._brush_thickness:
             return False
         return True
+    
+    def get_outer_pixels(self, drawing_angle, x1, y1, x2, y2):
+        if ((x1 == x2) or (y1 == y2)):
+            return (None, None), (None, None)
+        above_line_xy = [x1, y1, 0]
+        below_line_xy = [x1, y1, 0]
+        center_x, center_y = self.brush_thickness / 2, self.brush_thickness / 2
+        slope = ((y2 - y1) / (x2 - x1))
+        intercept = (slope * -center_x) + center_y
+        perpendicular_slope = -(1 / slope)
+        for edge_pixel in self.circle_for_line_drawing:
+            [column_index, row_index, radial_angle, [lower_angle, upper_angle]] = edge_pixel
+            if (not angle_in_range(lower_angle, drawing_angle, upper_angle)) or (self.brush_thickness < 4) or (self.brush_style == LineTool.SQUARE_BRUSH):
+                pixel_x = column_index + 0.5
+                pixel_y = row_index + 0.5
+                perpendicular_intercept = (perpendicular_slope * -pixel_x) + pixel_y
+                intersection_x = (perpendicular_intercept - intercept) / (slope - perpendicular_slope)
+                intersection_y = (slope * intersection_x) + intercept
+                distance_from_line = math.sqrt(((intersection_x - pixel_x) ** 2) + ((intersection_y - pixel_y) ** 2))
+                # above line
+                if pixel_y > (slope * pixel_x) + intercept:
+                    if distance_from_line > above_line_xy[2]:
+                        above_line_xy = [column_index, row_index, distance_from_line]
+                # below line
+                else:
+                    if distance_from_line > below_line_xy[2]:
+                        below_line_xy = [column_index, row_index, distance_from_line]
+        return above_line_xy[0:2], below_line_xy[0:2]
 
 
 class CurvyLineTool(EditorTool):
@@ -2379,6 +2407,16 @@ class EditorMap():
                         draw_angle = math.degrees(math.atan2(self.current_tool.start_left_top_xy[1] - topest_brush_pixel, leftest_brush_pixel - self.current_tool.start_left_top_xy[0])) % 360
                         map_edit = self.map_edits[-1].change_dict
                         max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
+                        # # get points used to draw lines in the fragment shader to make the drawn points match
+                        # x2 = int(pixel_x + (((self.current_tool.brush_thickness - 1) // 2) * self.pixel_scale))
+                        # y2 = int(pixel_y + (((self.current_tool.brush_thickness - 1) // 2) * self.pixel_scale))
+                        # x1 = int(x2 + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale))
+                        # y1 = int(y2 + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale))
+                        # (stamp1_above_line_x, stamp1_above_line_y), (stamp1_below_line_x, stamp1_below_line_y) = self.current_tool.get_outer_pixels(draw_angle, x1, y1, x2, y2)
+                        # difference_x = leftest_brush_pixel-self.current_tool.start_left_top_xy[0]
+                        # difference_y = topest_brush_pixel-self.current_tool.start_left_top_xy[1]
+                        # (stamp2_above_line_x, stamp2_above_line_y), (stamp2_below_line_x, stamp2_below_line_y) = (stamp1_above_line_x+difference_x, stamp1_above_line_y+difference_y), (stamp1_below_line_x+difference_x, stamp1_below_line_y+difference_y)
+                        # stamp1_slope = (stamp1_above_line_y - stamp1_below_line_y) / (stamp1_above_line_x - stamp1_below_line_x)
                         for brush_offset_x, column in enumerate(self.current_tool.circle):
                             for brush_offset_y, draw in enumerate(column):
                                 if draw == LineTool.NOT_DRAW_PIXEL:
