@@ -434,6 +434,7 @@ class RenderObjects():
     #
     def draw_line(self, Screen: ScreenObject, gl_context: moderngl.Context, x1: int, y1: int, x2: int, y2: int, thickness: int, rgba, pixel_size: int | float = 1, circle_for_line_drawing = None, brush_style: int = LineTool.CIRCLE_BRUSH):
         # 'draw_line', DrawLine
+        angle = (atan2(y2 - y1, x2 - x1) + 270) % 360
         if circle_for_line_drawing is None:
             match brush_style:
                 case LineTool.CIRCLE_BRUSH:
@@ -476,7 +477,6 @@ class RenderObjects():
             if (y1 < y2) and (x1 < x2):
                 x2 += pixel_size
                 y2 += pixel_size
-        angle = (atan2(y2 - y1, x2 - x1) + 270) % 360
         octant = ((angle // 45) + 1) if (not horizontal_or_vertical) else 0
         if (octant != 0):
             # get the ltwh
@@ -494,7 +494,7 @@ class RenderObjects():
             perpendicular_slope = -(1 / slope)
             for edge_pixel in circle_for_line_drawing:
                 [column_index, row_index, radial_angle, [lower_angle, upper_angle]] = edge_pixel
-                if angle_in_range(lower_angle, angle, upper_angle) or (thickness < 4) or (brush_style == LineTool.SQUARE_BRUSH):
+                if (not angle_in_range(lower_angle, angle, upper_angle)) or (thickness < 4) or (brush_style == LineTool.SQUARE_BRUSH):
                     pixel_x = column_index + 0.5
                     pixel_y = row_index + 0.5
                     perpendicular_intercept = (perpendicular_slope * -pixel_x) + pixel_y
@@ -515,7 +515,6 @@ class RenderObjects():
         topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
         topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
         bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
-        print((x1, y1), (x2, y2), pixel_size)
         program['aspect'] = Screen.aspect
         program['red'] = rgba[0]
         program['green'] = rgba[1]
@@ -1586,6 +1585,7 @@ class DrawLine():
 
         const vec3 RED = vec3(1.0, 0.0, 0.0);
         const vec3 GREEN = vec3(0.0, 1.0, 0.0);
+        const vec3 WHITE = vec3(1.0, 1.0, 1.0);
 
         uniform sampler2D tex;
         uniform float red;
@@ -1618,6 +1618,16 @@ class DrawLine():
 
         in vec2 uvs;
         out vec4 f_color;
+
+        float round_close(highp float number) {
+            if (mod(number, 1.0) > 0.999) {
+                number = ceil(number);
+            }
+            if (mod(number, 1.0) < 0.001) {
+                number = floor(number);
+            }
+            return number;
+        }
 
         void main() {
             vec4 line_color = vec4(
@@ -2181,15 +2191,10 @@ class DrawLine():
                     f_color.rgba = line_color;
                 }
 
+                slope = (delta_y - 1) / (delta_x - 1);
                 if (thickness == 1.0) {
-                    slope = (delta_y - 1) / (delta_x - 1);
                     float calculated_y = (slope * (editor_pixel_x - 0.5)) + 0.5;
-                    if (mod(calculated_y, 1.0) > 0.999) {
-                        calculated_y = ceil(calculated_y);
-                    }
-                    if (mod(calculated_y, 1.0) < 0.001) {
-                        calculated_y = floor(calculated_y);
-                    }
+                    calculated_y = round_close(calculated_y);
                     if ((calculated_y < editor_pixel_y + 0.5) && (calculated_y >= editor_pixel_y - 0.5)) {
                         f_color.rgba = line_color;
                     }
@@ -2198,13 +2203,15 @@ class DrawLine():
                 float left_top_edge_offset = (mod(thickness, 2.0) == 0.0) ? -((thickness / 2) - 1) : -floor(thickness / 2);
                 float bottom_line_x = x1 + left_top_edge_offset + outer_line_x1;
                 float bottom_line_y = y1 + left_top_edge_offset + outer_line_y1;
-                float bottom_line_intercept = (slope * -bottom_line_x) + bottom_line_y;
-                bool above_bottom_line = editor_pixel_y - 0.5 <= (slope * editor_pixel_x) + bottom_line_intercept;
+                float calculated_bottom_line = (slope * (editor_pixel_x - bottom_line_x - 0.5)) + bottom_line_y + 0.5;
+                calculated_bottom_line = round_close(calculated_bottom_line);
+                bool above_bottom_line = calculated_bottom_line >= editor_pixel_y - 0.5;
 
                 float top_line_x = x1 + left_top_edge_offset + outer_line_x2;
                 float top_line_y = y1 + left_top_edge_offset + outer_line_y2;
-                float top_line_intercept = (slope * -top_line_x) + top_line_y;
-                bool below_top_line = editor_pixel_y + 0.5 > (slope * editor_pixel_x) + top_line_intercept;
+                float calculated_top_line = (slope * (editor_pixel_x - top_line_x - 0.5)) + top_line_y + 0.5;
+                calculated_top_line = round_close(calculated_top_line);
+                bool below_top_line = calculated_top_line < editor_pixel_y + 0.5;
 
                 float perpendicular_slope = (top_line_y - bottom_line_y) / (top_line_x - bottom_line_x);
                 float perpendicular_intercept_stamp1 = (perpendicular_slope * -bottom_line_x + 1) + bottom_line_y;
@@ -2222,3 +2229,61 @@ class DrawLine():
         }
         '''
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
+
+
+
+            # if (octant == 8) {
+            #     float center_offset_xy1 = (mod(thickness, 2.0) == 0.0) ? -1.0 : -0.5;
+            #     float editor_radial_distance_xy1 = pow(abs(editor_pixel_x - x1 + center_offset_xy1), 2) + pow(abs(editor_pixel_y - y1 + center_offset_xy1), 2);
+            #     float editor_circle_radius_xy1 = pow(((thickness - 0.5) / 2), 2);
+            #     if (editor_radial_distance_xy1 < editor_circle_radius_xy1) {
+            #         f_color.rgba = line_color;
+            #     }
+
+            #     float center_offset_xy2 = (mod(thickness, 2.0) == 0.0) ? 0.0 : 0.5;
+            #     float editor_radial_distance_xy2 = pow(abs(editor_pixel_x - x2 + center_offset_xy2), 2) + pow(abs(editor_pixel_y - y2 + center_offset_xy2), 2);
+            #     float editor_circle_radius_xy2 = pow(((thickness - 0.5) / 2), 2);
+            #     if (editor_radial_distance_xy2 < editor_circle_radius_xy2) {
+            #         f_color.rgba = line_color;
+            #     }
+
+            #     if (thickness == 1.0) {
+            #         slope = (delta_y - 1) / (delta_x - 1);
+            #         float calculated_y = (slope * (editor_pixel_x - 0.5)) + 0.5;
+            #         if (mod(calculated_y, 1.0) > 0.999) {
+            #             calculated_y = ceil(calculated_y);
+            #         }
+            #         if (mod(calculated_y, 1.0) < 0.001) {
+            #             calculated_y = floor(calculated_y);
+            #         }
+            #         if ((calculated_y < editor_pixel_y + 0.5) && (calculated_y >= editor_pixel_y - 0.5)) {
+            #             f_color.rgba = line_color;
+            #         }
+            #     }
+
+            #     float left_top_edge_offset = (mod(thickness, 2.0) == 0.0) ? -((thickness / 2) - 1) : -floor(thickness / 2);
+            #     float bottom_line_x = x1 + left_top_edge_offset + outer_line_x1;
+            #     float bottom_line_y = y1 + left_top_edge_offset + outer_line_y1;
+            #     float bottom_line_intercept = (slope * -bottom_line_x) + bottom_line_y;
+            #     bool above_bottom_line = editor_pixel_y - 0.5 <= (slope * editor_pixel_x) + bottom_line_intercept;
+
+            #     float top_line_x = x1 + left_top_edge_offset + outer_line_x2;
+            #     float top_line_y = y1 + left_top_edge_offset + outer_line_y2;
+            #     float top_line_intercept = (slope * -top_line_x) + top_line_y;
+            #     bool below_top_line = editor_pixel_y + 0.5 > (slope * editor_pixel_x) + top_line_intercept;
+
+            #     float perpendicular_slope = (top_line_y - bottom_line_y) / (top_line_x - bottom_line_x);
+            #     float perpendicular_intercept_stamp1 = (perpendicular_slope * -bottom_line_x + 1) + bottom_line_y;
+            #     bool right_of_stamp1 = editor_pixel_x + 0.5 >= ((1/perpendicular_slope) * (editor_pixel_y - bottom_line_y)) + bottom_line_x + 1;
+
+            #     float stamp2_x = x1 + delta_x - 1 + left_top_edge_offset + outer_line_x1 + 0.5;
+            #     float stamp2_y = y1 + delta_y - 1 + left_top_edge_offset + outer_line_y1 + 0.5;
+            #     float perpendicular_intercept_stamp2 = (perpendicular_slope * -(bottom_line_x + delta_x - 1)) + (bottom_line_y + delta_y - 1);
+            #     bool left_of_stamp2 = editor_pixel_x - 0.5 < ((1/perpendicular_slope) * (editor_pixel_y - stamp2_y)) + stamp2_x;
+
+            #     if ((above_bottom_line) && (below_top_line) && (right_of_stamp1) && (left_of_stamp2) && (thickness != 1.0)) {
+            #         f_color.rgba = line_color;
+            #     }
+            # }

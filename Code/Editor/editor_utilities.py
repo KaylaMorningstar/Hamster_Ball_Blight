@@ -2376,7 +2376,7 @@ class EditorMap():
                         self.current_tool.state = LineTool.NOT_DRAWING
                         # draw the line on the map
                         reload_tiles = {}
-                        draw_angle = math.degrees(math.atan2(self.current_tool.start_xy[1] - topest_brush_pixel, leftest_brush_pixel - self.current_tool.start_xy[0])) % 360
+                        draw_angle = math.degrees(math.atan2(self.current_tool.start_left_top_xy[1] - topest_brush_pixel, leftest_brush_pixel - self.current_tool.start_left_top_xy[0])) % 360
                         map_edit = self.map_edits[-1].change_dict
                         max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
                         for brush_offset_x, column in enumerate(self.current_tool.circle):
@@ -2407,23 +2407,25 @@ class EditorMap():
                                     else:
                                         # stamp the point if bresenham isn't needed
                                         if angle_in_range(draw[0], draw_angle, draw[1]):
-                                            if map_edit.get(tile_name := (edited_pixel_x := leftest_brush_pixel+brush_offset_x, edited_pixel_y := topest_brush_pixel+brush_offset_y)) is None:
-                                                # get the tile and pixel being edited
-                                                tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
-                                                tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
-                                                # don't try to draw outside of map bounds
-                                                if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
-                                                    tile = self.tile_array[tile_x][tile_y]
-                                                    # load the tile if it isn't loaded
-                                                    if tile.pg_image is None:
-                                                        tile.load(render_instance, screen_instance, gl_context)
-                                                    reload_tiles[tile.image_reference] = tile
-                                                    # make the edit
-                                                    original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
-                                                    tile.edits[(pixel_x, pixel_y)] = resulting_color
-                                                    # record what was edited for ctrl-Z
-                                                    map_edit[tile_name] = original_pixel_color
+                                            # point should be stamped on the starting and ending stamps
+                                            for edited_pixel_x, edited_pixel_y in [(self.current_tool.start_left_top_xy[0]+brush_offset_x, self.current_tool.start_left_top_xy[1]+brush_offset_y), (leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y)]:
+                                                if map_edit.get(tile_name := (edited_pixel_x, edited_pixel_y)) is None:
+                                                    # get the tile and pixel being edited
+                                                    tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                                    tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                                    # don't try to draw outside of map bounds
+                                                    if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                                        tile = self.tile_array[tile_x][tile_y]
+                                                        # load the tile if it isn't loaded
+                                                        if tile.pg_image is None:
+                                                            tile.load(render_instance, screen_instance, gl_context)
+                                                        reload_tiles[tile.image_reference] = tile
+                                                        # make the edit
+                                                        original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                        tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                        # record what was edited for ctrl-Z
+                                                        map_edit[tile_name] = original_pixel_color
                                             continue
                                         # draw bresenham points if necessary
                                         for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.start_left_top_xy[0]+brush_offset_x, self.current_tool.start_left_top_xy[1]+brush_offset_y, leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y):
