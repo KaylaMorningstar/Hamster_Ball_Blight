@@ -1292,18 +1292,25 @@ def get_square_with_edge_angles(length: int):
                 # calculate angle range that is should skip bresenham algorithm
                 angle_from_center = atan2((column_index + 0.5 - center), -(row_index + 0.5 - center))
                 # right-side
-                if (315.0 <= angle_from_center <= 360.0) or (0.0 <= angle_from_center <= 45.0):
+                if (315.0 < angle_from_center <= 360.0) or (0.0 <= angle_from_center < 45.0):
                     angle_range = array('f', (90.0, 270.0))
+                elif angle_from_center == 45.0:
+                    angle_range = array('f', [0.0, 360.0])
                 # top-side
-                if 45.0 <= angle_from_center <= 135.0:
+                elif 45.0 < angle_from_center < 135.0:
                     angle_range = array('f', (180.0, 360.0))
+                elif angle_from_center == 135.0:
+                    angle_range = array('f', [0.0, 360.0])
                 # left-side
-                if 135.0 <= angle_from_center <= 225.0:
-                    angle_range = array('f', (270.0, 45.0))
+                elif 135.0 < angle_from_center < 225.0:
+                    angle_range = array('f', (270.0, 90.0))
+                elif angle_from_center == 225.0:
+                    angle_range = array('f', [0.0, 360.0])
                 # bottom-side
-                if 225.0 <= angle_from_center <= 315.0:
+                elif 225.0 < angle_from_center < 315.0:
                     angle_range = array('f', (0.0, 180.0))
-                # angle_range = array('f', ((angle_from_center - 90) % 360, (angle_from_center + 90) % 360))
+                elif angle_from_center == 315.0:
+                    angle_range = array('f', [0.0, 360.0])
                 current_row.append(angle_range)
             else:
                 current_row.append(1)
@@ -2424,23 +2431,24 @@ class EditorMap():
                                 else:
                                     # draw brush pixels
                                     if (draw == LineTool.DRAW_PIXEL):
-                                        if map_edit.get(tile_name := (edited_pixel_x := leftest_brush_pixel+brush_offset_x, edited_pixel_y := topest_brush_pixel+brush_offset_y)) is None:
-                                            # get the tile and pixel being edited
-                                            tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
-                                            tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
-                                            # don't try to draw outside of map bounds
-                                            if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
-                                                tile = self.tile_array[tile_x][tile_y]
-                                                # load the tile if it isn't loaded
-                                                if tile.pg_image is None:
-                                                    tile.load(render_instance, screen_instance, gl_context)
-                                                reload_tiles[tile.image_reference] = tile
-                                                # make the edit
-                                                original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
-                                                tile.edits[(pixel_x, pixel_y)] = resulting_color
-                                                # record what was edited for ctrl-Z
-                                                map_edit[tile_name] = original_pixel_color
+                                        for edited_pixel_x, edited_pixel_y in [(self.current_tool.start_left_top_xy[0]+brush_offset_x, self.current_tool.start_left_top_xy[1]+brush_offset_y), (leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y)]:
+                                            if map_edit.get(tile_name := (edited_pixel_x, edited_pixel_y)) is None:
+                                                # get the tile and pixel being edited
+                                                tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                                tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                                # don't try to draw outside of map bounds
+                                                if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                                    tile = self.tile_array[tile_x][tile_y]
+                                                    # load the tile if it isn't loaded
+                                                    if tile.pg_image is None:
+                                                        tile.load(render_instance, screen_instance, gl_context)
+                                                    reload_tiles[tile.image_reference] = tile
+                                                    # make the edit
+                                                    original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                    tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                    # record what was edited for ctrl-Z
+                                                    map_edit[tile_name] = original_pixel_color
                                     # draw bresenham pixels
                                     else:
                                         # stamp the point if bresenham isn't needed

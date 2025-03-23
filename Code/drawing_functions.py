@@ -2022,19 +2022,6 @@ class DrawLine():
                     }
                 }
 
-                // float left_top_edge_offset = (mod(thickness, 2.0) == 0.0) ? -((thickness / 2) - 1) : -floor(thickness / 2);
-                // float bottom_line_x = x1 + left_top_edge_offset + outer_line_x1;
-                // float bottom_line_y = y1 + left_top_edge_offset + outer_line_y1;
-                // float bottom_line_intercept = (slope * -bottom_line_x) + bottom_line_y;
-                // bool above_bottom_line = editor_pixel_y - 0.5 <= (slope * editor_pixel_x) + bottom_line_intercept;
-
-                // float top_line_x = x1 + left_top_edge_offset + outer_line_x2;
-                // float top_line_y = y1 + left_top_edge_offset + outer_line_y2;
-                // float top_line_intercept = (slope * -top_line_x) + top_line_y;
-                // bool below_top_line = editor_pixel_y + 0.5 >= (slope * editor_pixel_x) + top_line_intercept;
-
-
-
                 float left_top_edge_offset = (mod(thickness, 2.0) == 0.0) ? -((thickness / 2) - 1) : -floor(thickness / 2);
                 float bottom_line_x = x1 + left_top_edge_offset + outer_line_x1;
                 float bottom_line_y = y1 + left_top_edge_offset + outer_line_y1;
@@ -2047,8 +2034,6 @@ class DrawLine():
                 float calculated_top_line = (slope * (editor_pixel_x - top_line_x + 0.5)) + top_line_y + 0.5;
                 calculated_top_line = round_close(calculated_top_line);
                 bool below_top_line = calculated_top_line < editor_pixel_y + 0.5;
-
-
 
                 float perpendicular_slope = (top_line_y - bottom_line_y) / (top_line_x - bottom_line_x);
                 float perpendicular_intercept_stamp1 = (perpendicular_slope * -bottom_line_x - 1) + bottom_line_y;
