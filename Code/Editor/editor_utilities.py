@@ -2419,11 +2419,16 @@ class EditorMap():
                         # y2 = int(pixel_y + (((self.current_tool.brush_thickness - 1) // 2) * self.pixel_scale))
                         # x1 = int(x2 + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale))
                         # y1 = int(y2 + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale))
-                        # (stamp1_above_line_x, stamp1_above_line_y), (stamp1_below_line_x, stamp1_below_line_y) = self.current_tool.get_outer_pixels(draw_angle, x1, y1, x2, y2)
-                        # difference_x = leftest_brush_pixel-self.current_tool.start_left_top_xy[0]
-                        # difference_y = topest_brush_pixel-self.current_tool.start_left_top_xy[1]
-                        # (stamp2_above_line_x, stamp2_above_line_y), (stamp2_below_line_x, stamp2_below_line_y) = (stamp1_above_line_x+difference_x, stamp1_above_line_y+difference_y), (stamp1_below_line_x+difference_x, stamp1_below_line_y+difference_y)
-                        # stamp1_slope = (stamp1_above_line_y - stamp1_below_line_y) / (stamp1_above_line_x - stamp1_below_line_x)
+                        # (stamp1_below_line_x, stamp1_below_line_y), (stamp1_above_line_x, stamp1_above_line_y) = self.current_tool.get_outer_pixels(draw_angle, x1, y1, x2, y2)
+                        # valid_slope = all(map(lambda x: x is not None, [stamp1_below_line_x, stamp1_below_line_y, stamp1_above_line_x, stamp1_above_line_y]))
+                        # if valid_slope:
+                        #     difference_x = leftest_brush_pixel-self.current_tool.start_left_top_xy[0]
+                        #     difference_y = topest_brush_pixel-self.current_tool.start_left_top_xy[1]
+                        #     (stamp2_above_line_x, stamp2_above_line_y), (stamp2_below_line_x, stamp2_below_line_y) = (stamp1_above_line_x+difference_x, stamp1_above_line_y+difference_y), (stamp1_below_line_x+difference_x, stamp1_below_line_y+difference_y)
+                        #     delta_y = stamp1_above_line_y - stamp1_below_line_y
+                        #     delta_x = stamp1_above_line_x - stamp1_below_line_x
+                        #     stamp_slope = delta_y / delta_x if delta_x != 0 else 99999999
+                        #     print(stamp_slope)
                         for brush_offset_x, column in enumerate(self.current_tool.circle):
                             for brush_offset_y, draw in enumerate(column):
                                 if draw == LineTool.NOT_DRAW_PIXEL:
