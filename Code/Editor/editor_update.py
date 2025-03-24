@@ -412,6 +412,36 @@ def update_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Key
                     palette_color_offset_y = round(move_number_to_desired_range(0, Singleton.palette_pixels_down, palette_colors_scroll_space_available))
                     Singleton.palette_scroll_percentage = move_number_to_desired_range(0, palette_color_offset_y / palette_colors_scroll_space_available, 1)
                     Singleton.palette_scroll_ltwh[1] = round(move_number_to_desired_range(top_of_palette_scroll_area, top_of_palette_scroll_area + ((Singleton.palette_scroll_percentage) * (bottom_of_palette_scroll_area - top_of_palette_scroll_area)), bottom_of_palette_scroll_area))
+                # adjust spectrum
+                Singleton.add_color_spectrum_x_percentage, Singleton.add_color_saturation_percentage, Singleton.add_color_spectrum_y_percentage = Singleton.currently_selected_color.rgb_to_hsl(Singleton.currently_selected_color.color)
+                Singleton.add_color_alpha_percentage = Singleton.currently_selected_color.color[3]
+                color_spectrum_ltwh = Singleton.get_color_spectrum_ltwh()
+                spectrum_x_pos = move_number_to_desired_range(0, Singleton.add_color_spectrum_x_percentage * color_spectrum_ltwh[2], color_spectrum_ltwh[2])
+                spectrum_y_pos = move_number_to_desired_range(0, Singleton.add_color_spectrum_y_percentage * color_spectrum_ltwh[3], color_spectrum_ltwh[3])
+                mouse_in_bottom_half_of_spectrum = (spectrum_y_pos / color_spectrum_ltwh[3]) < 0.5
+                Singleton.add_color_current_circle_color = COLORS['WHITE'] if mouse_in_bottom_half_of_spectrum else COLORS['BLACK']
+                Singleton.add_color_circle_center_relative_xy = [spectrum_x_pos, abs(color_spectrum_ltwh[3] - spectrum_y_pos)]
+                Singleton.add_color_spectrum_x_percentage = (spectrum_x_pos / color_spectrum_ltwh[2])
+                Singleton.add_color_spectrum_y_percentage = abs(1 - (spectrum_y_pos / color_spectrum_ltwh[3]))
+                # update saturation
+                saturation_x_pos = move_number_to_desired_range(0, Singleton.add_color_saturation_percentage * color_spectrum_ltwh[2], color_spectrum_ltwh[2])
+                Singleton.add_color_saturation_circle_relative_x = saturation_x_pos
+                Singleton.currently_selected_color.saturation = Singleton.add_color_saturation_circle_relative_x / color_spectrum_ltwh[2]
+                Singleton.add_color_saturation_percentage = (saturation_x_pos / color_spectrum_ltwh[2])
+                # update alpha
+                alpha_x_pos = move_number_to_desired_range(0, Singleton.add_color_alpha_percentage * color_spectrum_ltwh[2], color_spectrum_ltwh[2])
+                Singleton.add_color_alpha_circle_relative_x = alpha_x_pos
+                Singleton.currently_selected_color.alpha = Singleton.add_color_alpha_circle_relative_x / color_spectrum_ltwh[2]
+                Singleton.add_color_alpha_percentage = (alpha_x_pos / color_spectrum_ltwh[2])
+                # update text input rgba and hex
+                red, green, blue, alpha = percent_to_rgba(Singleton.currently_selected_color.color)
+                Singleton.add_color_dynamic_inputs[0].current_string = str(red)
+                Singleton.add_color_dynamic_inputs[1].current_string = str(green)
+                Singleton.add_color_dynamic_inputs[2].current_string = str(blue)
+                Singleton.add_color_dynamic_inputs[3].current_string = str(alpha)
+                Singleton.add_color_dynamic_inputs[4].current_string = f'{add_characters_to_front_of_string(base10_to_hex(red), 2, "0")}{add_characters_to_front_of_string(base10_to_hex(green), 2, "0")}{add_characters_to_front_of_string(base10_to_hex(blue), 2, "0")}{add_characters_to_front_of_string(base10_to_hex(alpha), 2, "0")}'
+                # update the currently selected color
+                Singleton.currently_selected_color.calculate_color(Singleton.add_color_spectrum_x_percentage, Singleton.add_color_spectrum_y_percentage, Singleton.add_color_alpha_percentage)
     #
     # RGBA spectrum
     color_spectrum_ltwh = Singleton.get_color_spectrum_ltwh()
