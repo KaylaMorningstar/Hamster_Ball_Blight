@@ -2559,12 +2559,11 @@ class EditorMap():
                         editor_singleton.add_color_dynamic_inputs[2].current_string = str(blue)
                         editor_singleton.add_color_dynamic_inputs[3].current_string = str(alpha)
                         editor_singleton.add_color_dynamic_inputs[4].current_string = f'{add_characters_to_front_of_string(base10_to_hex(red), 2, "0")}{add_characters_to_front_of_string(base10_to_hex(green), 2, "0")}{add_characters_to_front_of_string(base10_to_hex(blue), 2, "0")}{add_characters_to_front_of_string(base10_to_hex(alpha), 2, "0")}'
-                        # update spectrum based on palette selection
+                        # update spectrum
                         eyedrop_pixel_color_glsl = rgba_to_glsl(eyedrop_pixel_color)
                         editor_singleton.add_color_spectrum_x_percentage, editor_singleton.add_color_saturation_percentage, editor_singleton.add_color_spectrum_y_percentage = editor_singleton.currently_selected_color.rgb_to_hsl(eyedrop_pixel_color_glsl)
                         editor_singleton.add_color_alpha_percentage = eyedrop_pixel_color_glsl[3]
                         color_spectrum_ltwh = editor_singleton.get_color_spectrum_ltwh()
-                        # update spectrum
                         spectrum_x_pos = move_number_to_desired_range(0, editor_singleton.add_color_spectrum_x_percentage * color_spectrum_ltwh[2], color_spectrum_ltwh[2])
                         spectrum_y_pos = move_number_to_desired_range(0, editor_singleton.add_color_spectrum_y_percentage * color_spectrum_ltwh[3], color_spectrum_ltwh[3])
                         mouse_in_bottom_half_of_spectrum = (spectrum_y_pos / color_spectrum_ltwh[3]) < 0.5
@@ -2584,6 +2583,18 @@ class EditorMap():
                         editor_singleton.add_color_alpha_percentage = (alpha_x_pos / color_spectrum_ltwh[2])
                         # update the currently selected color
                         editor_singleton.currently_selected_color.calculate_color(editor_singleton.add_color_spectrum_x_percentage, editor_singleton.add_color_spectrum_y_percentage, editor_singleton.add_color_alpha_percentage)
+                        # update the palette
+                        eyedrop_color_in_palette = False
+                        for palette_index, palette_color in enumerate(editor_singleton.palette_colors):
+                            if eyedrop_pixel_color == percent_to_rgba(palette_color):
+                                eyedrop_color_in_palette = True
+                                break
+                        if eyedrop_color_in_palette:
+                            editor_singleton.palette_just_clicked_new_color = True
+                            editor_singleton.currently_selected_color.selected_through_palette = True
+                            editor_singleton.currently_selected_color.palette_index = palette_index
+                        else:
+                            editor_singleton.currently_selected_color.selected_through_palette = False
 
         except CaseBreak:
             pass
