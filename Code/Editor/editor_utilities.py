@@ -28,6 +28,14 @@ class EditorModes(Enum):
     BLOCK = 2
     OBJECT = 3
 
+@unique
+class CollisionMode(Enum):
+    NO_COLLISION = 0
+    COLLISION = 1
+    GRAPPLEABLE = 2
+    PLATFORM = 3
+    WATER = 4
+
 
 class TextInput():
     _STOPPING_CHARACTERS = ' ,.?!:;/\\[](){}'
@@ -1872,6 +1880,18 @@ class EyedropTool(EditorTool):
         super().__init__(active)
 
 
+class CollisionSelector():
+    def __init__(self, Render, text_color, color, text, text_pixel_size, mode, active: bool = False):
+        self.active = active  # whether this collision selector is currently selected or not
+        self.mode = mode
+        self.text_color = text_color
+        self.color = color
+        self.text = text
+        self.text_pixel_size = text_pixel_size
+        self.text_height = get_text_height(text_pixel_size) - (2 * text_pixel_size)
+        self.text_width = get_text_width(Render, text, text_pixel_size)
+
+
 class EditorMap():
     _STARTING_ZOOM_INDEX = 3
     _ZOOM = [
@@ -2736,7 +2756,6 @@ class EditorMap():
 
 
 class EditorTile():
-
     def __init__(self, base_path: str, column: int, row: int):
         self.column: int = column
         self.row: int = row
@@ -2748,7 +2767,6 @@ class EditorTile():
 
     def load(self, render_instance, screen_instance, gl_context):
         if not self.loaded:
-            # render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, f"{path}t{column}_{row}.png", f"{column}_{row}")
             self.pg_image = render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, self.image_path, self.image_reference)
         self.loaded = True
 

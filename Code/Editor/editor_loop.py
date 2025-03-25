@@ -3,10 +3,10 @@ import random
 import pygame
 from copy import deepcopy
 from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, ceil_scaled, floor_scaled, LOADED_IN_EDITOR, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
-from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes
+from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes, update_collision_selector
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap, get_tf_circle
 from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
-from Code.Editor.editor_utilities import MapModes, EditorModes
+from Code.Editor.editor_utilities import MapModes, EditorModes, CollisionSelector, CollisionMode
 import random
 
 
@@ -132,9 +132,6 @@ class EditorSingleton():
                     pygame_circle_image.set_at((left, top), (0, 0, 0, 0))
         self.footer_active_color_circle_reference = 'footer_active_color_circle_reference'
         Render.add_moderngl_texture_with_surface(Screen, gl_context, pygame_circle_image, self.footer_active_color_circle_reference)
-
-
-
         #
         # add color
         # add/remove color
@@ -251,6 +248,27 @@ class EditorSingleton():
         # tool attribute area
         self.tool_attribute_ltwh = [0, 0, 0, 0]
         #
+        # collision selector area
+        self.collision_selector_border_color = COLORS['PINK']
+        self.collision_selector_inner_color = COLORS['WHITE']
+        self.collision_selector_circle_color = COLORS['WHITE']
+        self.collision_selector_text_color = COLORS['BLACK']
+        self.collision_selector_color_indicator_border_color = COLORS['BLACK']
+        self.collision_selector_text_pixel_size = 3
+        self.collision_selector_space_between_text_and_circle = 2
+        self.collision_selector_circle_thickness = 3
+        self.collision_selector_additional_padding = 0
+        self.collision_selector_space_between_options = (2 * self.collision_selector_space_between_text_and_circle) + self.collision_selector_circle_thickness
+        self.collision_selector_square_color_indicator_thickness = 2
+        self.collision_selector_square_color_indicator_padding = 1
+        self.collision_selector_modes = {'no_collision': CollisionSelector(Render, text_color=self.collision_selector_text_color, color=COLORS['WHITE'], text='NO COLLISION', text_pixel_size=self.collision_selector_text_pixel_size, mode=CollisionMode.NO_COLLISION),
+                                         'collision': CollisionSelector(Render, text_color=self.collision_selector_text_color, color=COLORS['BLACK'], text='COLLISION', text_pixel_size=self.collision_selector_text_pixel_size, mode=CollisionMode.COLLISION, active=True),
+                                         'grappleable': CollisionSelector(Render, text_color=self.collision_selector_text_color, color=COLORS['RED'], text='GRAPPLEABLE', text_pixel_size=self.collision_selector_text_pixel_size, mode=CollisionMode.GRAPPLEABLE),
+                                         'platform': CollisionSelector(Render, text_color=self.collision_selector_text_color, color=COLORS['YELLOW'], text='PLATFORM', text_pixel_size=self.collision_selector_text_pixel_size, mode=CollisionMode.PLATFORM),
+                                         'water': CollisionSelector(Render, text_color=self.collision_selector_text_color, color=COLORS['BLUE'], text='WATER', text_pixel_size=self.collision_selector_text_pixel_size, mode=CollisionMode.WATER)}
+        self.collision_selector_ltwh = [0, self.header_bottom, self.palette_ltwh[2], (len(self.collision_selector_modes) * get_text_height(self.collision_selector_text_pixel_size)) - (2 * self.collision_selector_text_pixel_size) + ((len(self.collision_selector_modes) + 1) * self.collision_selector_circle_thickness) + (len(self.collision_selector_modes) * self.collision_selector_space_between_text_and_circle) + (2 * self.collision_selector_additional_padding)]
+        self.collision_selector_mode = CollisionMode.COLLISION
+        #
         # other
         self.stored_draws = []
         self.xy = [0, 0]
@@ -314,5 +332,6 @@ def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     update_header(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_footer(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_add_color(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
+    update_collision_selector(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)

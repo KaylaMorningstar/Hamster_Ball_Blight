@@ -15,9 +15,10 @@ def update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys,
         Singleton.palette_moving_a_color = False
     #
     # draw palette background
-    Singleton.palette_ltwh[3] = Screen.height - Singleton.header_bottom - Singleton.add_color_ltwh[3] - Singleton.footer_ltwh[3] - Singleton.separate_palette_and_add_color_ltwh[3] + Singleton.palette_padding
+    Singleton.palette_ltwh[1] = Singleton.header_bottom + Singleton.collision_selector_ltwh[3] - Singleton.palette_padding
+    Singleton.palette_ltwh[3] = Screen.height - Singleton.header_bottom - Singleton.add_color_ltwh[3] - Singleton.footer_ltwh[3] - Singleton.separate_palette_and_add_color_ltwh[3] + Singleton.palette_padding - Singleton.collision_selector_ltwh[3] + Singleton.palette_padding
     inside_palette_ltwh = get_rect_minus_borders(Singleton.palette_ltwh, Singleton.palette_padding)
-    Render.draw_rectangle(Screen, gl_context, (0, Singleton.header_bottom, Singleton.palette_ltwh[2], Singleton.palette_ltwh[3]), Singleton.palette_padding, Singleton.palette_border_color, False, Singleton.palette_background_color, True)
+    Render.draw_rectangle(Screen, gl_context, (0, Singleton.palette_ltwh[1], Singleton.palette_ltwh[2], Singleton.palette_ltwh[3]), Singleton.palette_padding, Singleton.palette_border_color, False, Singleton.palette_background_color, True)
     #
     # draw scroll
     palette_scroll_background_ltwh = (Singleton.palette_ltwh[2] - Singleton.palette_padding - Singleton.palette_scroll_width, Singleton.palette_ltwh[1] + Singleton.palette_padding, Singleton.palette_scroll_width, Singleton.palette_ltwh[3] - (2 * Singleton.palette_padding))
@@ -189,7 +190,7 @@ def update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys,
             Singleton.currently_selected_color.update_outline_ltwh()
     #
     # draw palette border left and right
-    Render.draw_part_of_rectangle(Screen, gl_context, (0, Singleton.header_bottom, Singleton.palette_ltwh[2], Singleton.palette_ltwh[3]), Singleton.palette_padding, Singleton.palette_border_color, False, True, False, True, Singleton.palette_background_color, False)
+    Render.draw_part_of_rectangle(Screen, gl_context, (0, Singleton.palette_ltwh[1], Singleton.palette_ltwh[2], Singleton.palette_ltwh[3]), Singleton.palette_padding, Singleton.palette_border_color, False, True, False, True, Singleton.palette_background_color, False)
     #
     # draw selected palette color outline
     mouse_is_on_edge_of_selected_palette_color = point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.currently_selected_color.outline2_ltwh) and not point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, get_rect_minus_borders(Singleton.currently_selected_color.outline2_ltwh, Singleton.currently_selected_color.outline1_thickness * 2))
@@ -272,7 +273,7 @@ def update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys,
         Cursor.add_cursor_this_frame('cursor_nesw')
     #
     # draw palette border up and down
-    Render.draw_part_of_rectangle(Screen, gl_context, (0, Singleton.header_bottom, Singleton.palette_ltwh[2], Singleton.palette_ltwh[3]), Singleton.palette_padding, Singleton.palette_border_color, True, False, True, False, Singleton.palette_background_color, False)
+    Render.draw_part_of_rectangle(Screen, gl_context, (0, Singleton.palette_ltwh[1], Singleton.palette_ltwh[2], Singleton.palette_ltwh[3]), Singleton.palette_padding, Singleton.palette_border_color, True, False, True, False, Singleton.palette_background_color, False)
 
 
 def update_header(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
@@ -1082,3 +1083,37 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
 
         except CaseBreak:
             pass
+
+
+def update_collision_selector(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
+    #
+    # draw collision selector background
+    Render.draw_part_of_rectangle(Screen, gl_context, Singleton.collision_selector_ltwh, Singleton.palette_padding, Singleton.collision_selector_border_color, True, True, False, True, Singleton.collision_selector_inner_color, True)
+    #
+    # find whether a new collision mode was selected
+    selected_a_new_collision_mode = Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, get_rect_minus_borders(Singleton.collision_selector_ltwh, Singleton.palette_padding))
+    #
+    #
+    already_selected_a_new_mode = False
+    already_hovered_over_an_option = False
+    collision_selector_lt = [Singleton.palette_padding + Singleton.collision_selector_additional_padding + Singleton.collision_selector_circle_thickness + Singleton.collision_selector_space_between_text_and_circle, Singleton.collision_selector_ltwh[1] + Singleton.palette_padding + Singleton.collision_selector_additional_padding + Singleton.collision_selector_circle_thickness + Singleton.collision_selector_space_between_text_and_circle]
+    for collision_selector in Singleton.collision_selector_modes.values():
+        if selected_a_new_collision_mode:
+            collision_selector.active = False
+
+        collision_selector_rectangle_ltwh = [collision_selector_lt[0] - Singleton.collision_selector_space_between_text_and_circle - Singleton.collision_selector_circle_thickness, collision_selector_lt[1] - Singleton.collision_selector_space_between_text_and_circle - Singleton.collision_selector_circle_thickness, Singleton.collision_selector_ltwh[2] - (2 * Singleton.palette_padding) - (2 * Singleton.collision_selector_additional_padding), collision_selector.text_height + (2 * (Singleton.collision_selector_space_between_text_and_circle + Singleton.collision_selector_circle_thickness))]
+        collision_color_indicator_wh = collision_selector_rectangle_ltwh[3] - (2 * Singleton.collision_selector_circle_thickness) - (2 * Singleton.collision_selector_square_color_indicator_padding)
+        collision_color_indicator_ltwh = [collision_selector_rectangle_ltwh[0] + collision_selector_rectangle_ltwh[2] - Singleton.collision_selector_circle_thickness - collision_color_indicator_wh - Singleton.collision_selector_square_color_indicator_padding, collision_selector_rectangle_ltwh[1] + (collision_selector_rectangle_ltwh[3] // 2) - (collision_color_indicator_wh // 2), collision_color_indicator_wh, collision_color_indicator_wh]
+        cursor_hovering_over_option = point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, collision_selector_rectangle_ltwh)
+        if cursor_hovering_over_option and selected_a_new_collision_mode and not already_selected_a_new_mode:
+            collision_selector.active = True
+            already_selected_a_new_mode = True
+            Singleton.collision_selector_mode = collision_selector.mode
+
+        Render.draw_rectangle(Screen, gl_context, collision_selector_rectangle_ltwh, Singleton.collision_selector_circle_thickness, COLORS['BLACK'], True, COLORS['GREY'], True if (collision_selector.active or (cursor_hovering_over_option and not already_hovered_over_an_option)) else False)
+        Render.draw_rectangle(Screen, gl_context, collision_color_indicator_ltwh, Singleton.collision_selector_square_color_indicator_thickness, Singleton.collision_selector_color_indicator_border_color, True, collision_selector.color, True)
+        Render.draw_string_of_characters(Screen, gl_context, collision_selector.text, collision_selector_lt, collision_selector.text_pixel_size, collision_selector.text_color)
+
+        if cursor_hovering_over_option:
+            already_hovered_over_an_option = True
+        collision_selector_lt[1] += Singleton.collision_selector_space_between_options + collision_selector.text_height
