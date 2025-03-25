@@ -7,6 +7,26 @@ from array import array
 from bresenham import bresenham
 from typing import Any
 from random import choice, shuffle
+from enum import unique, Enum
+
+
+@unique
+class FooterInfo(Enum):
+    SEPARATOR = 0
+    MAP_SIZE = 1
+    CURSOR_POSITION = 2
+    ACTIVE_COLOR = 3
+
+@unique
+class MapModes(Enum):
+    PRETTY = 1
+    COLLISION = 2
+
+@unique
+class EditorModes(Enum):
+    DRAW = 1
+    BLOCK = 2
+    OBJECT = 3
 
 
 class TextInput():

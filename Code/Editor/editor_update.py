@@ -1,7 +1,8 @@
 import math
 from copy import deepcopy
 from Code.utilities import CaseBreak, point_is_in_ltwh, move_number_to_desired_range, percent_to_rgba, base10_to_hex, add_characters_to_front_of_string, get_time, switch_to_base10, rgba_to_glsl, get_rect_minus_borders, round_scaled, get_text_height, get_text_width, COLORS
-from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
+from Code.Editor.editor_utilities import FooterInfo, EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
+from Code.Editor.editor_utilities import MapModes, EditorModes
 
 
 def update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
@@ -681,13 +682,6 @@ def update_tools(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
         Render.basic_rect_ltwh_to_quad(Screen, gl_context, tool_attributes[2], tool_attributes[0])
 
 
-class FooterInfo:
-    SEPARATOR = 0
-    MAP_SIZE = 1
-    CURSOR_POSITION = 2
-    ACTIVE_COLOR = 3
-
-
 def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     # Singleton.tool_attribute_ltwh
     current_tool = Singleton.map.current_tool
@@ -697,6 +691,73 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
     tool_attribute_lt = [Singleton.tool_attribute_ltwh[0], Singleton.tool_attribute_ltwh[1]]
     center_text_offset_y = (Singleton.tool_attribute_ltwh[3] - (5 * PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)) // 2
 
+    # draw and update different map editor modes (pretty map, collision map, draw, block, object)
+    LEFT_RIGHT_HIGHLIGHT_PADDING = 8
+    SPACE_BETWEEN_MODES = 2
+    BUTTON_PADDING_LT = [(LEFT_RIGHT_HIGHLIGHT_PADDING // 2), ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['pretty_mode'].ORIGINAL_HEIGHT) // 2)]
+    map_editor_modes_ltwh = [Singleton.palette_padding + BUTTON_PADDING_LT[0], Singleton.tool_attribute_ltwh[1], Singleton.palette_ltwh[2] - (2 * Singleton.palette_padding) - LEFT_RIGHT_HIGHLIGHT_PADDING, Singleton.tool_attribute_ltwh[3]]
+    map_editor_button_ltwh = [map_editor_modes_ltwh[0], Singleton.tool_attribute_ltwh[1] + BUTTON_PADDING_LT[1], Render.renderable_objects['pretty_mode'].ORIGINAL_WIDTH, Render.renderable_objects['pretty_mode'].ORIGINAL_HEIGHT]
+    # get mode icon ltwh
+    pretty_mode_ltwh = deepcopy(map_editor_button_ltwh)
+    pretty_mode_highlight_ltwh = [pretty_mode_ltwh[0] - BUTTON_PADDING_LT[0], pretty_mode_ltwh[1] - BUTTON_PADDING_LT[1], pretty_mode_ltwh[2] + LEFT_RIGHT_HIGHLIGHT_PADDING, pretty_mode_ltwh[3] + (2 * BUTTON_PADDING_LT[1])]
+    map_editor_button_ltwh[0] += Render.renderable_objects['pretty_mode'].ORIGINAL_WIDTH + LEFT_RIGHT_HIGHLIGHT_PADDING + SPACE_BETWEEN_MODES
+    collision_mode_ltwh =  deepcopy(map_editor_button_ltwh)
+    collision_mode_highlight_ltwh = [collision_mode_ltwh[0] - BUTTON_PADDING_LT[0], collision_mode_ltwh[1] - BUTTON_PADDING_LT[1], collision_mode_ltwh[2] + LEFT_RIGHT_HIGHLIGHT_PADDING, collision_mode_ltwh[3] + (2 * BUTTON_PADDING_LT[1])]
+    map_editor_button_ltwh[0] = map_editor_modes_ltwh[0] + map_editor_modes_ltwh[2] - BUTTON_PADDING_LT[0] - (3 * Render.renderable_objects['pretty_mode'].ORIGINAL_WIDTH) - (2 * LEFT_RIGHT_HIGHLIGHT_PADDING) - (2 * SPACE_BETWEEN_MODES)
+    draw_mode_ltwh = deepcopy(map_editor_button_ltwh)
+    draw_mode_highlight_ltwh = [draw_mode_ltwh[0] - BUTTON_PADDING_LT[0], draw_mode_ltwh[1] - BUTTON_PADDING_LT[1], draw_mode_ltwh[2] + LEFT_RIGHT_HIGHLIGHT_PADDING, draw_mode_ltwh[3] + (2 * BUTTON_PADDING_LT[1])]
+    map_editor_button_ltwh[0] += Render.renderable_objects['pretty_mode'].ORIGINAL_WIDTH + LEFT_RIGHT_HIGHLIGHT_PADDING + SPACE_BETWEEN_MODES
+    block_mode_ltwh = deepcopy(map_editor_button_ltwh)
+    block_mode_highlight_ltwh = [block_mode_ltwh[0] - BUTTON_PADDING_LT[0], block_mode_ltwh[1] - BUTTON_PADDING_LT[1], block_mode_ltwh[2] + LEFT_RIGHT_HIGHLIGHT_PADDING, block_mode_ltwh[3] + (2 * BUTTON_PADDING_LT[1])]
+    map_editor_button_ltwh[0] += Render.renderable_objects['pretty_mode'].ORIGINAL_WIDTH + LEFT_RIGHT_HIGHLIGHT_PADDING + SPACE_BETWEEN_MODES
+    object_mode_ltwh = deepcopy(map_editor_button_ltwh)
+    object_mode_highlight_ltwh = [object_mode_ltwh[0] - BUTTON_PADDING_LT[0], object_mode_ltwh[1] - BUTTON_PADDING_LT[1], object_mode_ltwh[2] + LEFT_RIGHT_HIGHLIGHT_PADDING, object_mode_ltwh[3] + (2 * BUTTON_PADDING_LT[1])]
+    map_editor_button_ltwh[0] += Render.renderable_objects['pretty_mode'].ORIGINAL_WIDTH + LEFT_RIGHT_HIGHLIGHT_PADDING
+    # change active mode
+    highlight_pretty_mode = False
+    highlight_collision_mode = False
+    highlight_draw_mode = False
+    highlight_block_mode = False
+    highlight_object_mode = False
+    if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, map_editor_modes_ltwh):
+        if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, pretty_mode_highlight_ltwh):
+            highlight_pretty_mode = True
+            if Keys.editor_primary.newly_pressed:
+                Singleton.map_mode = MapModes.PRETTY
+        if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, collision_mode_highlight_ltwh):
+            highlight_collision_mode = True
+            if Keys.editor_primary.newly_pressed:
+                Singleton.map_mode = MapModes.COLLISION
+        if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, draw_mode_highlight_ltwh):
+            highlight_draw_mode = True
+            if Keys.editor_primary.newly_pressed:
+                Singleton.editor_mode = EditorModes.DRAW
+        if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, block_mode_highlight_ltwh):
+            highlight_block_mode = True
+            if Keys.editor_primary.newly_pressed:
+                Singleton.editor_mode = EditorModes.BLOCK
+        if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, object_mode_highlight_ltwh):
+            highlight_object_mode = True
+            if Keys.editor_primary.newly_pressed:
+                Singleton.editor_mode = EditorModes.OBJECT
+    # pretty vs. collision mode
+    if (Singleton.map_mode == MapModes.PRETTY) or (highlight_pretty_mode):
+        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=pretty_mode_highlight_ltwh, rgba=COLORS['GREY'])
+    Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='pretty_mode', ltwh=pretty_mode_ltwh)
+    if (Singleton.map_mode == MapModes.COLLISION) or (highlight_collision_mode):
+        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=collision_mode_highlight_ltwh, rgba=COLORS['GREY'])
+    Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='collision_mode', ltwh=collision_mode_ltwh)
+    if (Singleton.editor_mode == EditorModes.DRAW) or (highlight_draw_mode):
+        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=draw_mode_highlight_ltwh, rgba=COLORS['GREY'])
+    Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='draw_mode', ltwh=draw_mode_ltwh)
+    if (Singleton.editor_mode == EditorModes.BLOCK) or (highlight_block_mode):
+        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=block_mode_highlight_ltwh, rgba=COLORS['GREY'])
+    Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='block_mode', ltwh=block_mode_ltwh)
+    if (Singleton.editor_mode == EditorModes.OBJECT) or (highlight_object_mode):
+        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=object_mode_highlight_ltwh, rgba=COLORS['GREY'])
+    Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='object_mode', ltwh=object_mode_ltwh)
+
+    # draw and update tool attributes
     try:
         match int(current_tool):
             case MarqueeRectangleTool.INDEX:
@@ -713,7 +774,7 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 brush_style_ltwh = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
                 # square or circle toggle
                 if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
-                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=[brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]], rgba=COLORS['LIGHT_GREY'])
+                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=[brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]], rgba=COLORS['GREY'])
                 Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=brush_style_ltwh)
                 if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
                     current_tool.update_brush_style(Render, Screen, gl_context)
@@ -824,7 +885,7 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                                 text_input = current_tool.spray_time_text_input
                         SPEED_STYLE_BUTTON_LTWH = [tool_attribute_lt[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2) + current_tool.SPRAY_SPEED_WIDTH + text_input.background_ltwh[2] + SEPARATION_BETWEEN_TEXT_INPUT_AND_BUTTON, tool_attribute_lt[1], Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]]
                     if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, SPEED_STYLE_BUTTON_LTWH):
-                        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SPEED_STYLE_BUTTON_LTWH, rgba=COLORS['LIGHT_GREY'])
+                        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SPEED_STYLE_BUTTON_LTWH, rgba=COLORS['GREY'])
                 
                 match current_tool.speed_type:
                     case SprayTool.SPEED_IS_DROPS:
@@ -885,7 +946,7 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 brush_style_ltwh = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
                 # square or circle toggle
                 if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
-                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=[brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]], rgba=COLORS['LIGHT_GREY'])
+                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=[brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]], rgba=COLORS['GREY'])
                 Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=brush_style_ltwh)
                 if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
                     current_tool.update_brush_style(Render, Screen, gl_context)

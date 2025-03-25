@@ -6,13 +6,17 @@ from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_heigh
 from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap, get_tf_circle
 from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
+from Code.Editor.editor_utilities import MapModes, EditorModes
 import random
+
 
 
 class EditorSingleton():
     def __init__(self, Render, Screen, gl_context, PATH):
         self.editor_enabled = True
         self.border_color = COLORS['BLACK']
+        self.map_mode = MapModes.PRETTY
+        self.editor_mode = EditorModes.DRAW
         #
         # header
         self.header_text_pixel_color = COLORS['BLACK']
@@ -21,7 +25,7 @@ class EditorSingleton():
         self.header_selected_color = COLORS['YELLOW']
         self.header_border_color = COLORS['WHITE']
         self.header_border_thickness = 25
-        self.header_strings = ['File', 'Edit', 'Options', 'Objects', 'Blocks']
+        self.header_strings = ['File', 'Edit', 'Options']
         self.header_string_selected = ''
         self.header_index_selected = -1
         self.header_indexes = [index for index in range(len(self.header_strings))]
@@ -67,14 +71,6 @@ class EditorSingleton():
                                                                  'Toggle map': lambda: print('k'),
                                                                  'Show grid': lambda: print('l'),},
                                      text_pixel_size = 3, padding = self.header_manager_padding, padding_between_items = self.header_manager_padding_between_items, border_thickness = self.header_manager_border_thickness, text_color = COLORS['BLACK'], background_color = COLORS['GREEN'], highlighted_background_color = COLORS['YELLOW'], edge_color = COLORS['BLUE'], left = self.header_hover_ltwh[2][0], top = self.header_height),
-
-            'Objects': HeaderManager(Render,
-                                     option_names_and_responses={'Object': lambda: print('m'),},
-                                     text_pixel_size = 3, padding = self.header_manager_padding, padding_between_items = self.header_manager_padding_between_items, border_thickness = self.header_manager_border_thickness, text_color = COLORS['BLACK'], background_color = COLORS['GREEN'], highlighted_background_color = COLORS['YELLOW'], edge_color = COLORS['BLUE'], left = self.header_hover_ltwh[3][0], top = self.header_height),
-
-            'Blocks': HeaderManager(Render,
-                                    option_names_and_responses={'Block': lambda: print('n'),},
-                                    text_pixel_size = 3, padding = self.header_manager_padding, padding_between_items = self.header_manager_padding_between_items, border_thickness = self.header_manager_border_thickness, text_color = COLORS['BLACK'], background_color = COLORS['GREEN'], highlighted_background_color = COLORS['YELLOW'], edge_color = COLORS['BLUE'], left = self.header_hover_ltwh[4][0], top = self.header_height),
             }
         self.header_bottom = self.header_height + self.header_border_thickness
         #
