@@ -1098,22 +1098,24 @@ def update_collision_selector(Singleton, Api, PATH, Screen, gl_context, Render, 
     already_hovered_over_an_option = False
     collision_selector_lt = [Singleton.palette_padding + Singleton.collision_selector_additional_padding + Singleton.collision_selector_circle_thickness + Singleton.collision_selector_space_between_text_and_circle, Singleton.collision_selector_ltwh[1] + Singleton.palette_padding + Singleton.collision_selector_additional_padding + Singleton.collision_selector_circle_thickness + Singleton.collision_selector_space_between_text_and_circle]
     for collision_selector in Singleton.collision_selector_modes.values():
+        # reset active if a new collision selection was made
         if selected_a_new_collision_mode:
             collision_selector.active = False
-
+        # get ltwh for items in the collision selector area
         collision_selector_rectangle_ltwh = [collision_selector_lt[0] - Singleton.collision_selector_space_between_text_and_circle - Singleton.collision_selector_circle_thickness, collision_selector_lt[1] - Singleton.collision_selector_space_between_text_and_circle - Singleton.collision_selector_circle_thickness, Singleton.collision_selector_ltwh[2] - (2 * Singleton.palette_padding) - (2 * Singleton.collision_selector_additional_padding), collision_selector.text_height + (2 * (Singleton.collision_selector_space_between_text_and_circle + Singleton.collision_selector_circle_thickness))]
         collision_color_indicator_wh = collision_selector_rectangle_ltwh[3] - (2 * Singleton.collision_selector_circle_thickness) - (2 * Singleton.collision_selector_square_color_indicator_padding)
         collision_color_indicator_ltwh = [collision_selector_rectangle_ltwh[0] + collision_selector_rectangle_ltwh[2] - Singleton.collision_selector_circle_thickness - collision_color_indicator_wh - Singleton.collision_selector_square_color_indicator_padding, collision_selector_rectangle_ltwh[1] + (collision_selector_rectangle_ltwh[3] // 2) - (collision_color_indicator_wh // 2), collision_color_indicator_wh, collision_color_indicator_wh]
         cursor_hovering_over_option = point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, collision_selector_rectangle_ltwh)
+        # implement a new collision selection if one was made
         if cursor_hovering_over_option and selected_a_new_collision_mode and not already_selected_a_new_mode:
             collision_selector.active = True
             already_selected_a_new_mode = True
             Singleton.collision_selector_mode = collision_selector.mode
-
+        # draw the area
         Render.draw_rectangle(Screen, gl_context, collision_selector_rectangle_ltwh, Singleton.collision_selector_circle_thickness, COLORS['BLACK'], True, COLORS['GREY'], True if (collision_selector.active or (cursor_hovering_over_option and not already_hovered_over_an_option)) else False)
         Render.draw_rectangle(Screen, gl_context, collision_color_indicator_ltwh, Singleton.collision_selector_square_color_indicator_thickness, Singleton.collision_selector_color_indicator_border_color, True, collision_selector.color, True)
         Render.draw_string_of_characters(Screen, gl_context, collision_selector.text, collision_selector_lt, collision_selector.text_pixel_size, collision_selector.text_color)
-
+        # stuff needed for future loops
         if cursor_hovering_over_option:
             already_hovered_over_an_option = True
         collision_selector_lt[1] += Singleton.collision_selector_space_between_options + collision_selector.text_height
