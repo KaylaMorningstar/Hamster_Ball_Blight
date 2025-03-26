@@ -1907,6 +1907,7 @@ class CollisionSelector():
 
 
 class EditorMap():
+    TILE_WH = 256
     _STARTING_ZOOM_INDEX = 3
     _ZOOM = [
         # [# of pixels, resulting pixel size]
@@ -2780,28 +2781,41 @@ class EditorTile():
         # self.image_path: str = f"{base_path}t{self.image_reference}.png"
         self.path: str = f"{base_path}t{self.image_reference}"
         self.pg_image: pygame.Surface | None = None
+        self.pretty_bytearray: bytearray = None
+        self.collision_bytearray: bytearray = None
         self.edits: dict = {}
 
     def load(self, render_instance, screen_instance, gl_context):
         if not self.loaded:
             #self.pg_image = render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, self.image_path, self.image_reference)
-            self.pg_image = render_instance.add_moderngl_texture_using_bytearray(screen_instance, gl_context, self.load_bytearray(), 256, 256, self.image_reference)
+            self._load_bytearray()
+            self.pg_image = render_instance.add_moderngl_texture_using_bytearray(screen_instance, gl_context, self.pretty_bytearray, EditorMap.TILE_WH, EditorMap.TILE_WH, self.image_reference)
         self.loaded = True
 
     def unload(self, render_instance):
         if self.loaded:
             self.pg_image = None
+            self.pretty_bytearray = None
             render_instance.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
+            self.collision_bytearray = None
         self.loaded = False
 
     def save(self):
         with open(self.path, "wb") as file:
-            # save the image in png format
+            # save the pretty image in png format
             file.write(bytearray(pygame.image.tobytes(self.pg_image, EditorTile.PYGAME_IMAGE_FORMAT)))
+            # new line
+            file.write("\n".encode(CollisionMode.UTF_8))
+            # save the collision map
+            file.write(CollisionMode.NO_COLLISION_BYTEARRAY * (256**2))
 
-    def load_bytearray(self):
+    def _load_bytearray(self):
         with open(self.path, mode='rb') as file:
-            return bytearray(file.read())
+            # get the byte array
+            byte_array = bytearray(file.read())
+            self.pretty_bytearray = byte_array[0:(EditorMap.TILE_WH**2)*4]  # (256*256*4); 256 = tile width/height; 4 = number of bytes per pixel
+            self.collision_bytearray = byte_array[((EditorMap.TILE_WH**2)*4)+1:((EditorMap.TILE_WH**2)*5)+1]
+            print(self.collision_bytearray[0:5], self.collision_bytearray[-5:])
 
     def draw_image(self, render_instance, screen_instance, gl_context, ltwh: list[int, int, int, int], load: bool = False, draw_tiles: bool = True):
         loaded = False
