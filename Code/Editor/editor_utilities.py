@@ -28,13 +28,27 @@ class EditorModes(Enum):
     BLOCK = 2
     OBJECT = 3
 
-@unique
-class CollisionMode(Enum):
+class CollisionMode:
+    UTF_8 = 'utf-8'
+    NEW_LINE = '\n'
+
     NO_COLLISION = 0
     COLLISION = 1
     GRAPPLEABLE = 2
     PLATFORM = 3
     WATER = 4
+
+    NO_COLLISION_BINARY = b'\x00'
+    COLLISION_BINARY = b'\x01'
+    GRAPPLEABLE_BINARY = b'\x02'
+    PLATFORM_BINARY = b'\x03'
+    WATER_BINARY = b'\x04'
+
+    NO_COLLISION_BYTEARRAY = bytearray(b'\x00')
+    COLLISION_BYTEARRAY = bytearray(b'\x01')
+    GRAPPLEABLE_BYTEARRAY = bytearray(b'\x02')
+    PLATFORM_BYTEARRAY = bytearray(b'\x03')
+    WATER_BYTEARRAY = bytearray(b'\x04')
 
 
 class TextInput():
@@ -2756,18 +2770,22 @@ class EditorMap():
 
 
 class EditorTile():
+    PYGAME_IMAGE_FORMAT = "RGBA"
+
     def __init__(self, base_path: str, column: int, row: int):
         self.column: int = column
         self.row: int = row
         self.loaded: bool = False
         self.image_reference: str = f"{self.column}_{self.row}"
-        self.image_path: str = f"{base_path}t{self.image_reference}.png"
+        # self.image_path: str = f"{base_path}t{self.image_reference}.png"
+        self.path: str = f"{base_path}t{self.image_reference}"
         self.pg_image: pygame.Surface | None = None
         self.edits: dict = {}
 
     def load(self, render_instance, screen_instance, gl_context):
         if not self.loaded:
-            self.pg_image = render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, self.image_path, self.image_reference)
+            #self.pg_image = render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, self.image_path, self.image_reference)
+            self.pg_image = render_instance.add_moderngl_texture_using_bytearray(screen_instance, gl_context, self.load_bytearray(), 256, 256, self.image_reference)
         self.loaded = True
 
     def unload(self, render_instance):
@@ -2777,7 +2795,13 @@ class EditorTile():
         self.loaded = False
 
     def save(self):
-        pygame.image.save(self.pg_image, self.image_path)
+        with open(self.path, "wb") as file:
+            # save the image in png format
+            file.write(bytearray(pygame.image.tobytes(self.pg_image, EditorTile.PYGAME_IMAGE_FORMAT)))
+
+    def load_bytearray(self):
+        with open(self.path, mode='rb') as file:
+            return bytearray(file.read())
 
     def draw_image(self, render_instance, screen_instance, gl_context, ltwh: list[int, int, int, int], load: bool = False, draw_tiles: bool = True):
         loaded = False
@@ -2793,3 +2817,45 @@ class EditorTile():
 
         render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.image_reference, ltwh)
         return loaded
+
+
+
+
+# class EditorTile():
+#     def __init__(self, base_path: str, column: int, row: int):
+#         self.column: int = column
+#         self.row: int = row
+#         self.loaded: bool = False
+#         self.image_reference: str = f"{self.column}_{self.row}"
+#         self.image_path: str = f"{base_path}t{self.image_reference}.png"
+#         self.pg_image: pygame.Surface | None = None
+#         self.edits: dict = {}
+
+#     def load(self, render_instance, screen_instance, gl_context):
+#         if not self.loaded:
+#             self.pg_image = render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, self.image_path, self.image_reference)
+#         self.loaded = True
+
+#     def unload(self, render_instance):
+#         if self.loaded:
+#             self.pg_image = None
+#             render_instance.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
+#         self.loaded = False
+
+#     def save(self):
+#         pygame.image.save(self.pg_image, self.image_path)
+
+#     def draw_image(self, render_instance, screen_instance, gl_context, ltwh: list[int, int, int, int], load: bool = False, draw_tiles: bool = True):
+#         loaded = False
+#         if load and not self.loaded:
+#             self.load(render_instance, screen_instance, gl_context)
+#             loaded = True
+
+#         if not self.loaded:
+#             return loaded
+
+#         if not draw_tiles:
+#             return True
+
+#         render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.image_reference, ltwh)
+#         return loaded

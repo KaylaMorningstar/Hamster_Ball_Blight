@@ -1,7 +1,7 @@
 from PIL import Image
 
 
-FILE_LOCATION = "C:\\Users\\Kayle\\Desktop\\Hamster_Ball_Blight\\Test\\Images\\load_unload2\\Forest.png"
+FILE_LOCATION = "C:\\Users\\Kayle\\Desktop\\Blight\\Hamster_Ball_Blight\\Test\\Images\\load_unload2\\Forest.png"
 TILE_WIDTH = 256
 TILE_HEIGHT = 256
 

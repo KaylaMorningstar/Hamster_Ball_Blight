@@ -109,6 +109,15 @@ class RenderObjects():
         self.renderable_objects[name] = RenderableObject(Screen, texture, width, height, rotation)
         return pygame_image
     #
+    def add_moderngl_texture_using_bytearray(self, Screen: ScreenObject, gl_context: moderngl.Context, byte_array: bytearray, width: int, height: int, name: str):
+        texture = gl_context.texture((width, height), 4)
+        texture.filter = (moderngl.NEAREST, moderngl.NEAREST)
+        texture.swizzle = 'RGBA'
+        texture.write(byte_array)
+        rotation = 0
+        self.renderable_objects[name] = RenderableObject(Screen, texture, width, height, rotation)
+        return pygame.image.frombytes(bytes(byte_array), (width, height), 'RGBA')
+    #
     def add_moderngl_texture_scaled(self, Screen: ScreenObject, gl_context: moderngl.Context, path, name, scale):
         pygame_image = pygame.image.load(path).convert_alpha()
         width, height = [int(wh * scale) for wh in pygame_image.get_size()]
