@@ -1486,7 +1486,7 @@ class PencilTool(EditorTool):
         self.BRUSH_STYLE_WIDTH = get_text_width(render_instance, PencilTool.BRUSH_STYLE, PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         self.BRUSH_THICKNESS_WIDTH = get_text_width(render_instance, PencilTool.BRUSH_THICKNESS, PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         self.brush_style = PencilTool.CIRCLE_BRUSH  # (CIRCLE_BRUSH = 1, SQUARE_BRUSH = 2)
-        self._brush_thickness: int = 4
+        self._brush_thickness: int = PencilTool._MIN_BRUSH_THICKNESS
         self.circle: list[list[int | list[float, float]]]
         self.update_brush_thickness(render_instance, screen_instance, gl_context, self._brush_thickness)
         self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE, PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
@@ -2180,6 +2180,9 @@ class EditorMap():
             left += self.tile_wh[0]
 
     def _tool(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton):
+        current_collision = editor_singleton.collision_selector_mode  # CollisionMode
+        map_mode = editor_singleton.map_mode  # MapModes (PRETTY or COLLISION)
+        print(map_mode)
         try:
             match int(self.current_tool):
                 case MarqueeRectangleTool.INDEX:
@@ -2257,6 +2260,8 @@ class EditorMap():
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                                     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                    # collision map edit
+                                                    tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                     # record what was edited for ctrl-Z
                                                     map_edit[tile_name] = original_pixel_color
                                         # draw bresenham pixels
@@ -2278,6 +2283,8 @@ class EditorMap():
                                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                                         tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                        # collision map edit
+                                                        tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                         # record what was edited for ctrl-Z
                                                         map_edit[tile_name] = original_pixel_color
                                                 continue
@@ -2298,11 +2305,14 @@ class EditorMap():
                                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                                         tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                        # collision map edit
+                                                        tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                         # record what was edited for ctrl-Z
                                                         map_edit[tile_name] = original_pixel_color
 
                             for tile in reload_tiles.values():
-                                render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image, ltwh)
+                                render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
+                                render_instance.write_pixels_from_bytearray(tile.collision_image_reference, tile.collision_bytearray)
                                 tile.save()
 
                     # update values to use next loop
@@ -2405,11 +2415,14 @@ class EditorMap():
                                                 original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                                 tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
                                                 tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                # collision map edit
+                                                tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                 # record what was edited for ctrl-Z
                                                 map_edit[tile_name] = original_pixel_color
 
                                 for tile in reload_tiles.values():
-                                    render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image, ltwh)
+                                    render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
+                                    render_instance.write_pixels_from_bytearray(tile.collision_image_reference, tile.collision_bytearray)
                                     tile.save()
 
                                 # update values to use next loop
@@ -2507,6 +2520,8 @@ class EditorMap():
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                                     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                    # collision map edit
+                                                    tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                     # record what was edited for ctrl-Z
                                                     map_edit[tile_name] = original_pixel_color
                                     # draw bresenham pixels
@@ -2530,6 +2545,8 @@ class EditorMap():
                                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                                         tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                        # collision map edit
+                                                        tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                         # record what was edited for ctrl-Z
                                                         map_edit[tile_name] = original_pixel_color
                                             continue
@@ -2550,11 +2567,14 @@ class EditorMap():
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                                                     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                    # collision map edit
+                                                    tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                     # record what was edited for ctrl-Z
                                                     map_edit[tile_name] = original_pixel_color
 
                         for tile in reload_tiles.values():
-                            render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image, ltwh)
+                            render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
+                            render_instance.write_pixels_from_bytearray(tile.collision_image_reference, tile.collision_bytearray)
                             tile.save()
 
                     match self.current_tool.state:
@@ -2815,8 +2835,10 @@ class EditorTile():
             # new line
             file.write("\n".encode(CollisionMode.UTF_8))
             # save the collision map
-            byte_array_choice = choice([CollisionMode.NO_COLLISION_BYTEARRAY, CollisionMode.COLLISION_BYTEARRAY, CollisionMode.GRAPPLEABLE_BYTEARRAY, CollisionMode.PLATFORM_BYTEARRAY, CollisionMode.WATER_BYTEARRAY])
-            file.write(byte_array_choice * (EditorMap.TILE_WH**2))
+            # byte_array_choice = choice([CollisionMode.NO_COLLISION_BYTEARRAY, CollisionMode.COLLISION_BYTEARRAY, CollisionMode.GRAPPLEABLE_BYTEARRAY, CollisionMode.PLATFORM_BYTEARRAY, CollisionMode.WATER_BYTEARRAY])
+            # file.write(byte_array_choice * (EditorMap.TILE_WH**2))
+            # self.collision_bytearray[500] = CollisionMode.PLATFORM
+            file.write(self.collision_bytearray)
 
     def _load_bytearray(self):
         with open(self.path, mode='rb') as file:
@@ -2839,8 +2861,6 @@ class EditorTile():
         if not draw_tiles:
             return True
 
-        if self.image_reference == '0_0':
-            print(self.collision_bytearray[0])
         match map_mode:
             case MapModes.PRETTY:
                 render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.image_reference, ltwh)
