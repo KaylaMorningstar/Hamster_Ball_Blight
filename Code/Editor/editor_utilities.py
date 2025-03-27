@@ -2034,7 +2034,7 @@ class EditorMap():
         self._tool(screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton)
         
         # iterate through tiles that should be loaded; load them; draw them
-        self._iterate_through_tiles(render_instance, screen_instance, gl_context, True, True)
+        self._iterate_through_tiles(render_instance, screen_instance, gl_context, True, True, editor_singleton)
 
         # execute stored draws
         self._execute_stored_draws(render_instance, screen_instance, gl_context)
@@ -2160,7 +2160,7 @@ class EditorMap():
             self.loaded_y += [y for y in load_y if y not in unload_y]
             self.loaded_y = sorted(self.loaded_y)
 
-    def _iterate_through_tiles(self, render_instance, screen_instance, gl_context, draw_tiles: bool, load_tiles: bool):
+    def _iterate_through_tiles(self, render_instance, screen_instance, gl_context, draw_tiles: bool, load_tiles: bool, editor_singleton):
         # iterate through all loaded tiles
         load = True
         started_loading = False
@@ -2172,7 +2172,7 @@ class EditorMap():
                     if get_time() - start_load > EditorMap._MAX_LOAD_TIME:
                         load = False
                 tile = self.tile_array[column][row]
-                loaded = tile.draw_image(render_instance, screen_instance, gl_context, [left, top, self.tile_wh[0], self.tile_wh[1]], load and load_tiles, draw_tiles)
+                loaded = tile.draw_image(render_instance, screen_instance, gl_context, [left, top, self.tile_wh[0], self.tile_wh[1]], editor_singleton.map_mode, load and load_tiles, draw_tiles)
                 if loaded and not started_loading:
                     started_loading = True
                     start_load = get_time()
@@ -2772,15 +2772,19 @@ class EditorMap():
 
 class EditorTile():
     PYGAME_IMAGE_FORMAT = "RGBA"
+    PRETTY_MAP_BYTES_PER_PIXEL = 4
+    COLLISION_MAP_BYTES_PER_PIXEL = 1
 
     def __init__(self, base_path: str, column: int, row: int):
         self.column: int = column
         self.row: int = row
         self.loaded: bool = False
         self.image_reference: str = f"{self.column}_{self.row}"
+        self.collision_image_reference: str = f"c{self.column}_{self.row}"
         # self.image_path: str = f"{base_path}t{self.image_reference}.png"
         self.path: str = f"{base_path}t{self.image_reference}"
         self.pg_image: pygame.Surface | None = None
+        self.collision_image: pygame.Surface | None = None
         self.pretty_bytearray: bytearray = None
         self.collision_bytearray: bytearray = None
         self.edits: dict = {}
@@ -2789,7 +2793,10 @@ class EditorTile():
         if not self.loaded:
             #self.pg_image = render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, self.image_path, self.image_reference)
             self._load_bytearray()
-            self.pg_image = render_instance.add_moderngl_texture_using_bytearray(screen_instance, gl_context, self.pretty_bytearray, EditorMap.TILE_WH, EditorMap.TILE_WH, self.image_reference)
+            # load the pretty map
+            self.pg_image = render_instance.add_moderngl_texture_using_bytearray(screen_instance, gl_context, self.pretty_bytearray, EditorTile.PRETTY_MAP_BYTES_PER_PIXEL, EditorMap.TILE_WH, EditorMap.TILE_WH, self.image_reference)
+            # load the collision map
+            render_instance.add_moderngl_texture_using_bytearray(screen_instance, gl_context, self.collision_bytearray, EditorTile.COLLISION_MAP_BYTES_PER_PIXEL, EditorMap.TILE_WH, EditorMap.TILE_WH, self.collision_image_reference)
         self.loaded = True
 
     def unload(self, render_instance):
@@ -2798,6 +2805,7 @@ class EditorTile():
             self.pretty_bytearray = None
             render_instance.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
             self.collision_bytearray = None
+            self.collision_image = None
         self.loaded = False
 
     def save(self):
@@ -2807,7 +2815,7 @@ class EditorTile():
             # new line
             file.write("\n".encode(CollisionMode.UTF_8))
             # save the collision map
-            file.write(CollisionMode.NO_COLLISION_BYTEARRAY * (256**2))
+            file.write(CollisionMode.NO_COLLISION_BYTEARRAY * (EditorMap.TILE_WH**2))
 
     def _load_bytearray(self):
         with open(self.path, mode='rb') as file:
@@ -2815,9 +2823,8 @@ class EditorTile():
             byte_array = bytearray(file.read())
             self.pretty_bytearray = byte_array[0:(EditorMap.TILE_WH**2)*4]  # (256*256*4); 256 = tile width/height; 4 = number of bytes per pixel
             self.collision_bytearray = byte_array[((EditorMap.TILE_WH**2)*4)+1:((EditorMap.TILE_WH**2)*5)+1]
-            print(self.collision_bytearray[0:5], self.collision_bytearray[-5:])
 
-    def draw_image(self, render_instance, screen_instance, gl_context, ltwh: list[int, int, int, int], load: bool = False, draw_tiles: bool = True):
+    def draw_image(self, render_instance, screen_instance, gl_context, ltwh: list[int, int, int, int], map_mode: MapModes, load: bool = False, draw_tiles: bool = True):
         loaded = False
         if load and not self.loaded:
             self.load(render_instance, screen_instance, gl_context)
@@ -2829,47 +2836,9 @@ class EditorTile():
         if not draw_tiles:
             return True
 
-        render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.image_reference, ltwh)
+        match map_mode:
+            case MapModes.PRETTY:
+                render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.image_reference, ltwh)
+            case MapModes.COLLISION:
+                render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.collision_image_reference, ltwh)
         return loaded
-
-
-
-
-# class EditorTile():
-#     def __init__(self, base_path: str, column: int, row: int):
-#         self.column: int = column
-#         self.row: int = row
-#         self.loaded: bool = False
-#         self.image_reference: str = f"{self.column}_{self.row}"
-#         self.image_path: str = f"{base_path}t{self.image_reference}.png"
-#         self.pg_image: pygame.Surface | None = None
-#         self.edits: dict = {}
-
-#     def load(self, render_instance, screen_instance, gl_context):
-#         if not self.loaded:
-#             self.pg_image = render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, self.image_path, self.image_reference)
-#         self.loaded = True
-
-#     def unload(self, render_instance):
-#         if self.loaded:
-#             self.pg_image = None
-#             render_instance.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
-#         self.loaded = False
-
-#     def save(self):
-#         pygame.image.save(self.pg_image, self.image_path)
-
-#     def draw_image(self, render_instance, screen_instance, gl_context, ltwh: list[int, int, int, int], load: bool = False, draw_tiles: bool = True):
-#         loaded = False
-#         if load and not self.loaded:
-#             self.load(render_instance, screen_instance, gl_context)
-#             loaded = True
-
-#         if not self.loaded:
-#             return loaded
-
-#         if not draw_tiles:
-#             return True
-
-#         render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.image_reference, ltwh)
-#         return loaded
