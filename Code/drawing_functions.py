@@ -81,6 +81,7 @@ class RenderObjects():
         self.programs['circle_outline'] = DrawCircleOutline(gl_context)
         self.programs['draw_circle'] = DrawCircle(gl_context)
         self.programs['draw_line'] = DrawLine(gl_context)
+        self.programs['draw_collision_tile'] = DrawCollisionTile(gl_context)
     #
     def write_pixels(self, name: str, ltwh: tuple[int, int, int, int], rgba: tuple[int, int, int, int]):
         self.renderable_objects[name].texture.write(np.array(rgba_to_bgra(rgba), dtype=np.uint8).tobytes(), viewport=ltwh)
@@ -543,6 +544,22 @@ class RenderObjects():
         program['octant'] = int(octant)
         program['pixel_size'] = pixel_size
         program['brush_style'] = brush_style
+        quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
+        renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
+        renderable_object.texture.use(0)
+        renderer.render(mode=moderngl.TRIANGLE_STRIP)
+        quads.release()
+        renderer.release()
+    #
+    def draw_collision_map_tile_in_editor(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ltwh):
+        # 'draw_collision_tile', DrawCollisionTile
+        program = self.programs['draw_collision_tile'].program
+        renderable_object = self.renderable_objects[object_name]
+        topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
+        topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
+        topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
+        bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
+        program['aspect'] = Screen.aspect
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
         renderable_object.texture.use(0)
@@ -2212,6 +2229,40 @@ class DrawLine():
                     f_color.rgba = line_color;
                 }
             }
+        }
+        '''
+        self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
+class DrawCollisionTile():
+    def __init__(self, gl_context):
+        self.VERTICE_SHADER = '''
+        #version 330 core
+
+        uniform float aspect;
+
+        in vec2 vert;
+        in vec2 texcoord;
+        out vec2 uvs;
+
+        void main() {
+            uvs = texcoord;
+            gl_Position = vec4(
+            vert.x / aspect, 
+            vert.y, 0.0, 1.0
+            );
+        }
+        '''
+        self.FRAGMENT_SHADER = '''
+        #version 330 core
+
+        uniform sampler2D tex;
+
+        in vec2 uvs;
+        out vec4 f_color;
+
+        void main() {
+            f_color = texture(tex, uvs);
         }
         '''
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)

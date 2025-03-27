@@ -2815,13 +2815,16 @@ class EditorTile():
             # new line
             file.write("\n".encode(CollisionMode.UTF_8))
             # save the collision map
-            file.write(CollisionMode.NO_COLLISION_BYTEARRAY * (EditorMap.TILE_WH**2))
+            byte_array_choice = choice([CollisionMode.NO_COLLISION_BYTEARRAY, CollisionMode.COLLISION_BYTEARRAY, CollisionMode.GRAPPLEABLE_BYTEARRAY, CollisionMode.PLATFORM_BYTEARRAY, CollisionMode.WATER_BYTEARRAY])
+            file.write(byte_array_choice * (EditorMap.TILE_WH**2))
 
     def _load_bytearray(self):
         with open(self.path, mode='rb') as file:
             # get the byte array
             byte_array = bytearray(file.read())
+            # separate the pretty map byte array
             self.pretty_bytearray = byte_array[0:(EditorMap.TILE_WH**2)*4]  # (256*256*4); 256 = tile width/height; 4 = number of bytes per pixel
+            # separate the collision map byte array
             self.collision_bytearray = byte_array[((EditorMap.TILE_WH**2)*4)+1:((EditorMap.TILE_WH**2)*5)+1]
 
     def draw_image(self, render_instance, screen_instance, gl_context, ltwh: list[int, int, int, int], map_mode: MapModes, load: bool = False, draw_tiles: bool = True):
@@ -2840,5 +2843,5 @@ class EditorTile():
             case MapModes.PRETTY:
                 render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.image_reference, ltwh)
             case MapModes.COLLISION:
-                render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.collision_image_reference, ltwh)
+                render_instance.draw_collision_map_tile_in_editor(screen_instance, gl_context, self.collision_image_reference, ltwh)
         return loaded
