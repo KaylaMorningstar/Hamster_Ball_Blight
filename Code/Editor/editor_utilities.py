@@ -50,6 +50,12 @@ class CollisionMode:
     PLATFORM_BYTEARRAY = bytearray(b'\x03')
     WATER_BYTEARRAY = bytearray(b'\x04')
 
+    NO_COLLISION_COLOR = COLORS['WHITE']
+    COLLISION_COLOR = COLORS['BLACK']
+    GRAPPLEABLE_COLOR = COLORS['RED']
+    PLATFORM_COLOR = COLORS['YELLOW']
+    WATER_COLOR = COLORS['BLUE']
+
 
 class TextInput():
     _STOPPING_CHARACTERS = ' ,.?!:;/\\[](){}'
@@ -2180,9 +2186,20 @@ class EditorMap():
             left += self.tile_wh[0]
 
     def _tool(self, screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton):
-        current_collision = editor_singleton.collision_selector_mode  # CollisionMode
         map_mode = editor_singleton.map_mode  # MapModes (PRETTY or COLLISION)
-        print(map_mode)
+        current_collision = editor_singleton.collision_selector_mode  # CollisionMode
+        match current_collision:
+            case CollisionMode.NO_COLLISION:
+                current_collision_color = CollisionMode.NO_COLLISION_COLOR
+            case CollisionMode.COLLISION:
+                current_collision_color = CollisionMode.COLLISION_COLOR
+            case CollisionMode.GRAPPLEABLE:
+                current_collision_color = CollisionMode.GRAPPLEABLE_COLOR
+            case CollisionMode.PLATFORM:
+                current_collision_color = CollisionMode.PLATFORM_COLOR
+            case CollisionMode.WATER:
+                current_collision_color = CollisionMode.WATER_COLOR
+
         try:
             match int(self.current_tool):
                 case MarqueeRectangleTool.INDEX:
@@ -2219,7 +2236,7 @@ class EditorMap():
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
-                        render_instance.store_draw(PencilTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': PencilTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color})
+                        render_instance.store_draw(PencilTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': PencilTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color})
                         self.stored_draw_keys.append(PencilTool.CIRCLE_REFERENCE)
                     current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
@@ -2579,7 +2596,7 @@ class EditorMap():
 
                     match self.current_tool.state:
                         case LineTool.NOT_DRAWING:
-                            render_instance.store_draw(LineTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color})
+                            render_instance.store_draw(LineTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': LineTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color})
                             self.stored_draw_keys.append(LineTool.CIRCLE_REFERENCE)
                         case LineTool.DRAWING:
                             reload_tiles = {}
@@ -2587,7 +2604,7 @@ class EditorMap():
                             y2 = int(pixel_y + (((self.current_tool.brush_thickness - 1) // 2) * self.pixel_scale))
                             x1 = int(x2 + ((self.current_tool.start_xy[0] - pos_x) * self.pixel_scale))
                             y1 = int(y2 + ((self.current_tool.start_xy[1] - pos_y) * self.pixel_scale))
-                            render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': self.current_tool.brush_thickness, 'rgba': editor_singleton.currently_selected_color.color, 'pixel_size': self.pixel_scale, 'circle_for_line_drawing': self.current_tool.circle_for_line_drawing, 'brush_style': self.current_tool.brush_style})
+                            render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': self.current_tool.brush_thickness, 'rgba': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color, 'pixel_size': self.pixel_scale, 'circle_for_line_drawing': self.current_tool.circle_for_line_drawing, 'brush_style': self.current_tool.brush_style})
                             self.stored_draw_keys.append(LineTool.LINE_REFERENCE)
 
                 case CurvyLineTool.INDEX:
