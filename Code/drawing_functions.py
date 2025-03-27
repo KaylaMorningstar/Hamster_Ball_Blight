@@ -2256,6 +2256,19 @@ class DrawCollisionTile():
         self.FRAGMENT_SHADER = '''
         #version 330 core
 
+        // NO COLLISION
+        const vec3 WHITE = vec3(1.0, 1.0, 1.0);
+        // COLLISION
+        const vec3 BLACK = vec3(0.0, 0.0, 0.0);
+        // GRAPPLE
+        const vec3 RED = vec3(1.0, 0.0, 0.0);
+        // PLATFORM
+        const vec3 YELLOW = vec3(1.0, 1.0, 0.0);
+        // WATER
+        const vec3 BLUE = vec3(0.0, 0.0, 1.0);
+
+        const float one_bit = 1 / 255;
+
         uniform sampler2D tex;
 
         in vec2 uvs;
@@ -2263,6 +2276,31 @@ class DrawCollisionTile():
 
         void main() {
             f_color = texture(tex, uvs);
+
+            // NO COLLISION
+            if (texture(tex, uvs).r == one_bit) {
+                f_color.rgb = WHITE;
+            }
+
+            // COLLISION
+            if ((texture(tex, uvs).r > one_bit) && (texture(tex, uvs).r < 0.004)) {
+                f_color.rgb = BLACK;
+            }
+
+            // GRAPPLE
+            if ((texture(tex, uvs).r > 0.007843) && (texture(tex, uvs).r < 0.008)) {
+                f_color.rgb = RED;
+            }
+
+            // PLATFORM
+            if ((texture(tex, uvs).r > 0.01176) && (texture(tex, uvs).r < 0.012)) {
+                f_color.rgb = YELLOW;
+            }
+
+            // WATER
+            if ((texture(tex, uvs).r > 0.01568) && (texture(tex, uvs).r < 0.016)) {
+                f_color.rgb = BLUE;
+            }
         }
         '''
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)

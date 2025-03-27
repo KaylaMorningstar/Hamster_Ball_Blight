@@ -2839,6 +2839,8 @@ class EditorTile():
         if not draw_tiles:
             return True
 
+        if self.image_reference == '0_0':
+            print(self.collision_bytearray[0])
         match map_mode:
             case MapModes.PRETTY:
                 render_instance.basic_rect_ltwh_to_quad(screen_instance, gl_context, self.image_reference, ltwh)
