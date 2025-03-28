@@ -2,6 +2,7 @@ import pygame
 import pyperclip
 from Code.utilities import move_number_to_desired_range, get_time
 from Code.Editor.editor_loop import editor_loop, EditorSingleton
+from Code.Game.game_loop import game_loop, GameSingleton
 from typing import Callable
 from Code.utilities import COLORS
 
@@ -22,23 +23,35 @@ def application_setup():
 
 
 class ApiObject():
+    EDITOR = 'Editor'
+    GAME = 'Game'
+    MENU = 'Menu'
+
     def __init__(self, Render):
         self.scroll_x = 0
         self.scroll_y = 0
-        self.EDITOR = 'Editor'
-        self.GAME = 'Game'
-        self.MENU = 'Menu'
         self.setup_required = True
-        self.current_api = self.EDITOR
-        self.api_options = {self.EDITOR: editor_loop,
-                            self.GAME: False, 
-                            self.MENU: False,}
-        self.api_singletons = {self.EDITOR: EditorSingleton,
-                               self.GAME: False, 
-                               self.MENU: False,}
-        self.api_initiated_singletons = {self.EDITOR: 0,
-                                         self.GAME: 0, 
-                                         self.MENU: 0,}
+        self.current_api = ApiObject.EDITOR
+        self.stored_api = None
+        self.api_options = {ApiObject.EDITOR: editor_loop,
+                            ApiObject.GAME: game_loop, 
+                            ApiObject.MENU: False,}
+        self.api_singletons = {ApiObject.EDITOR: EditorSingleton,
+                               ApiObject.GAME: GameSingleton, 
+                               ApiObject.MENU: False,}
+        self.api_initiated_singletons = {ApiObject.EDITOR: 0,
+                                         ApiObject.GAME: 0, 
+                                         ApiObject.MENU: 0,}
+    
+    def initiate_api_switch(self, new_api: str):
+        self.setup_required = True
+        self.stored_api = new_api
+
+    def run_api(self, *args):
+        if self.stored_api is not None:
+            self.current_api = self.stored_api
+            self.stored_api = None
+        self.api_options[self.current_api](*args)
 
 
 class TimingClass():

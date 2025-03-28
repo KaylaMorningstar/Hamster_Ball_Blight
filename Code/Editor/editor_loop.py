@@ -2,7 +2,7 @@ import math
 import random
 import pygame
 from copy import deepcopy
-from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, ceil_scaled, floor_scaled, LOADED_IN_EDITOR, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
+from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, ceil_scaled, floor_scaled, LOADED_IN_EDITOR, LOADED_IN_GAME, LOADED_IN_MENU, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
 from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes, update_collision_selector
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap, get_tf_circle
 from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
@@ -25,7 +25,7 @@ class EditorSingleton():
         self.header_selected_color = COLORS['YELLOW']
         self.header_border_color = COLORS['WHITE']
         self.header_border_thickness = 25
-        self.header_strings = ['File', 'Edit', 'Options']
+        self.header_strings = ['FILE', 'EDIT', 'OPTIONS']
         self.header_string_selected = ''
         self.header_index_selected = -1
         self.header_indexes = [index for index in range(len(self.header_strings))]
@@ -50,7 +50,7 @@ class EditorSingleton():
         self.header_manager_padding_between_items = 20
         self.header_manager_border_thickness = 3
         self.header_options = {
-            'File': HeaderManager(Render,
+            'FILE': HeaderManager(Render,
                                   option_names_and_responses={'New project': lambda: print('a'),
                                                               'New level': lambda: print('a'),
                                                               'Save level': lambda: print('b'),
@@ -58,7 +58,7 @@ class EditorSingleton():
                                                               'Exit game': lambda: print('d'),},
                                   text_pixel_size = 3, padding = self.header_manager_padding, padding_between_items = self.header_manager_padding_between_items, border_thickness = self.header_manager_border_thickness, text_color = COLORS['BLACK'], background_color = COLORS['GREEN'], highlighted_background_color = COLORS['YELLOW'], edge_color = COLORS['BLUE'], left = self.header_hover_ltwh[0][0], top = self.header_height),
 
-            'Edit': HeaderManager(Render,
+            'EDIT': HeaderManager(Render,
                                   option_names_and_responses={'Undo': lambda: print('e'),
                                                               'Paste': lambda: print('f'),
                                                               'Rotate': lambda: print('g'),
@@ -66,13 +66,23 @@ class EditorSingleton():
                                                               'Flip': lambda: print('i'),},
                                   text_pixel_size = 3, padding = self.header_manager_padding, padding_between_items = self.header_manager_padding_between_items, border_thickness = self.header_manager_border_thickness, text_color = COLORS['BLACK'], background_color = COLORS['GREEN'], highlighted_background_color = COLORS['YELLOW'], edge_color = COLORS['BLUE'], left = self.header_hover_ltwh[1][0], top = self.header_height),
 
-            'Options': HeaderManager(Render,
+            'OPTIONS': HeaderManager(Render,
                                      option_names_and_responses={'Play level': lambda: print('j'),
                                                                  'Toggle map': lambda: print('k'),
                                                                  'Show grid': lambda: print('l'),},
                                      text_pixel_size = 3, padding = self.header_manager_padding, padding_between_items = self.header_manager_padding_between_items, border_thickness = self.header_manager_border_thickness, text_color = COLORS['BLACK'], background_color = COLORS['GREEN'], highlighted_background_color = COLORS['YELLOW'], edge_color = COLORS['BLUE'], left = self.header_hover_ltwh[2][0], top = self.header_height),
             }
         self.header_bottom = self.header_height + self.header_border_thickness
+        #
+        # play button
+        self.play_text_color = self.header_text_pixel_color
+        self.play_highlight_color = self.header_highlight_color
+        self.play_selected_color = self.header_selected_color
+        self.play_text = 'PLAY'
+        self.play_text_pixel_size = self.header_text_pixel_size
+        self.play_text_width = get_text_width(Render, self.play_text, self.play_text_pixel_size)
+        self.play_button_box_ltwh = [0, 0, (2 * self.distance_between_header_options) + self.play_text_width, self.header_border_thickness]
+        self.play_button_text_lt = [0, self.header_strings_top]
         #
         # palette
         self.palette_border_color = COLORS['PINK']
@@ -322,7 +332,7 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
 def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     Cursor.add_cursor_this_frame('cursor_arrow')
     if Api.setup_required:
-        loading_and_unloading_images_manager(Screen, Render, gl_context, IMAGE_PATHS, [LOADED_IN_EDITOR], [])
+        loading_and_unloading_images_manager(Screen, Render, gl_context, IMAGE_PATHS, [LOADED_IN_EDITOR], [LOADED_IN_MENU, LOADED_IN_GAME])
         Api.api_initiated_singletons['Editor'] = Api.api_singletons['Editor'](Render, Screen, gl_context, PATH)
         Api.setup_required = False
     #

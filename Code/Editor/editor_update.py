@@ -325,6 +325,18 @@ def update_header(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, 
         Singleton.header_which_selected = [False for _ in Singleton.header_which_selected]
         Singleton.header_string_selected = ''
         Singleton.header_index_selected = -1
+    #
+    # play button
+    Singleton.play_button_box_ltwh[0] = Screen.width - Singleton.play_button_box_ltwh[2]
+    Singleton.play_button_text_lt[0] = Singleton.play_button_box_ltwh[0] + Singleton.distance_between_header_options
+    if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.play_button_box_ltwh):
+        if Keys.editor_primary.newly_pressed:
+            Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.play_button_box_ltwh, Singleton.play_selected_color)
+            Api.initiate_api_switch('Game')
+        else:
+            Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', Singleton.play_button_box_ltwh, Singleton.play_highlight_color)
+    Render.draw_string_of_characters(Screen, gl_context, Singleton.play_text, Singleton.play_button_text_lt, Singleton.play_text_pixel_size, Singleton.play_text_color)
+
 
 
 def update_footer(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):

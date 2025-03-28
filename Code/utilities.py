@@ -214,6 +214,8 @@ class CaseBreak(Exception):
 
 ALWAYS_LOADED = 'ALWAYS_LOADED'
 LOADED_IN_EDITOR = 'LOADED_IN_EDITOR'
+LOADED_IN_GAME = 'LOADED_IN_GAME'
+LOADED_IN_MENU = 'LOADED_IN_MENU'
 
 IMAGE_PATHS = {
     # key: [Bool, path, draw_function_key]; 'always' to not unload image
