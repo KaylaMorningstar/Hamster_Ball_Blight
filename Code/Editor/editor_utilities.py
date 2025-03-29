@@ -2828,7 +2828,6 @@ class EditorTile():
 
     def load(self, render_instance, screen_instance, gl_context):
         if not self.loaded:
-            #self.pg_image = render_instance.add_moderngl_texture_to_renderable_objects_dict(screen_instance, gl_context, self.image_path, self.image_reference)
             self._load_bytearray()
             # load the pretty map
             self.pg_image = render_instance.add_moderngl_texture_using_bytearray(screen_instance, gl_context, self.pretty_bytearray, EditorTile.PRETTY_MAP_BYTES_PER_PIXEL, EditorMap.TILE_WH, EditorMap.TILE_WH, self.image_reference)
@@ -2852,9 +2851,6 @@ class EditorTile():
             # new line
             file.write("\n".encode(CollisionMode.UTF_8))
             # save the collision map
-            # byte_array_choice = choice([CollisionMode.NO_COLLISION_BYTEARRAY, CollisionMode.COLLISION_BYTEARRAY, CollisionMode.GRAPPLEABLE_BYTEARRAY, CollisionMode.PLATFORM_BYTEARRAY, CollisionMode.WATER_BYTEARRAY])
-            # file.write(byte_array_choice * (EditorMap.TILE_WH**2))
-            # self.collision_bytearray[500] = CollisionMode.PLATFORM
             file.write(self.collision_bytearray)
 
     def _load_bytearray(self):
