@@ -6,8 +6,12 @@ from Code.utilities import atan2
 
 class Player():
     def __init__(self, PATH: str):
+        #
+        # forces
+        #
         # collision
         self.ball_collision_image_path: str = f'{PATH}\\Images\\not_always_loaded\\game\\player\\ball_collision.png'
+        # items below are set with the _initialize_ball_collision function
         self.ball_collision_image: pygame.Surface = None
         self.ball_collision_data: dict[tuple[int, int], list[float]] = {}
         self.ball_collisions: dict[tuple[int, int], bool] = {}
@@ -22,9 +26,17 @@ class Player():
         self.ball_up_key: tuple
         self.ball_right_key: tuple
         self.ball_down_key: tuple
-        self._get_ball_collision()
+        self._initialize_ball_collision()
+        #
+        # tools (water jet, grapple, etc)
     #
-    def _get_ball_collision(self):
+    def get_collisions_with_map(self):
+        pass
+    #
+    def _reset_ball_collisions(self):
+        self.ball_collisions = deepcopy(self.ball_collisions_default)
+    #
+    def _initialize_ball_collision(self):
         # load the image
         self.ball_collision_image = pygame.image.load(self.ball_collision_image_path)
         # get width, height, and center
@@ -48,5 +60,3 @@ class Player():
         self.ball_up_key = (self.ball_center_index, 0)
         self.ball_right_key = (self.ball_width_index, self.ball_center_index)
         self.ball_down_key = (self.ball_center_index, self.ball_height_index)
-        print(self.ball_left_key, self.ball_up_key, self.ball_right_key, self.ball_down_key)
-        print(self.ball_collision_data)
