@@ -350,4 +350,6 @@ IMAGE_PATHS = {
     'object_mode': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\modes\\object_mode.png'],
     # test
     # 'map': [[LOADED_IN_EDITOR], 'C:\\Users\\Kayle\\Desktop\\OLD_HAMSTER\\HAMSTER_BALL_BLITZ\\data\\Images\\Forest\\Forest1.png']
+    # player
+    'player_ball_front': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\game\\player\\ball_front.png']
 }

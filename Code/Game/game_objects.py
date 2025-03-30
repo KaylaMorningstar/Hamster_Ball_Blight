@@ -5,13 +5,18 @@ from Code.utilities import atan2
 
 
 class Player():
+    PRETTY_BALL_FRONT_REFERENCE = 'player_ball_front'
+    PRETTY_BALL_ORDER = 5
+
     def __init__(self, PATH: str):
+        #
+        # pathing
+        self.player_image_folder_path: str = f'{PATH}\\Images\\not_always_loaded\\game\\player\\'
+        self.ball_collision_path: str = 'ball_collision.png'
         #
         # forces
         #
         # collision
-        self.ball_collision_image_path: str = f'{PATH}\\Images\\not_always_loaded\\game\\player\\ball_collision.png'
-        # items below are set with the _initialize_ball_collision function
         self.ball_collision_image: pygame.Surface = None
         self.ball_collision_data: dict[tuple[int, int], list[float]] = {}
         self.ball_collisions: dict[tuple[int, int], bool] = {}
@@ -30,6 +35,11 @@ class Player():
         #
         # tools (water jet, grapple, etc)
     #
+    def draw(self, stored_draws, Render, Screen, gl_context, left: int, top: int):
+        # draw the front of the ball
+        Render.store_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Render.basic_rect_ltwh_to_quad, {'object_name': Player.PRETTY_BALL_FRONT_REFERENCE, 'ltwh': [left, top, self.ball_width, self.ball_height]})
+        stored_draws.add_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Player.PRETTY_BALL_ORDER)
+    #
     def get_collisions_with_map(self):
         pass
     #
@@ -38,7 +48,7 @@ class Player():
     #
     def _initialize_ball_collision(self):
         # load the image
-        self.ball_collision_image = pygame.image.load(self.ball_collision_image_path)
+        self.ball_collision_image = pygame.image.load(f'{self.player_image_folder_path}{self.ball_collision_path}')
         # get width, height, and center
         self.ball_width = self.ball_collision_image.get_width()
         self.ball_width_index = self.ball_width - 1

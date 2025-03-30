@@ -113,5 +113,24 @@ class Tile():
         return load
 
 
+class StoredDraws():
+    def __init__(self):
+        # lower order is drawn first, higher order is drawn later
+        self.default_stored_draws = [[] for _ in range(10)]
+        self.stored_draws_references = deepcopy(self.default_stored_draws)
+
+    def add_draw(self, reference: str, order: int):
+        self.stored_draws_references[order].append(reference)
+
+    def draw(self, Render, Screen, gl_context):
+        for current_level in self.stored_draws_references:
+            for reference in current_level:
+                Render.execute_stored_draw(Screen, gl_context, reference)
+        self.stored_draws_references = deepcopy(self.default_stored_draws)
+
+
+
+
+
 def rectangles_overlap(ltwh1, ltwh2):
     return (ltwh1[0] < ltwh2[0] + ltwh2[2]) and (ltwh1[0] + ltwh1[2] > ltwh2[0]) and (ltwh1[1] < ltwh2[1] + ltwh2[3]) and (ltwh1[1] + ltwh1[3] > ltwh2[1])
