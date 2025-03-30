@@ -1,3 +1,4 @@
+import pygame
 from array import array
 from copy import deepcopy
 from Code.utilities import move_number_to_desired_range
@@ -56,18 +57,18 @@ class Map():
                     continue
                 self.tiles[index_x][index_y].unload(Render)
         # load and draw needed tiles
+        load = True
         ltwh = [self.offset_x, self.offset_y, Map.TILE_WH, Map.TILE_WH]
         for index_x in range(self.tiles_loaded_x[0], self.tiles_loaded_x[1] + 1):
             ltwh[0] = self.offset_x + (Map.TILE_WH * index_x)
             for index_y in range(self.tiles_loaded_y[0], self.tiles_loaded_y[1] + 1):
                 ltwh[1] = self.offset_y + (Map.TILE_WH * index_y)
                 tile = self.tiles[index_x][index_y]
-                tile.draw(Render, Screen, gl_context, ltwh)
-        print(offset_x, self.offset_x,)
-        #print(self.tiles_loaded_x, self.tiles_loaded_y)
-            
+                priority_load = rectangles_overlap(ltwh, [0, 0, Screen.width, Screen.height])
+                load = tile.draw(Render, Screen, gl_context, ltwh, load or priority_load)
 
-        
+
+
 
 
 
@@ -105,8 +106,17 @@ class Tile():
             Render.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
         self.loaded = False
 
-    def draw(self, Render, Screen, gl_context, ltwh):
+    def draw(self, Render, Screen, gl_context, ltwh, load):
         if not self.loaded:
-            self.load(Render, Screen, gl_context)
+            if load:
+                self.load(Render, Screen, gl_context)
+                load = False
+            else:
+                return False
 
         Render.basic_rect_ltwh_to_quad(Screen, gl_context, self.image_reference, ltwh)
+        return load
+
+
+def rectangles_overlap(ltwh1, ltwh2):
+    return (ltwh1[0] < ltwh2[0] + ltwh2[2]) and (ltwh1[0] + ltwh1[2] > ltwh2[0]) and (ltwh1[1] < ltwh2[1] + ltwh2[3]) and (ltwh1[1] + ltwh1[3] > ltwh2[1])
