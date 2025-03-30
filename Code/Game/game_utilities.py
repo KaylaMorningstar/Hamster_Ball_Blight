@@ -68,11 +68,6 @@ class Map():
                 load = tile.draw(Render, Screen, gl_context, ltwh, load or priority_load)
 
 
-
-
-
-
-
 class Tile():
     PRETTY_MAP_BYTES_PER_PIXEL = 4
     COLLISION_MAP_BYTES_PER_PIXEL = 1

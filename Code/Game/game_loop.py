@@ -1,9 +1,13 @@
 from Code.utilities import loading_and_unloading_images_manager, IMAGE_PATHS, LOADED_IN_MENU, LOADED_IN_GAME, LOADED_IN_EDITOR
 from Code.Game.game_utilities import Map
+from Code.Game.game_objects import Player
 
 
 class GameSingleton():
     def __init__(self, Render, Screen, gl_context, PATH):
+        #
+        # player
+        self.player = Player(PATH)
         #
         # map
         self.map = Map(Screen, gl_context, Render, PATH, "C:\\Users\\Kayle\\Desktop\\Blight\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\")
