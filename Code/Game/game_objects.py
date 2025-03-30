@@ -1,7 +1,7 @@
 import pygame
 import math
 from copy import deepcopy
-from Code.utilities import atan2
+from Code.utilities import atan2, move_number_to_desired_range
 
 
 class Player():
@@ -14,12 +14,25 @@ class Player():
     MAX_UP = 100
     MAX_RIGHT = 200
     MAX_DOWN = 100
+    BALL_POSITION_ON_SCREEN_SPEED_X = 6 * 60
+    BALL_POSITION_ON_SCREEN_SPEED_Y = 3 * 60
 
     MAX_VELOCITY_X = 400
     MAX_VELOCITY_Y = 900
 
     FORCE_MOVEMENT_X = 400
     FORCE_MOVEMENT_Y = 400
+
+    DEFAULT_FORCE_GRAVITY_X = 0
+    DEFAULT_FORCE_GRAVITY_Y = 0
+    DEFAULT_FORCE_MOVEMENT_X = 0
+    DEFAULT_FORCE_MOVEMENT_Y = 0
+    DEFAULT_FORCE_TOOL_X = 0
+    DEFAULT_FORCE_TOOL_Y = 0
+    DEFAULT_FORCE_NORMAL_X = 0
+    DEFAULT_FORCE_NORMAL_Y = 0
+    DEFAULT_FORCE_WATER_X = 0
+    DEFAULT_FORCE_WATER_Y = 0
 
     def __init__(self, PATH: str):
         #
@@ -28,16 +41,16 @@ class Player():
         self.ball_collision_path: str = 'ball_collision.png'
         #
         # forces
-        self.force_gravity_x: float = 0
-        self.force_gravity_y: float = 400
-        self.force_movement_x: float = 0
-        self.force_movement_y: float = 0
-        self.force_tool_x: float = 0
-        self.force_tool_y: float = 0
-        self.force_normal_x: float = 0
-        self.force_normal_y: float = 0
-        self.force_water_x: float = 0
-        self.force_water_y: float = 0
+        self.force_gravity_x: float = Player.DEFAULT_FORCE_GRAVITY_X
+        self.force_gravity_y: float = Player.DEFAULT_FORCE_GRAVITY_Y
+        self.force_movement_x: float = Player.DEFAULT_FORCE_MOVEMENT_X
+        self.force_movement_y: float = Player.DEFAULT_FORCE_MOVEMENT_Y
+        self.force_tool_x: float = Player.DEFAULT_FORCE_TOOL_X
+        self.force_tool_y: float = Player.DEFAULT_FORCE_TOOL_Y
+        self.force_normal_x: float = Player.DEFAULT_FORCE_NORMAL_X
+        self.force_normal_y: float = Player.DEFAULT_FORCE_NORMAL_Y
+        self.force_water_x: float = Player.DEFAULT_FORCE_WATER_X
+        self.force_water_y: float = Player.DEFAULT_FORCE_WATER_Y
         self.force_x: float = 0
         self.force_y: float = 0
         #
@@ -48,6 +61,16 @@ class Player():
         self.velocity_y: float = 0
         self.position_x: float = 0
         self.position_y: float = 0
+        self.ball_center_x: float = 0
+        self.ball_center_y: float = 0
+        #
+        # screen position
+        self.screen_position_x: float = 0
+        self.screen_position_y: float = 0
+        self.player_box_left: float = 0
+        self.player_box_top: float = 0
+        self.player_box_right: float = 0
+        self.player_box_bottom: float = 0
         #
         # collision
         self.ball_collision_image: pygame.Surface = None
@@ -58,7 +81,7 @@ class Player():
         self.ball_width_index: int = None
         self.ball_height: int = None
         self.ball_height_index: int = None
-        self.ball_center: float = None
+        self.ball_radius: float = None
         self.ball_center_index: int = None
         self.ball_left_key: tuple
         self.ball_up_key: tuple
@@ -68,7 +91,49 @@ class Player():
         #
         # tools (water jet, grapple, etc)
     #
-    def update_physics(self, Keys, Time):
+    def _update_screen_position(self, Map, Screen, Time):
+        # left-right movement
+        self.player_box_left = (Screen.width / 2) - Player.MAX_LEFT - self.ball_radius
+        self.player_box_right = (Screen.width / 2) + Player.MAX_RIGHT - self.ball_radius
+        if Map.reached_left_edge:
+            self.screen_position_x = self.position_x
+            if self.screen_position_x > self.player_box_left:
+                Map.reached_left_edge = False
+                Map.offset_x = 0
+        elif Map.reached_right_edge:
+            self.screen_position_x = Screen.width + self.position_x - Map.map_wh[0]
+            if self.screen_position_x < self.player_box_right:
+                Map.reached_right_edge = False
+                Map.offset_x = Screen.width - Map.map_wh[0]
+        if (not Map.reached_left_edge and not Map.reached_right_edge):
+            if self.velocity_x < 0:
+                self.screen_position_x += Player.BALL_POSITION_ON_SCREEN_SPEED_X * Time.delta_time
+            else:
+                self.screen_position_x -= Player.BALL_POSITION_ON_SCREEN_SPEED_X * Time.delta_time
+            self.screen_position_x = move_number_to_desired_range(self.player_box_left, self.screen_position_x, self.player_box_right)
+            Map.offset_x = int(self.screen_position_x - self.position_x)
+        # up-down movement
+        self.player_box_up = (Screen.height / 2) - Player.MAX_UP - self.ball_radius
+        self.player_box_down = (Screen.height / 2) + Player.MAX_DOWN - self.ball_radius
+        if Map.reached_top_edge:
+            self.screen_position_y = self.position_y
+            if self.screen_position_y > self.player_box_up:
+                Map.reached_top_edge = False
+                Map.offset_y = 0
+        elif Map.reached_bottom_edge:
+            self.screen_position_y = Screen.height + self.position_y - Map.map_wh[1]
+            if self.screen_position_y < self.player_box_down:
+                Map.reached_bottom_edge = False
+                Map.offset_y = Screen.height - Map.map_wh[1]
+        if (not Map.reached_top_edge and not Map.reached_bottom_edge):
+            if self.velocity_y < 0:
+                self.screen_position_y += Player.BALL_POSITION_ON_SCREEN_SPEED_Y * Time.delta_time
+            else:
+                self.screen_position_y -= Player.BALL_POSITION_ON_SCREEN_SPEED_Y * Time.delta_time
+            self.screen_position_y = move_number_to_desired_range(self.player_box_up, self.screen_position_y, self.player_box_down)
+            Map.offset_y = int(self.screen_position_y - self.position_y)
+    #
+    def update_physics(self, Map, Screen, Keys, Time):
         self._calculate_force()
         self.acceleration_x = self.force_x / Player.MASS
         self.acceleration_y = self.force_y / Player.MASS
@@ -78,7 +143,9 @@ class Player():
         self.velocity_y = self.velocity_y + (self.acceleration_y * Time.delta_time)
         self.position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
         self.position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
-        print(self.position_x)
+        self.ball_center_x = self.position_x + self.ball_radius
+        self.ball_center_y = self.position_y + self.ball_radius
+        self._update_screen_position(Map, Screen, Time)
         self._reset_forces()
     #
     def update_player_controls(self, Keys):
@@ -86,10 +153,14 @@ class Player():
             self.force_movement_x = -Player.FORCE_MOVEMENT_X
         if Keys.right.pressed:
             self.force_movement_x = Player.FORCE_MOVEMENT_X
+        if Keys.float_up.pressed:
+            self.force_movement_y = -Player.FORCE_MOVEMENT_Y
+        if Keys.sink_down.pressed:
+            self.force_movement_y = Player.FORCE_MOVEMENT_Y
     #
-    def draw(self, stored_draws, Render, Screen, gl_context, left: int, top: int):
+    def draw(self, stored_draws, Render, Screen, gl_context):
         # draw the front of the ball
-        Render.store_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Render.basic_rect_ltwh_to_quad, {'object_name': Player.PRETTY_BALL_FRONT_REFERENCE, 'ltwh': [left, top, self.ball_width, self.ball_height]})
+        Render.store_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Render.basic_rect_ltwh_to_quad, {'object_name': Player.PRETTY_BALL_FRONT_REFERENCE, 'ltwh': [self.screen_position_x, self.screen_position_y, self.ball_width, self.ball_height]})
         stored_draws.add_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Player.PRETTY_BALL_ORDER)
     #
     def get_collisions_with_map(self):
@@ -100,16 +171,16 @@ class Player():
         self.force_y = self.force_gravity_y + self.force_movement_y + self.force_tool_y + self.force_normal_y + self.force_water_y
     #
     def _reset_forces(self):
-        self.force_gravity_x = 0
-        self.force_gravity_y = 400
-        self.force_movement_x = 0
-        self.force_movement_y = 0
-        self.force_tool_x = 0
-        self.force_tool_y = 0
-        self.force_normal_x = 0
-        self.force_normal_y = 0
-        self.force_water_x = 0
-        self.force_water_y = 0
+        self.force_gravity_x = Player.DEFAULT_FORCE_GRAVITY_X
+        self.force_gravity_y = Player.DEFAULT_FORCE_GRAVITY_Y
+        self.force_movement_x = Player.DEFAULT_FORCE_MOVEMENT_X
+        self.force_movement_y = Player.DEFAULT_FORCE_MOVEMENT_Y
+        self.force_tool_x = Player.DEFAULT_FORCE_TOOL_X
+        self.force_tool_y = Player.DEFAULT_FORCE_TOOL_Y
+        self.force_normal_x = Player.DEFAULT_FORCE_NORMAL_X
+        self.force_normal_y = Player.DEFAULT_FORCE_NORMAL_Y
+        self.force_water_x = Player.DEFAULT_FORCE_WATER_X
+        self.force_water_y = Player.DEFAULT_FORCE_WATER_Y
     #
     def _reset_ball_collisions(self):
         self.ball_collisions = deepcopy(self.ball_collisions_default)
@@ -122,13 +193,13 @@ class Player():
         self.ball_width_index = self.ball_width - 1
         self.ball_height = self.ball_collision_image.get_height()
         self.ball_height_index = self.ball_height - 1
-        self.ball_center = self.ball_width / 2
+        self.ball_radius = self.ball_width / 2
         self.ball_center_index = self.ball_width // 2
         # iterate through all pixels to find where ball collision exists
         for index_x in range(self.ball_width):
             for index_y in range(self.ball_height):
                 if self.ball_collision_image.get_at((index_x, index_y)) == (0, 0, 0, 255):
-                    angle_from_center = atan2((index_x + 0.5 - self.ball_center), -(index_y + 0.5 - self.ball_center))
+                    angle_from_center = atan2((index_x + 0.5 - self.ball_radius), -(index_y + 0.5 - self.ball_radius))
                     self.ball_collision_data[(index_x, index_y)] = angle_from_center
                     self.ball_collisions[(index_x, index_y)] = False
         # define a default collision to revert active collisions each frame

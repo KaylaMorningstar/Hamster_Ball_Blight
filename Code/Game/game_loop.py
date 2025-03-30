@@ -37,14 +37,14 @@ def game_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     #     Singleton.map_offset_y += 16
     # if (Keys.float_up.pressed):
     #     Singleton.map_offset_y -= 16
-    Singleton.map.update_tile_loading(Render, Screen, gl_context, Time, Keys, Cursor, Singleton.map_offset_x, Singleton.map_offset_y)
+    Singleton.map.update_tile_loading(Render, Screen, gl_context, Time, Keys, Cursor)
 
     # update objects (non-player)
 
     # update player
     Singleton.player.update_player_controls(Keys)
-    Singleton.player.update_physics(Keys, Time)
-    Singleton.player.draw(Singleton.stored_draws, Render, Screen, gl_context, 0, 0)
+    Singleton.player.update_physics(Singleton.map, Screen, Keys, Time)
+    Singleton.player.draw(Singleton.stored_draws, Render, Screen, gl_context)
 
     # execute stored draws
     Singleton.stored_draws.draw(Render, Screen, gl_context)

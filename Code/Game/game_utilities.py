@@ -29,14 +29,14 @@ class Map():
         self.offset_y: int = 0
         self.tiles: list[list[Tile]] = [[Tile(level_path, index_x, index_y) for index_y in range(self.tiles_high)] for index_x in range(self.tiles_across)]
 
-    def update_tile_loading(self, Render, Screen, gl_context, Time, Keys, Cursor, offset_x: int, offset_y: int):
+    def update_tile_loading(self, Render, Screen, gl_context, Time, Keys, Cursor):
         # adjust the offset depending on the map edges
-        self.reached_left_edge = offset_x >= 0
-        self.reached_right_edge = -offset_x >= self.map_wh[0] - Screen.width
-        self.reached_top_edge = offset_y >= 0
-        self.reached_bottom_edge = -offset_y >= self.map_wh[1] - Screen.height
-        self.offset_x = move_number_to_desired_range(-self.map_wh[0]+Screen.width, offset_x, 0)
-        self.offset_y = move_number_to_desired_range(-self.map_wh[1]+Screen.height, offset_y, 0)
+        self.reached_left_edge = self.offset_x >= 0
+        self.reached_right_edge = -self.offset_x >= self.map_wh[0] - Screen.width
+        self.reached_top_edge = self.offset_y >= 0
+        self.reached_bottom_edge = -self.offset_y >= self.map_wh[1] - Screen.height
+        self.offset_x = move_number_to_desired_range(-self.map_wh[0]+Screen.width, self.offset_x, 0)
+        self.offset_y = move_number_to_desired_range(-self.map_wh[1]+Screen.height, self.offset_y, 0)
         # get which tiles were loaded last frame
         self.last_tiles_loaded_x = deepcopy(self.tiles_loaded_x)
         self.last_tiles_loaded_y = deepcopy(self.tiles_loaded_y)
