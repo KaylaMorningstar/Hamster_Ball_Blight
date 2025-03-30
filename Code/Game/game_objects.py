@@ -8,6 +8,19 @@ class Player():
     PRETTY_BALL_FRONT_REFERENCE = 'player_ball_front'
     PRETTY_BALL_ORDER = 5
 
+    MASS = 1
+
+    MAX_LEFT = 200
+    MAX_UP = 100
+    MAX_RIGHT = 200
+    MAX_DOWN = 100
+
+    MAX_VELOCITY_X = 400
+    MAX_VELOCITY_Y = 900
+
+    FORCE_MOVEMENT_X = 400
+    FORCE_MOVEMENT_Y = 400
+
     def __init__(self, PATH: str):
         #
         # pathing
@@ -15,6 +28,26 @@ class Player():
         self.ball_collision_path: str = 'ball_collision.png'
         #
         # forces
+        self.force_gravity_x: float = 0
+        self.force_gravity_y: float = 400
+        self.force_movement_x: float = 0
+        self.force_movement_y: float = 0
+        self.force_tool_x: float = 0
+        self.force_tool_y: float = 0
+        self.force_normal_x: float = 0
+        self.force_normal_y: float = 0
+        self.force_water_x: float = 0
+        self.force_water_y: float = 0
+        self.force_x: float = 0
+        self.force_y: float = 0
+        #
+        # acceleration, velocity, position
+        self.acceleration_x: float = 0
+        self.acceleration_y: float = 0
+        self.velocity_x: float = 0
+        self.velocity_y: float = 0
+        self.position_x: float = 0
+        self.position_y: float = 0
         #
         # collision
         self.ball_collision_image: pygame.Surface = None
@@ -35,6 +68,25 @@ class Player():
         #
         # tools (water jet, grapple, etc)
     #
+    def update_physics(self, Keys, Time):
+        self._calculate_force()
+        self.acceleration_x = self.force_x / Player.MASS
+        self.acceleration_y = self.force_y / Player.MASS
+        initial_velocity_x = self.velocity_x
+        initial_velocity_y = self.velocity_y
+        self.velocity_x = self.velocity_x + (self.acceleration_x * Time.delta_time)
+        self.velocity_y = self.velocity_y + (self.acceleration_y * Time.delta_time)
+        self.position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
+        self.position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
+        print(self.position_x)
+        self._reset_forces()
+    #
+    def update_player_controls(self, Keys):
+        if Keys.left.pressed:
+            self.force_movement_x = -Player.FORCE_MOVEMENT_X
+        if Keys.right.pressed:
+            self.force_movement_x = Player.FORCE_MOVEMENT_X
+    #
     def draw(self, stored_draws, Render, Screen, gl_context, left: int, top: int):
         # draw the front of the ball
         Render.store_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Render.basic_rect_ltwh_to_quad, {'object_name': Player.PRETTY_BALL_FRONT_REFERENCE, 'ltwh': [left, top, self.ball_width, self.ball_height]})
@@ -42,6 +94,22 @@ class Player():
     #
     def get_collisions_with_map(self):
         pass
+    #
+    def _calculate_force(self):
+        self.force_x = self.force_gravity_x + self.force_movement_x + self.force_tool_x + self.force_normal_x + self.force_water_x
+        self.force_y = self.force_gravity_y + self.force_movement_y + self.force_tool_y + self.force_normal_y + self.force_water_y
+    #
+    def _reset_forces(self):
+        self.force_gravity_x = 0
+        self.force_gravity_y = 400
+        self.force_movement_x = 0
+        self.force_movement_y = 0
+        self.force_tool_x = 0
+        self.force_tool_y = 0
+        self.force_normal_x = 0
+        self.force_normal_y = 0
+        self.force_water_x = 0
+        self.force_water_y = 0
     #
     def _reset_ball_collisions(self):
         self.ball_collisions = deepcopy(self.ball_collisions_default)
