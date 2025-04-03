@@ -86,7 +86,7 @@ class Player():
         #
         # collision
         self.ball_collision_image: pygame.Surface = None
-        self.ball_collision_data: dict[tuple[int, int], list[float, float, float]] = {}
+        self.ball_collision_data: dict[tuple[int, int], tuple[float, float, float]] = {}
         self.ball_collisions: dict[tuple[int, int], bool] = {}
         self.ball_collisions_default: dict[tuple[int, int], bool] = self.ball_collisions
         self.ball_width: int = None
@@ -102,6 +102,74 @@ class Player():
         self._initialize_ball_collision()
         #
         # tools (water jet, grapple, etc)
+    #
+    def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
+        self._update_player_controls(Keys)
+        self._get_normal_force_angle(Singleton.map)
+        self._reset_ball_collisions()
+        self._calculate_force()
+        self._calculate_position(Singleton, Render, Screen, gl_context, Keys, Cursor, Time)
+        self._update_screen_position(Singleton.map, Screen, Time)
+        self._reset_forces()
+        self._draw(Singleton.stored_draws, Render, Screen, gl_context)
+    #
+    def _update_player_controls(self, Keys):
+        if Keys.left.pressed:
+            self.force_movement_x = -Player.FORCE_MOVEMENT_X
+        if Keys.right.pressed:
+            self.force_movement_x = Player.FORCE_MOVEMENT_X
+        if Keys.float_up.pressed:
+            self.force_movement_y = -Player.FORCE_MOVEMENT_Y
+        if Keys.sink_down.pressed:
+            self.force_movement_y = Player.FORCE_MOVEMENT_Y
+    #
+    def _get_normal_force_angle(self, map_object):
+        number_of_collisions = 0
+        cumulative_x = 0
+        cumulative_y = 0
+        x_pos, y_pos = round(self.position_x), round(self.position_y)
+        for (offset_x, offset_y), (pixel_angle, cos_angle, sin_angle) in self.ball_collision_data.items():
+            # collision may have already been recorded from an object
+            if self.ball_collisions[(offset_x, offset_y)]:
+                cumulative_x += cos_angle
+                cumulative_y += sin_angle
+                number_of_collisions += 1
+                continue
+            # get map collision pixel data
+            tile_x, pixel_x = divmod(x_pos+offset_x, Map.TILE_WH)
+            tile_y, pixel_y = divmod(y_pos+offset_y, Map.TILE_WH)
+            pixel_collision = map_object.tiles[tile_x][tile_y].collision_bytearray[(pixel_y * Map.TILE_WH) + pixel_x]
+            # record collisions from the map
+            if (pixel_collision == Map.COLLISION) or (pixel_collision == Map.GRAPPLEABLE):
+                cumulative_x += cos_angle
+                cumulative_y += sin_angle
+                number_of_collisions += 1
+                continue
+        # end the function if there was no collision
+        if number_of_collisions == 0:
+            self.normal_force_angle = None
+            return
+        # get the normal force angle
+        self.normal_force_angle = (math.degrees(math.atan2(cumulative_y / number_of_collisions, cumulative_x / number_of_collisions)) - 180) % 360
+    #
+    def _reset_ball_collisions(self):
+        self.ball_collisions = deepcopy(self.ball_collisions_default)
+    #
+    def _calculate_force(self):
+        self.force_x = self.force_gravity_x + self.force_movement_x + self.force_tool_x + self.force_normal_x + self.force_water_x
+        self.force_y = self.force_gravity_y + self.force_movement_y + self.force_tool_y + self.force_normal_y + self.force_water_y
+    #
+    def _calculate_position(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
+        self.acceleration_x = self.force_x / Player.MASS
+        self.acceleration_y = self.force_y / Player.MASS
+        initial_velocity_x = self.velocity_x
+        initial_velocity_y = self.velocity_y
+        self.velocity_x = self.velocity_x + (self.acceleration_x * Time.delta_time)
+        self.velocity_y = self.velocity_y + (self.acceleration_y * Time.delta_time)
+        self.position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
+        self.position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
+        self.ball_center_x = self.position_x + self.ball_radius
+        self.ball_center_y = self.position_y + self.ball_radius
     #
     def _update_screen_position(self, Map, Screen, Time):
         # left-right movement
@@ -145,71 +213,6 @@ class Player():
             self.screen_position_y = move_number_to_desired_range(self.player_box_up, self.screen_position_y, self.player_box_down)
             Map.offset_y = int(self.screen_position_y - self.position_y)
     #
-    def update_physics(self, Map, Screen, Keys, Time):
-        self._calculate_force()
-        self.acceleration_x = self.force_x / Player.MASS
-        self.acceleration_y = self.force_y / Player.MASS
-        initial_velocity_x = self.velocity_x
-        initial_velocity_y = self.velocity_y
-        self.velocity_x = self.velocity_x + (self.acceleration_x * Time.delta_time)
-        self.velocity_y = self.velocity_y + (self.acceleration_y * Time.delta_time)
-        self.position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
-        self.position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
-        self.ball_center_x = self.position_x + self.ball_radius
-        self.ball_center_y = self.position_y + self.ball_radius
-        self._update_screen_position(Map, Screen, Time)
-        self._reset_forces()
-    #
-    def update_player_controls(self, Keys):
-        if Keys.left.pressed:
-            self.force_movement_x = -Player.FORCE_MOVEMENT_X
-        if Keys.right.pressed:
-            self.force_movement_x = Player.FORCE_MOVEMENT_X
-        if Keys.float_up.pressed:
-            self.force_movement_y = -Player.FORCE_MOVEMENT_Y
-        if Keys.sink_down.pressed:
-            self.force_movement_y = Player.FORCE_MOVEMENT_Y
-    #
-    def draw(self, stored_draws, Render, Screen, gl_context):
-        # draw the front of the ball
-        Render.store_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Render.basic_rect_ltwh_to_quad, {'object_name': Player.PRETTY_BALL_FRONT_REFERENCE, 'ltwh': [self.screen_position_x, self.screen_position_y, self.ball_width, self.ball_height]})
-        stored_draws.add_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Player.PRETTY_BALL_ORDER)
-    #
-    def get_normal_force_angle(self, map):
-        number_of_collisions = 0
-        cumulative_x = 0
-        cumulative_y = 0
-        x_pos, y_pos = round(self.position_x), round(self.position_y)
-        for (offset_x, offset_y), (pixel_angle, cos_angle, sin_angle) in self.ball_collision_data.items():
-            # collision may have already been recorded from an object
-            if self.ball_collisions[(offset_x, offset_y)]:
-                cumulative_x += cos_angle
-                cumulative_y += sin_angle
-                number_of_collisions += 1
-                continue
-            # get map collision pixel data
-            tile_x, pixel_x = divmod(x_pos+offset_x, Map.TILE_WH)
-            tile_y, pixel_y = divmod(y_pos+offset_y, Map.TILE_WH)
-            pixel_collision = map.tiles[tile_x][tile_y].collision_bytearray[(pixel_y * Map.TILE_WH) + pixel_x]
-            # record collisions from the map
-            if (pixel_collision == Map.COLLISION) or (pixel_collision == Map.GRAPPLEABLE):
-                cumulative_x += cos_angle
-                cumulative_y += sin_angle
-                number_of_collisions += 1
-                continue
-        # condition if there was a collision
-        if number_of_collisions > 0:
-            cumulative_x /= number_of_collisions
-            cumulative_y /= number_of_collisions
-            self.normal_force_angle = (math.degrees(math.atan2(cumulative_y, cumulative_x)) - 180) % 360
-        else:
-            self.normal_force_angle = None
-        print(self.normal_force_angle)
-    #
-    def _calculate_force(self):
-        self.force_x = self.force_gravity_x + self.force_movement_x + self.force_tool_x + self.force_normal_x + self.force_water_x
-        self.force_y = self.force_gravity_y + self.force_movement_y + self.force_tool_y + self.force_normal_y + self.force_water_y
-    #
     def _reset_forces(self):
         self.force_gravity_x = Player.DEFAULT_FORCE_GRAVITY_X
         self.force_gravity_y = Player.DEFAULT_FORCE_GRAVITY_Y
@@ -222,8 +225,10 @@ class Player():
         self.force_water_x = Player.DEFAULT_FORCE_WATER_X
         self.force_water_y = Player.DEFAULT_FORCE_WATER_Y
     #
-    def _reset_ball_collisions(self):
-        self.ball_collisions = deepcopy(self.ball_collisions_default)
+    def _draw(self, stored_draws, Render, Screen, gl_context):
+        # draw the front of the ball
+        Render.store_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Render.basic_rect_ltwh_to_quad, {'object_name': Player.PRETTY_BALL_FRONT_REFERENCE, 'ltwh': [self.screen_position_x, self.screen_position_y, self.ball_width, self.ball_height]})
+        stored_draws.add_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Player.PRETTY_BALL_ORDER)
     #
     def _initialize_ball_collision(self):
         # load the image
