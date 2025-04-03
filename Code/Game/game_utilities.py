@@ -1,4 +1,5 @@
 import pygame
+import io
 from array import array
 from copy import deepcopy
 from Code.utilities import move_number_to_desired_range
@@ -44,7 +45,7 @@ class Map():
         self.offset_x: int = 0
         self.offset_y: int = 0
         self.tiles: list[list[Tile]] = [[Tile(level_path, index_x, index_y) for index_y in range(self.tiles_high)] for index_x in range(self.tiles_across)]
-
+    #
     def update_tile_loading(self, Singleton, Render, Screen, gl_context, Time, Keys, Cursor):
         # adjust the offset depending on the map edges
         self.reached_left_edge = self.offset_x >= 0
@@ -95,12 +96,12 @@ class Tile():
         self.loaded: bool = False
         self.index_x: int = index_x
         self.index_y: int = index_y
-        self.tile_path: str = f"{level_path}\\t{index_x}_{index_y}"
+        self.tile_path: str = f"{level_path}t{index_x}_{index_y}"
         self.image_reference: str = f"{index_x}_{index_y}"
         self.pretty_bytearray: bytearray = None
         self.collision_bytearray: bytearray = None
-        self.file_reference = open(self.tile_path, mode='rb')
-
+        self.file_reference: io.BufferedReader = open(self.tile_path, mode='rb')
+    #
     def load(self, Render, Screen, gl_context):
         # get the byte array
         byte_array = bytearray(self.file_reference.read())
@@ -114,14 +115,14 @@ class Tile():
         self.file_reference.seek(0)
         # report that the tile has been loaded
         self.loaded = True
-
+    #
     def unload(self, Render):
         if self.loaded:
             self.pretty_bytearray = None
             self.collision_bytearray = None
             Render.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
         self.loaded = False
-
+    #
     def draw(self, Render, Screen, gl_context, ltwh, load):
         if not self.loaded:
             if load:
