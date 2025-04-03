@@ -134,51 +134,6 @@ class Tile():
         return load
 
 
-# class Tile():
-#     PRETTY_MAP_BYTES_PER_PIXEL = 4
-#     COLLISION_MAP_BYTES_PER_PIXEL = 1
-
-#     def __init__(self, level_path: str, index_x: int, index_y: int):
-#         self.loaded: bool = False
-#         self.index_x: int = index_x
-#         self.index_y: int = index_y
-#         self.tile_path: str = f"{level_path}\\t{index_x}_{index_y}"
-#         self.image_reference: str = f"{index_x}_{index_y}"
-#         self.pretty_bytearray: bytearray = None
-#         self.collision_bytearray: bytearray = None
-
-#     def load(self, Render, Screen, gl_context):
-#         with open(self.tile_path, mode='rb') as file:
-#             # get the byte array
-#             byte_array = bytearray(file.read())
-#             # separate the pretty map byte array
-#             self.pretty_bytearray = byte_array[0:(Map.TILE_WH**2)*4]  # (256*256*4); 256 = tile width/height; 4 = number of bytes per pixel
-#             # separate the collision map byte array
-#             self.collision_bytearray = byte_array[((Map.TILE_WH**2)*4)+1:((Map.TILE_WH**2)*5)+1]
-#             #
-#             # finished reading from the byte array; add image reference for moderngl
-#             Render.add_moderngl_texture_using_bytearray(Screen, gl_context, self.pretty_bytearray, Tile.PRETTY_MAP_BYTES_PER_PIXEL, Map.TILE_WH, Map.TILE_WH, self.image_reference)
-#         self.loaded = True
-
-#     def unload(self, Render):
-#         if self.loaded:
-#             self.pretty_bytearray = None
-#             self.collision_bytearray = None
-#             Render.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
-#         self.loaded = False
-
-#     def draw(self, Render, Screen, gl_context, ltwh, load):
-#         if not self.loaded:
-#             if load:
-#                 self.load(Render, Screen, gl_context)
-#                 load = False
-#             else:
-#                 return False
-
-#         Render.basic_rect_ltwh_to_quad(Screen, gl_context, self.image_reference, ltwh)
-#         return load
-
-
 class StoredDraws():
     def __init__(self):
         # lower order is drawn first, higher order is drawn later
