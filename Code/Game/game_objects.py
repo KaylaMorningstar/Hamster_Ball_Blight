@@ -2,14 +2,20 @@ import pygame
 import math
 from copy import deepcopy
 from Code.utilities import atan2, move_number_to_desired_range
+from Code.Game.game_utilities import Map
 
 
 class Player():
+    BALL_WH = 69
+
+    # used for drawing
     PRETTY_BALL_FRONT_REFERENCE = 'player_ball_front'
     PRETTY_BALL_ORDER = 5
 
+    # used for force calculations
     MASS = 1
 
+    # ball must stay in rectangle in center of screen
     MAX_LEFT = 200
     MAX_UP = 100
     MAX_RIGHT = 200
@@ -17,12 +23,15 @@ class Player():
     BALL_POSITION_ON_SCREEN_SPEED_X = 6 * 60
     BALL_POSITION_ON_SCREEN_SPEED_Y = 3 * 60
 
+    # max velocity in x and y directions
     MAX_VELOCITY_X = 400
     MAX_VELOCITY_Y = 900
 
+    # force applied from movement
     FORCE_MOVEMENT_X = 400
     FORCE_MOVEMENT_Y = 400
 
+    # forces are reset to these values each frame
     DEFAULT_FORCE_GRAVITY_X = 0
     DEFAULT_FORCE_GRAVITY_Y = 0
     DEFAULT_FORCE_MOVEMENT_X = 0
@@ -54,6 +63,9 @@ class Player():
         self.force_x: float = 0
         self.force_y: float = 0
         #
+        # force adjacent
+        self.normal_force_angle: int | None = None
+        #
         # acceleration, velocity, position
         self.acceleration_x: float = 0
         self.acceleration_y: float = 0
@@ -74,7 +86,7 @@ class Player():
         #
         # collision
         self.ball_collision_image: pygame.Surface = None
-        self.ball_collision_data: dict[tuple[int, int], list[float]] = {}
+        self.ball_collision_data: dict[tuple[int, int], list[float, float, float]] = {}
         self.ball_collisions: dict[tuple[int, int], bool] = {}
         self.ball_collisions_default: dict[tuple[int, int], bool] = self.ball_collisions
         self.ball_width: int = None
@@ -163,8 +175,36 @@ class Player():
         Render.store_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Render.basic_rect_ltwh_to_quad, {'object_name': Player.PRETTY_BALL_FRONT_REFERENCE, 'ltwh': [self.screen_position_x, self.screen_position_y, self.ball_width, self.ball_height]})
         stored_draws.add_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Player.PRETTY_BALL_ORDER)
     #
-    def get_collisions_with_map(self):
-        pass
+    def get_normal_force_angle(self, map):
+        number_of_collisions = 0
+        cumulative_x = 0
+        cumulative_y = 0
+        x_pos, y_pos = round(self.position_x), round(self.position_y)
+        for (offset_x, offset_y), (pixel_angle, cos_angle, sin_angle) in self.ball_collision_data.items():
+            # collision may have already been recorded from an object
+            if self.ball_collisions[(offset_x, offset_y)]:
+                cumulative_x += cos_angle
+                cumulative_y += sin_angle
+                number_of_collisions += 1
+                continue
+            # get map collision pixel data
+            tile_x, pixel_x = divmod(x_pos+offset_x, Map.TILE_WH)
+            tile_y, pixel_y = divmod(y_pos+offset_y, Map.TILE_WH)
+            pixel_collision = map.tiles[tile_x][tile_y].collision_bytearray[(pixel_y * Map.TILE_WH) + pixel_x]
+            # record collisions from the map
+            if (pixel_collision == Map.COLLISION) or (pixel_collision == Map.GRAPPLEABLE):
+                cumulative_x += cos_angle
+                cumulative_y += sin_angle
+                number_of_collisions += 1
+                continue
+        # condition if there was a collision
+        if number_of_collisions > 0:
+            cumulative_x /= number_of_collisions
+            cumulative_y /= number_of_collisions
+            self.normal_force_angle = (math.degrees(math.atan2(cumulative_y, cumulative_x)) - 180) % 360
+        else:
+            self.normal_force_angle = None
+        print(self.normal_force_angle)
     #
     def _calculate_force(self):
         self.force_x = self.force_gravity_x + self.force_movement_x + self.force_tool_x + self.force_normal_x + self.force_water_x
@@ -200,7 +240,7 @@ class Player():
             for index_y in range(self.ball_height):
                 if self.ball_collision_image.get_at((index_x, index_y)) == (0, 0, 0, 255):
                     angle_from_center = atan2((index_x + 0.5 - self.ball_radius), -(index_y + 0.5 - self.ball_radius))
-                    self.ball_collision_data[(index_x, index_y)] = angle_from_center
+                    self.ball_collision_data[(index_x, index_y)] = (angle_from_center, math.cos(math.radians(angle_from_center)), math.sin(math.radians(angle_from_center)))
                     self.ball_collisions[(index_x, index_y)] = False
         # define a default collision to revert active collisions each frame
         self.ball_collisions_default = deepcopy(self.ball_collisions)

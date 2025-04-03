@@ -4,6 +4,22 @@ from copy import deepcopy
 from Code.utilities import move_number_to_desired_range
 
 class Map():
+    NO_COLLISION = 0
+    COLLISION = 1
+    GRAPPLEABLE = 2
+    PLATFORM = 3
+    WATER = 4
+    NO_COLLISION_BINARY = b'\x00'
+    COLLISION_BINARY = b'\x01'
+    GRAPPLEABLE_BINARY = b'\x02'
+    PLATFORM_BINARY = b'\x03'
+    WATER_BINARY = b'\x04'
+    NO_COLLISION_BYTEARRAY = bytearray(b'\x00')
+    COLLISION_BYTEARRAY = bytearray(b'\x01')
+    GRAPPLEABLE_BYTEARRAY = bytearray(b'\x02')
+    PLATFORM_BYTEARRAY = bytearray(b'\x03')
+    WATER_BYTEARRAY = bytearray(b'\x04')
+
     TILE_WH = 256
     LOAD_TILES_OUT_OF_VIEW_PIXELS = TILE_WH
 

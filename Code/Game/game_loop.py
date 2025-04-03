@@ -43,6 +43,7 @@ def game_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
 
     # update player
     Singleton.player.update_player_controls(Keys)
+    Singleton.player.get_normal_force_angle(Singleton.map)
     Singleton.player.update_physics(Singleton.map, Screen, Keys, Time)
     Singleton.player.draw(Singleton.stored_draws, Render, Screen, gl_context)
 
