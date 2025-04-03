@@ -75,6 +75,7 @@ class TimingClass():
     #
     def display_fps(self, Screen, Render, gl_context, lt: list[int, int]):
         fps = str(round(self.fps / 10) * 10)
+        print(fps)
         Render.draw_string_of_characters(Screen, gl_context, fps, lt, TimingClass._TEXT_PIXEL_SIZE, COLORS['BLACK'])
 
 

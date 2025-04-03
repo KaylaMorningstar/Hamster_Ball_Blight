@@ -45,7 +45,7 @@ class Map():
         self.offset_y: int = 0
         self.tiles: list[list[Tile]] = [[Tile(level_path, index_x, index_y) for index_y in range(self.tiles_high)] for index_x in range(self.tiles_across)]
 
-    def update_tile_loading(self, Render, Screen, gl_context, Time, Keys, Cursor):
+    def update_tile_loading(self, Singleton, Render, Screen, gl_context, Time, Keys, Cursor):
         # adjust the offset depending on the map edges
         self.reached_left_edge = self.offset_x >= 0
         self.reached_right_edge = -self.offset_x >= self.map_wh[0] - Screen.width
@@ -72,12 +72,15 @@ class Map():
                 if (self.tiles_loaded_x[0] <= index_x <= self.tiles_loaded_x[1]) and (self.tiles_loaded_y[0] <= index_y <= self.tiles_loaded_y[1]):
                     continue
                 self.tiles[index_x][index_y].unload(Render)
+        # change how loading and drawing works depending on player direction
+        range_x = range(self.tiles_loaded_x[0], self.tiles_loaded_x[1] + 1, 1) if (Singleton.player.velocity_x > 0) else range(self.tiles_loaded_x[1], self.tiles_loaded_x[0] - 1, -1)
+        range_y = range(self.tiles_loaded_y[0], self.tiles_loaded_y[1] + 1, 1) if (Singleton.player.velocity_y < 0) else range(self.tiles_loaded_y[1], self.tiles_loaded_y[0] - 1, -1)
         # load and draw needed tiles
         load = True
         ltwh = [self.offset_x, self.offset_y, Map.TILE_WH, Map.TILE_WH]
-        for index_x in range(self.tiles_loaded_x[0], self.tiles_loaded_x[1] + 1):
+        for index_x in range_x:
             ltwh[0] = self.offset_x + (Map.TILE_WH * index_x)
-            for index_y in range(self.tiles_loaded_y[0], self.tiles_loaded_y[1] + 1):
+            for index_y in range_y:
                 ltwh[1] = self.offset_y + (Map.TILE_WH * index_y)
                 tile = self.tiles[index_x][index_y]
                 priority_load = rectangles_overlap(ltwh, [0, 0, Screen.width, Screen.height])

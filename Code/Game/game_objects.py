@@ -128,7 +128,7 @@ class Player():
         cumulative_x = 0
         cumulative_y = 0
         x_pos, y_pos = round(self.position_x), round(self.position_y)
-        for (offset_x, offset_y), (pixel_angle, cos_angle, sin_angle) in self.ball_collision_data.items():
+        for (offset_x, offset_y), (_, cos_angle, sin_angle) in self.ball_collision_data.items():
             # collision may have already been recorded from an object
             if self.ball_collisions[(offset_x, offset_y)]:
                 cumulative_x += cos_angle
