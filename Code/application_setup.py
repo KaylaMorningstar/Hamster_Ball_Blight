@@ -56,13 +56,13 @@ class ApiObject():
 
 class TimingClass():
     _TEXT_PIXEL_SIZE = 4
+    DESIRED_FPS = 60
 
     def __init__(self):
         self.clock = pygame.time.Clock()
-        self.desired_fps = 60
         self.previous_tick = pygame.time.get_ticks()
         self.current_tick = pygame.time.get_ticks()
-        self.fps = self.desired_fps
+        self.fps = TimingClass.DESIRED_FPS
         self.delta_time = (self.current_tick - self.previous_tick) / 1000
     #
     def update(self):
@@ -71,7 +71,7 @@ class TimingClass():
         self.delta_time = (self.current_tick - self.previous_tick) / 1000
         self.delta_time = move_number_to_desired_range(0.001, self.delta_time, 99999999999)
         self.fps = 1 / self.delta_time
-        self.clock.tick(self.desired_fps)
+        self.clock.tick(TimingClass.DESIRED_FPS)
     #
     def display_fps(self, Screen, Render, gl_context, lt: list[int, int]):
         fps = str(round(self.fps / 10) * 10)

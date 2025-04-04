@@ -32,16 +32,16 @@ class Player():
     FORCE_MOVEMENT_Y = 400
 
     # forces are reset to these values each frame
-    DEFAULT_FORCE_GRAVITY_X = 0
-    DEFAULT_FORCE_GRAVITY_Y = 0
-    DEFAULT_FORCE_MOVEMENT_X = 0
-    DEFAULT_FORCE_MOVEMENT_Y = 0
-    DEFAULT_FORCE_TOOL_X = 0
-    DEFAULT_FORCE_TOOL_Y = 0
-    DEFAULT_FORCE_NORMAL_X = 0
-    DEFAULT_FORCE_NORMAL_Y = 0
-    DEFAULT_FORCE_WATER_X = 0
-    DEFAULT_FORCE_WATER_Y = 0
+    DEFAULT_FORCE_GRAVITY_X = 0.0
+    DEFAULT_FORCE_GRAVITY_Y = 0.0
+    DEFAULT_FORCE_MOVEMENT_X = 0.0
+    DEFAULT_FORCE_MOVEMENT_Y = 0.0
+    DEFAULT_FORCE_TOOL_X = 0.0
+    DEFAULT_FORCE_TOOL_Y = 0.0
+    DEFAULT_FORCE_NORMAL_X = 0.0
+    DEFAULT_FORCE_NORMAL_Y = 0.0
+    DEFAULT_FORCE_WATER_X = 0.0
+    DEFAULT_FORCE_WATER_Y = 0.0
 
     def __init__(self, PATH: str):
         #
@@ -106,6 +106,7 @@ class Player():
     def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
         self._update_player_controls(Keys)
         self._get_normal_force_angle(Singleton.map)
+        self._get_normal_force()
         self._reset_ball_collisions()
         self._calculate_force()
         self._calculate_position(Singleton, Render, Screen, gl_context, Keys, Cursor, Time)
@@ -150,7 +151,17 @@ class Player():
             self.normal_force_angle = None
             return
         # get the normal force angle
-        self.normal_force_angle = (math.degrees(math.atan2(cumulative_y / number_of_collisions, cumulative_x / number_of_collisions)) - 180) % 360
+        self.normal_force_angle = round((math.degrees(math.atan2(cumulative_y / number_of_collisions, cumulative_x / number_of_collisions)) - 180) % 360, 2)
+    #
+    def _get_normal_force(self):
+        if self.normal_force_angle is None:
+            return
+        # normal force from gravity
+        if 0.0 <= self.normal_force_angle <= 180.0:
+            magnitude_of_gravity = math.sqrt((self.force_gravity_x ** 2) + (self.force_gravity_y ** 2))
+            self.force_normal_x += round(math.cos(math.radians(self.normal_force_angle)), 2) * magnitude_of_gravity
+            self.force_normal_y += round(math.sin(math.radians(self.normal_force_angle)), 2) * magnitude_of_gravity
+        # normal force from impulse
     #
     def _reset_ball_collisions(self):
         self.ball_collisions = deepcopy(self.ball_collisions_default)
