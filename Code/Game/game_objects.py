@@ -1,7 +1,7 @@
 import pygame
 import math
 from copy import deepcopy
-from Code.utilities import atan2, move_number_to_desired_range
+from Code.utilities import atan2, move_number_to_desired_range, difference_between_angles
 from Code.Game.game_utilities import Map
 
 
@@ -31,9 +31,13 @@ class Player():
     FORCE_MOVEMENT_X = 400
     FORCE_MOVEMENT_Y = 400
 
+    # elasticity for the normal force
+    MAX_ELASTICITY = 1.0
+    MIN_ELASTICITY = 0.25
+
     # forces are reset to these values each frame
     DEFAULT_FORCE_GRAVITY_X = 0.0
-    DEFAULT_FORCE_GRAVITY_Y = 0.0
+    DEFAULT_FORCE_GRAVITY_Y = 400.0
     DEFAULT_FORCE_MOVEMENT_X = 0.0
     DEFAULT_FORCE_MOVEMENT_Y = 0.0
     DEFAULT_FORCE_TOOL_X = 0.0
@@ -60,29 +64,31 @@ class Player():
         self.force_normal_y: float = Player.DEFAULT_FORCE_NORMAL_Y
         self.force_water_x: float = Player.DEFAULT_FORCE_WATER_X
         self.force_water_y: float = Player.DEFAULT_FORCE_WATER_Y
-        self.force_x: float = 0
-        self.force_y: float = 0
+        self.force_x: float = 0.0
+        self.force_y: float = 0.0
         #
         # force adjacent
-        self.normal_force_angle: int | None = None
+        self.normal_force_angle: float | None = None
+        self.angle_of_motion: float | None = None
         #
         # acceleration, velocity, position
-        self.acceleration_x: float = 0
-        self.acceleration_y: float = 0
-        self.velocity_x: float = 0
-        self.velocity_y: float = 0
-        self.position_x: float = 0
-        self.position_y: float = 0
-        self.ball_center_x: float = 0
-        self.ball_center_y: float = 0
+        self.acceleration_x: float = 0.0
+        self.acceleration_y: float = 0.0
+        self.velocity_x: float = 0.0
+        self.velocity_y: float = 0.0
+        self.velocity: float = 0.0
+        self.position_x: float = 0.0
+        self.position_y: float = 0.0
+        self.ball_center_x: float = 0.0
+        self.ball_center_y: float = 0.0
         #
         # screen position
-        self.screen_position_x: float = 0
-        self.screen_position_y: float = 0
-        self.player_box_left: float = 0
-        self.player_box_top: float = 0
-        self.player_box_right: float = 0
-        self.player_box_bottom: float = 0
+        self.screen_position_x: float = 0.0
+        self.screen_position_y: float = 0.0
+        self.player_box_left: float = 0.0
+        self.player_box_top: float = 0.0
+        self.player_box_right: float = 0.0
+        self.player_box_bottom: float = 0.0
         #
         # collision
         self.ball_collision_image: pygame.Surface = None
@@ -106,7 +112,7 @@ class Player():
     def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
         self._update_player_controls(Keys)
         self._get_normal_force_angle(Singleton.map)
-        self._get_normal_force()
+        self._get_normal_force(Time)
         self._reset_ball_collisions()
         self._calculate_force()
         self._calculate_position(Singleton, Render, Screen, gl_context, Keys, Cursor, Time)
@@ -153,15 +159,31 @@ class Player():
         # get the normal force angle
         self.normal_force_angle = round((math.degrees(math.atan2(cumulative_y / number_of_collisions, cumulative_x / number_of_collisions)) - 180) % 360, 2)
     #
-    def _get_normal_force(self):
+    def _get_normal_force(self, Time):
+        # no normal force if the ball is undergoing ballistic motion
         if self.normal_force_angle is None:
             return
         # normal force from gravity
         if 0.0 <= self.normal_force_angle <= 180.0:
             magnitude_of_gravity = math.sqrt((self.force_gravity_x ** 2) + (self.force_gravity_y ** 2))
-            self.force_normal_x += round(math.cos(math.radians(self.normal_force_angle)), 2) * magnitude_of_gravity
-            self.force_normal_y += round(math.sin(math.radians(self.normal_force_angle)), 2) * magnitude_of_gravity
-        # normal force from impulse
+            self.force_normal_x += magnitude_of_gravity * round(math.cos(math.radians(self.normal_force_angle)), 2)
+            self.force_normal_y += magnitude_of_gravity * round(math.sin(math.radians(self.normal_force_angle)), 2)
+        # normal force from impulse; no impulse if motionless
+        if self.angle_of_motion is not None:
+            # Fdt = mdv
+            # get the reflection angle
+            resulting_angle = self._reflect_angle(self.normal_force_angle, (self.angle_of_motion + 180) % 360)
+            # calculate elasticity
+            elasticity = self._calculate_elasticity(self.angle_of_motion, resulting_angle)
+            # calculate the final velocity in x and y directions
+            final_velocity = self.velocity
+            final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
+            final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
+            # add the impulse to the normal force
+            self.force_normal_x += Player.MASS * (final_velocity_x - self.velocity_x) / Time.delta_time
+            self.force_normal_y += Player.MASS * (final_velocity_y - self.velocity_y) / Time.delta_time
+            self.position_y -= 1
+            print(self.force_normal_y)
     #
     def _reset_ball_collisions(self):
         self.ball_collisions = deepcopy(self.ball_collisions_default)
@@ -177,6 +199,8 @@ class Player():
         initial_velocity_y = self.velocity_y
         self.velocity_x = self.velocity_x + (self.acceleration_x * Time.delta_time)
         self.velocity_y = self.velocity_y + (self.acceleration_y * Time.delta_time)
+        self.velocity = math.sqrt((self.velocity_x ** 2) + (self.velocity_y ** 2))
+        self.angle_of_motion = None if self.velocity == 0.0 else math.degrees(math.atan2(-self.velocity_y, self.velocity_x)) % 360
         self.position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
         self.position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
         self.ball_center_x = self.position_x + self.ball_radius
@@ -265,3 +289,20 @@ class Player():
         self.ball_up_key = (self.ball_center_index, 0)
         self.ball_right_key = (self.ball_width_index, self.ball_center_index)
         self.ball_down_key = (self.ball_center_index, self.ball_height_index)
+    #
+    @staticmethod
+    def _reflect_angle(angle_of_reflection, angle_being_reflected):
+        difference_between_angles = abs(angle_being_reflected - angle_of_reflection)
+        if difference_between_angles == 0.0:
+            return angle_of_reflection
+        elif angle_being_reflected > angle_of_reflection:
+            return (angle_being_reflected - (2 * difference_between_angles)) % 360
+        else:
+            return (angle_being_reflected + (2 * difference_between_angles)) % 360
+    #
+    def _calculate_elasticity(self, angle1, angle2):
+        angle_difference = abs(difference_between_angles(angle1, angle2))
+        elasticity_scale = abs((angle_difference / 180) - 1)
+        elasticity = (elasticity_scale * Player.MAX_ELASTICITY) + ((1 - elasticity_scale) * Player.MIN_ELASTICITY)
+        return elasticity
+        

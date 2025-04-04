@@ -64,6 +64,10 @@ def angle_in_range(lower: float, theta: float, upper: float):
     return (theta - lower) % 360 < (upper - lower) % 360
 
 
+def difference_between_angles(angle1: float, angle2: float):
+    return (angle2 - angle1 + 180) % 360 - 180
+
+
 def round_scaled(value: float | int, scale: float | int):
     return scale * round(value / scale)
 
