@@ -92,9 +92,9 @@ class Tile():
     PRETTY_MAP_BYTES_PER_PIXEL = 4
     COLLISION_MAP_BYTES_PER_PIXEL = 1
 
-    PRETTY_BYTES_PER_TILE = (Map.TILE_WH ** 2) * PRETTY_MAP_BYTES_PER_PIXEL
-    COLLISION_BYTES_PER_TILE = (Map.TILE_WH ** 2) * COLLISION_MAP_BYTES_PER_PIXEL
-    NEWLINE_BYTES = 1
+    PRETTY_MAP_BYTES_PER_TILE = Map.TILE_WH * Map.TILE_WH * PRETTY_MAP_BYTES_PER_PIXEL
+    COLLISION_MAP_BYTES_PER_TILE = Map.TILE_WH * Map.TILE_WH * COLLISION_MAP_BYTES_PER_PIXEL
+    BYTES_PER_NEWLINE = 1
 
     def __init__(self, level_path: str, index_x: int, index_y: int):
         self.loaded: bool = False
@@ -109,14 +109,14 @@ class Tile():
     def load(self, Render, Screen, gl_context):
         # reset reading from the file reference
         self.file_reference.seek(0)
-        # separate the pretty map byte array
-        self.pretty_bytearray = self.file_reference.read(Tile.PRETTY_BYTES_PER_TILE)
-        # finished reading from the byte array; add image reference for moderngl
+        # get the pretty map
+        self.pretty_bytearray = self.file_reference.read(Tile.PRETTY_MAP_BYTES_PER_TILE)
+        # add the pretty map as a moderngl texture
         Render.add_moderngl_texture_using_bytearray(Screen, gl_context, self.pretty_bytearray, Tile.PRETTY_MAP_BYTES_PER_PIXEL, Map.TILE_WH, Map.TILE_WH, self.image_reference)
-        # skip the newline
-        self.file_reference.read(Tile.NEWLINE_BYTES)
+        # skip newline
+        self.file_reference.read(Tile.BYTES_PER_NEWLINE)
         # separate the collision map byte array
-        self.collision_bytearray = self.file_reference.read(Tile.COLLISION_BYTES_PER_TILE)
+        self.collision_bytearray = self.file_reference.read(Tile.COLLISION_MAP_BYTES_PER_TILE)
         # report that the tile has been loaded
         self.loaded = True
     #
