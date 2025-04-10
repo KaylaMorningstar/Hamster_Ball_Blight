@@ -96,8 +96,8 @@ class Player():
         self.velocity: float = 0.0
         self.last_position_x: float = 0.0
         self.last_position_y: float = 0.0
-        self.position_x: float = 0.0
-        self.position_y: float = 0.0
+        self.position_x: float = 5.0
+        self.position_y: float = 5.0
         self.ball_center_x: float = 0.0
         self.ball_center_y: float = 0.0
         #
@@ -114,6 +114,12 @@ class Player():
         self.inner_ball_collision_data: dict[tuple[int, int], tuple[float, float, float]] = {}
         self.inner_ball_collisions: dict[tuple[int, int], bool] = {}
         self.inner_ball_collisions_default: dict[tuple[int, int], bool] = self.inner_ball_collisions
+        # outer collision
+        self.outer_ball_collision_image: pygame.Surface | None = None
+        self.outer_ball_collision_data: dict[tuple[int, int], tuple[float, float, float]] = {}
+        self.outer_ball_collisions: dict[tuple[int, int], bool] = {}
+        self.outer_ball_collisions_default: dict[tuple[int, int], bool] = self.outer_ball_collisions
+        #
         self.ball_width: int = None
         self.ball_width_index: int = None
         self.ball_height: int = None
@@ -155,9 +161,9 @@ class Player():
         cumulative_x = 0
         cumulative_y = 0
         x_pos, y_pos = round(self.position_x), round(self.position_y)
-        for (offset_x, offset_y), (_, cos_angle, sin_angle) in self.inner_ball_collision_data.items():
+        for (offset_x, offset_y), (_, cos_angle, sin_angle) in self.outer_ball_collision_data.items():
             # collision may have already been recorded from an object
-            if self.inner_ball_collisions[(offset_x, offset_y)]:
+            if self.outer_ball_collisions[(offset_x, offset_y)]:
                 cumulative_x += cos_angle
                 cumulative_y += sin_angle
                 number_of_collisions += 1
@@ -205,6 +211,7 @@ class Player():
     #
     def _reset_ball_collisions(self):
         self.inner_ball_collisions = deepcopy(self.inner_ball_collisions_default)
+        self.outer_ball_collisions = deepcopy(self.outer_ball_collisions_default)
     #
     def _calculate_force(self):
         self.force_x = self.force_gravity_x + self.force_movement_x + self.force_tool_x + self.force_normal_x + self.force_water_x
@@ -222,10 +229,9 @@ class Player():
         self.angle_of_motion = None if self.velocity == 0.0 else math.degrees(math.atan2(-self.velocity_y, self.velocity_x)) % 360
         unimpeded_position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
         unimpeded_position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
-        print((self.position_x, self.position_y), (self.velocity_x, self.velocity_y))
 
         # update state
-        collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, round(unimpeded_position_x), round(unimpeded_position_y))
+        collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, round(unimpeded_position_x), round(unimpeded_position_y), inner=False)
         if number_of_collisions == 0:
             self.state = Player.BALLISTIC
         else:
@@ -234,15 +240,18 @@ class Player():
         match (self.last_state, self.state):
             # ballistic -> ballistic
             case (Player.BALLISTIC, Player.BALLISTIC):
-                #print('s1', (self.position_x, self.position_y), (unimpeded_position_x, unimpeded_position_y), (self.velocity_x, self.velocity_y), (self.acceleration_x, self.acceleration_y))
-                self.position_x = unimpeded_position_x
-                self.position_y = unimpeded_position_y
+                print('s1', (self.position_x, self.position_y))
+                self.position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
+                self.position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
             # ballistic -> any type of collision
             case (Player.BALLISTIC, _):
-                #print('s2', (self.position_x, self.position_y), (unimpeded_position_x, unimpeded_position_y), (self.velocity_x, self.velocity_y), (self.acceleration_x, self.acceleration_y))
-                previous_offset_x, previous_offset_y = round(self.position_x), round(self.position_y)
+                print('s2', (self.position_x, self.position_y))
+                unimpeded_position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
+                unimpeded_position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
+                previous_offset_x = round(self.position_x)
+                previous_offset_y = round(self.position_y)
                 for (offset_x, offset_y) in bresenham(round(self.last_position_x), round(self.last_position_y), round(unimpeded_position_x), round(unimpeded_position_y)):
-                    collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y)
+                    collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=True)
                     if number_of_collisions > 0:
                         self.position_x = previous_offset_x
                         self.position_y = previous_offset_y
@@ -252,8 +261,9 @@ class Player():
                     previous_offset_y = offset_y
             # any type of collision -> ballistic
             case (_, _):
-                pass
-                #print('s3', self.last_state, self.state)
+                self.position_x = (self.velocity_x * Time.delta_time) + self.position_x
+                self.position_y = (self.velocity_y * Time.delta_time) + self.position_y
+                print('s3', (self.position_x, self.position_y), (self.velocity_x, self.velocity_y), self.last_state, self.state)
 
         self.last_position_x = self.position_x
         self.last_position_y = self.position_y
@@ -320,7 +330,7 @@ class Player():
         stored_draws.add_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Player.PRETTY_BALL_ORDER)
     #
     def _initialize_ball_collision(self):
-        # load the image
+        # load the images
         self.inner_ball_collision_image = pygame.image.load(f'{self.player_image_folder_path}{self.inner_ball_collision_path}')
         self.outer_ball_collision_image = pygame.image.load(f'{self.player_image_folder_path}{self.outer_ball_collision_path}')
         # get width, height, and center
@@ -331,14 +341,23 @@ class Player():
         self.ball_radius = self.ball_width / 2
         self.ball_center_index = self.ball_width // 2
         # iterate through all pixels to find where ball collision exists
+        # inner
         for index_x in range(self.ball_width):
             for index_y in range(self.ball_height):
                 if self.inner_ball_collision_image.get_at((index_x, index_y)) == (0, 0, 0, 255):
                     angle_from_center = atan2((index_x + 0.5 - self.ball_radius), -(index_y + 0.5 - self.ball_radius))
                     self.inner_ball_collision_data[(index_x, index_y)] = (angle_from_center, math.cos(math.radians(angle_from_center)), math.sin(math.radians(angle_from_center)))
                     self.inner_ball_collisions[(index_x, index_y)] = False
+        # outer
+        for index_x in range(self.outer_ball_collision_image.get_width()):
+            for index_y in range(self.outer_ball_collision_image.get_height()):
+                if self.outer_ball_collision_image.get_at((index_x, index_y)) == (0, 0, 0, 255):
+                    angle_from_center = atan2((index_x + 0.5 - self.ball_radius - 1), -(index_y + 0.5 - self.ball_radius - 1))
+                    self.outer_ball_collision_data[(index_x, index_y)] = (angle_from_center, math.cos(math.radians(angle_from_center)), math.sin(math.radians(angle_from_center)))
+                    self.outer_ball_collisions[(index_x, index_y)] = False
         # define a default collision to revert active collisions each frame
         self.inner_ball_collisions_default = deepcopy(self.inner_ball_collisions)
+        self.outer_ball_collisions_default = deepcopy(self.outer_ball_collisions)
         # get keys to ball collision pixels representing certain directions
         self.ball_left_key = (0, self.ball_center_index)
         self.ball_up_key = (self.ball_center_index, 0)
@@ -361,10 +380,14 @@ class Player():
         elasticity = (elasticity_scale * Player.MAX_ELASTICITY) + ((1 - elasticity_scale) * Player.MIN_ELASTICITY)
         return elasticity
     #
-    def _get_ball_collisions(self, Map, x_pos: int, y_pos: int):
-        ball_collisions = deepcopy(self.inner_ball_collisions_default)
+    def _get_ball_collisions(self, Map, x_pos: int, y_pos: int, inner: bool):
+        # checking inner vs. outer ball collisions
+        if inner:
+            ball_collisions = deepcopy(self.inner_ball_collisions_default)
+        else:
+            ball_collisions = deepcopy(self.outer_ball_collisions_default)
         number_of_collisions = 0
-        for (offset_x, offset_y) in self.inner_ball_collisions.keys():
+        for (offset_x, offset_y) in ball_collisions.keys():
             # get map collision pixel data
             tile_x, pixel_x = divmod(x_pos+offset_x, Map.TILE_WH)
             tile_y, pixel_y = divmod(y_pos+offset_y, Map.TILE_WH)
