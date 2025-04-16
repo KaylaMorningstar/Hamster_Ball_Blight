@@ -312,7 +312,6 @@ class Player():
                 self.screen_position_y -= Player.BALL_POSITION_ON_SCREEN_SPEED_Y * Time.delta_time
             self.screen_position_y = move_number_to_desired_range(self.player_box_up, self.screen_position_y, self.player_box_down)
             Map.offset_y = int(self.screen_position_y - self.position_y)
-        print(self.screen_position_x, self.screen_position_y)
     #
     def _reset_forces(self):
         self.force_gravity_x = Player.DEFAULT_FORCE_GRAVITY_X

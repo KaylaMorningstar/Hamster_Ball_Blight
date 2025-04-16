@@ -47,28 +47,6 @@ class Map():
         self.offset_x: int = 0
         self.offset_y: int = 0
         self.tiles: list[list[Tile]]
-
-    # def __init__(self, Screen, gl_context, Render, PATH: str, level_path: str):
-    #     self.PATH: str = PATH
-    #     self.level_path: str = level_path
-    #     self.map_wh: array[int, int] = array('i', [11776, 5888])
-    #     self.tiles_across: int = self.map_wh[0] // Map.TILE_WH
-    #     self.tiles_high: int = self.map_wh[1] // Map.TILE_WH
-    #     self.min_tile_x: int = 0
-    #     self.min_tile_y: int = 0
-    #     self.max_tile_x: int = self.tiles_across - 1
-    #     self.max_tile_y: int = self.tiles_high - 1
-    #     self.tiles_loaded_x: list[int, int] = [0, 0]
-    #     self.tiles_loaded_y: list[int, int] = [0, 0]
-    #     self.last_tiles_loaded_x: list[int, int] = [0, 0]
-    #     self.last_tiles_loaded_y: list[int, int] = [0, 0]
-    #     self.reached_left_edge: bool = False
-    #     self.reached_right_edge: bool = False
-    #     self.reached_top_edge: bool = False
-    #     self.reached_bottom_edge: bool = False
-    #     self.offset_x: int = 0
-    #     self.offset_y: int = 0
-    #     self.tiles: list[list[Tile]] = [[Tile(level_path, index_x, index_y) for index_y in range(self.tiles_high)] for index_x in range(self.tiles_across)]
     #
     def load_level(self, Screen, level_path: str, player_center_x: int | float, player_center_y: int | float):
         self.level_path = level_path
