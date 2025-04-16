@@ -1,6 +1,7 @@
 import os
 import math
 from __main__ import PATH
+import pathlib
 import time
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
@@ -33,6 +34,10 @@ def path_exists(path):
 
 def create_folder(path):
     os.makedirs(path)
+
+
+def get_all_paths_in_directory(directory: str, file_type: str = '*'):
+    return pathlib.Path(directory).glob(file_type)
 
 
 def str_can_be_int(string):

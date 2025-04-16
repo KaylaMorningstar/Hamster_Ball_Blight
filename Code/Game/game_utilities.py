@@ -2,9 +2,12 @@ import pygame
 import io
 from array import array
 from copy import deepcopy
-from Code.utilities import move_number_to_desired_range
+from glob import glob
+from Code.utilities import move_number_to_desired_range, get_all_paths_in_directory
 
 class Map():
+    TILE_EXTENSION = ''
+
     NO_COLLISION = 0
     COLLISION = 1
     GRAPPLEABLE = 2
@@ -24,16 +27,15 @@ class Map():
     TILE_WH = 256
     LOAD_TILES_OUT_OF_VIEW_PIXELS = TILE_WH
 
-    def __init__(self, Screen, gl_context, Render, PATH: str, level_path: str):
-        self.PATH: str = PATH
-        self.level_path: str = level_path
-        self.map_wh: array[int, int] = array('i', [11776, 5888])
-        self.tiles_across: int = self.map_wh[0] // Map.TILE_WH
-        self.tiles_high: int = self.map_wh[1] // Map.TILE_WH
-        self.min_tile_x: int = 0
-        self.min_tile_y: int = 0
-        self.max_tile_x: int = self.tiles_across - 1
-        self.max_tile_y: int = self.tiles_high - 1
+    def __init__(self):
+        self.level_path: str
+        self.map_wh: array[int, int]
+        self.tiles_across: int
+        self.tiles_high: int
+        self.min_tile_x: int
+        self.min_tile_y: int
+        self.max_tile_x: int
+        self.max_tile_y: int
         self.tiles_loaded_x: list[int, int] = [0, 0]
         self.tiles_loaded_y: list[int, int] = [0, 0]
         self.last_tiles_loaded_x: list[int, int] = [0, 0]
@@ -44,7 +46,53 @@ class Map():
         self.reached_bottom_edge: bool = False
         self.offset_x: int = 0
         self.offset_y: int = 0
-        self.tiles: list[list[Tile]] = [[Tile(level_path, index_x, index_y) for index_y in range(self.tiles_high)] for index_x in range(self.tiles_across)]
+        self.tiles: list[list[Tile]]
+
+    # def __init__(self, Screen, gl_context, Render, PATH: str, level_path: str):
+    #     self.PATH: str = PATH
+    #     self.level_path: str = level_path
+    #     self.map_wh: array[int, int] = array('i', [11776, 5888])
+    #     self.tiles_across: int = self.map_wh[0] // Map.TILE_WH
+    #     self.tiles_high: int = self.map_wh[1] // Map.TILE_WH
+    #     self.min_tile_x: int = 0
+    #     self.min_tile_y: int = 0
+    #     self.max_tile_x: int = self.tiles_across - 1
+    #     self.max_tile_y: int = self.tiles_high - 1
+    #     self.tiles_loaded_x: list[int, int] = [0, 0]
+    #     self.tiles_loaded_y: list[int, int] = [0, 0]
+    #     self.last_tiles_loaded_x: list[int, int] = [0, 0]
+    #     self.last_tiles_loaded_y: list[int, int] = [0, 0]
+    #     self.reached_left_edge: bool = False
+    #     self.reached_right_edge: bool = False
+    #     self.reached_top_edge: bool = False
+    #     self.reached_bottom_edge: bool = False
+    #     self.offset_x: int = 0
+    #     self.offset_y: int = 0
+    #     self.tiles: list[list[Tile]] = [[Tile(level_path, index_x, index_y) for index_y in range(self.tiles_high)] for index_x in range(self.tiles_across)]
+    #
+    def load_level(self, Screen, level_path: str, player_center_x: int | float, player_center_y: int | float):
+        self.level_path = level_path
+        # get the map size
+        tile_size_generator = ([int(index_x), int(index_y)] for (index_x, index_y) in (str(path).split('\\')[-1][1:].split('_') for path in get_all_paths_in_directory(self.level_path) if path.suffix == Map.TILE_EXTENSION))
+        max_tile_x = 0
+        max_tile_y = 0
+        for (tile_x, tile_y) in tile_size_generator:
+            if tile_x > max_tile_x:
+                max_tile_x = tile_x
+            if tile_y > max_tile_y:
+                max_tile_y = tile_y
+        self.map_wh = array('i', [Map.TILE_WH + (max_tile_x * Map.TILE_WH), Map.TILE_WH + (max_tile_y * Map.TILE_WH)])
+        self.tiles_across = max_tile_x + 1
+        self.tiles_high = max_tile_y + 1
+        self.min_tile_x = 0
+        self.min_tile_y = 0
+        self.max_tile_x = self.tiles_across - 1
+        self.max_tile_y = self.tiles_high - 1
+        # initialize tiles
+        self.tiles = [[Tile(level_path, index_x, index_y) for index_y in range(self.tiles_high)] for index_x in range(self.tiles_across)]
+        # initialize map offset and loaded tiles
+        self.offset_x = -round(player_center_x - (Screen.width // 2))
+        self.offset_y = -round(player_center_y - (Screen.height // 2))
     #
     def update_tile_loading(self, Singleton, Render, Screen, gl_context, Time, Keys, Cursor):
         # adjust the offset depending on the map edges
