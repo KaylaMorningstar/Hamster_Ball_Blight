@@ -7,6 +7,10 @@ from bresenham import bresenham
 
 
 class Player():
+    # collision vs no collision
+    NO_COLLISION = 0
+    COLLISION = 1
+
     # states
     BALLISTIC = 0
     FLAT_GROUND_STATIONARY = 1
@@ -64,6 +68,7 @@ class Player():
         # state
         self.last_state: int = Player.BALLISTIC
         self.state: int = Player.BALLISTIC
+        self.collision_status: int = Player.NO_COLLISION
         #
         # pathing
         self.player_image_folder_path: str = f'{PATH}\\Images\\not_always_loaded\\game\\player\\'
@@ -136,6 +141,8 @@ class Player():
     #
     def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
         self.last_state = self.state
+        self.last_position_x = self.position_x
+        self.last_position_y = self.position_y
         self._update_player_controls(Keys)
         self._get_normal_force_angle(Singleton.map)
         self._get_normal_force(Time)
@@ -181,8 +188,10 @@ class Player():
         # end the function if there was no collision
         if number_of_collisions == 0:
             self.normal_force_angle = None
+            self.collision_status = Player.NO_COLLISION
             return
         # get the normal force angle
+        self.collision_status = Player.COLLISION
         self.normal_force_angle = round((math.degrees(math.atan2(cumulative_y / number_of_collisions, cumulative_x / number_of_collisions)) - 180) % 360, 2)
     #
     def _get_normal_force(self, Time):
@@ -230,43 +239,67 @@ class Player():
         unimpeded_position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
         unimpeded_position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
 
-        # update state
-        collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, round(unimpeded_position_x), round(unimpeded_position_y), inner=False)
-        if number_of_collisions == 0:
-            self.state = Player.BALLISTIC
-        else:
-            self.state = Player.FLAT_GROUND_STATIONARY
+        # condition if no collision was detected last frame
+        if self.collision_status == Player.NO_COLLISION:
+            unimpeded_position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
+            unimpeded_position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
+            previous_offset_x = round(self.position_x)
+            previous_offset_y = round(self.position_y)
+            collision_encountered = False
+            for (offset_x, offset_y) in bresenham(round(self.position_x), round(self.position_y), round(unimpeded_position_x), round(unimpeded_position_y)):
+                collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=True)
+                if number_of_collisions > 0:
+                    self.position_x = previous_offset_x
+                    self.position_y = previous_offset_y
+                    collision_encountered = True
+                    print('collision')
+                    break
+                previous_offset_x = offset_x
+                previous_offset_y = offset_y
+            if not collision_encountered:
+                self.position_x = unimpeded_position_x
+                self.position_y = unimpeded_position_y
+            print('s1', (self.position_x, self.position_y), self.force_normal_y, Time.current_tick)
+        # condition if a collision was detected last frame
+        if self.collision_status == Player.COLLISION:
+            # elastic collision
+            self.position_x = (self.velocity_x * Time.delta_time) + self.position_x
+            self.position_y = (self.velocity_y * Time.delta_time) + self.position_y
+            # roll on slope
+            print('s2', (self.position_x, self.position_y), self.force_normal_y, Time.current_tick)
 
-        match (self.last_state, self.state):
-            # ballistic -> ballistic
-            case (Player.BALLISTIC, Player.BALLISTIC):
-                print('s1', (self.position_x, self.position_y))
-                self.position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
-                self.position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
-            # ballistic -> any type of collision
-            case (Player.BALLISTIC, _):
-                print('s2', (self.position_x, self.position_y))
-                unimpeded_position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
-                unimpeded_position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
-                previous_offset_x = round(self.position_x)
-                previous_offset_y = round(self.position_y)
-                for (offset_x, offset_y) in bresenham(round(self.last_position_x), round(self.last_position_y), round(unimpeded_position_x), round(unimpeded_position_y)):
-                    collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=True)
-                    if number_of_collisions > 0:
-                        self.position_x = previous_offset_x
-                        self.position_y = previous_offset_y
-                        print('sf', (self.position_x, self.position_y))
-                        break
-                    previous_offset_x = offset_x
-                    previous_offset_y = offset_y
-            # any type of collision -> ballistic
-            case (_, _):
-                self.position_x = (self.velocity_x * Time.delta_time) + self.position_x
-                self.position_y = (self.velocity_y * Time.delta_time) + self.position_y
-                print('s3', (self.position_x, self.position_y), (self.velocity_x, self.velocity_y), self.last_state, self.state)
+        # # calculate position based on state
+        # match (self.collision_status):
+        #     # ballistic -> ballistic
+        #     case (Player.NO_COLLISION):
+        #         #print('s1', (self.position_x, self.position_y))
+        #         self.state = Player.BALLISTIC
+        #         self.position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
+        #         self.position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
+        #     # ballistic -> any type of collision
+        #     case (Player.NO_COLLISION, Player.COLLISION):
+        #         #print('s2', (self.position_x, self.position_y))
+        #         unimpeded_position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
+        #         unimpeded_position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
+        #         previous_offset_x = round(self.position_x)
+        #         previous_offset_y = round(self.position_y)
+        #         for (offset_x, offset_y) in bresenham(round(self.last_position_x), round(self.last_position_y), round(unimpeded_position_x), round(unimpeded_position_y)):
+        #             collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=True)
+        #             if number_of_collisions > 0:
+        #                 self.position_x = previous_offset_x
+        #                 self.position_y = previous_offset_y
+        #                 print('sf', round(self.last_position_x), round(self.last_position_y), round(unimpeded_position_x), round(unimpeded_position_y), (self.position_x, self.position_y))
+        #                 break
+        #             previous_offset_x = offset_x
+        #             previous_offset_y = offset_y
+        #     # any type of collision -> ballistic
+        #     case (Player.COLLISION, Player.NO_COLLISION):
+        #         self.position_x = (self.velocity_x * Time.delta_time) + self.position_x
+        #         self.position_y = (self.velocity_y * Time.delta_time) + self.position_y
+        #         #print('s3', (self.position_x, self.position_y), (self.velocity_x, self.velocity_y), self.last_state, self.state)
+        #     case (Player.COLLISION, Player.COLLISION):
+        #         print('s4')
 
-        self.last_position_x = self.position_x
-        self.last_position_y = self.position_y
         self.ball_center_x = self.position_x + self.ball_radius
         self.ball_center_y = self.position_y + self.ball_radius
     #

@@ -26,7 +26,7 @@ class ScreenObject():
         self.width = 1000
         self.height = 700
         self.aspect = self.width / self.height
-        self.screen = pygame.display.set_mode((self.width, self.height), pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
+        self.screen = pygame.display.set_mode((self.width, self.height), flags=(pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE))
         self.display = pygame.Surface((self.width, self.height))
     #
     def update_aspect(self):
