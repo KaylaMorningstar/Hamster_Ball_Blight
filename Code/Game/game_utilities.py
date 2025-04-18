@@ -48,7 +48,7 @@ class Map():
         self.offset_y: int = 0
         self.tiles: list[list[Tile]]
     #
-    def load_level(self, Screen, level_path: str, player_center_x: int | float, player_center_y: int | float):
+    def load_level(self, Singleton, Render, gl_context, Screen, Time, Keys, Cursor, level_path: str, player_center_x: int | float, player_center_y: int | float):
         self.level_path = level_path
         # get the map size
         tile_size_generator = ([int(index_x), int(index_y)] for (index_x, index_y) in (str(path).split('\\')[-1][1:].split('_') for path in get_all_paths_in_directory(self.level_path) if path.suffix == Map.TILE_EXTENSION))
@@ -71,6 +71,8 @@ class Map():
         # initialize map offset and loaded tiles
         self.offset_x = -round(player_center_x - (Screen.width // 2))
         self.offset_y = -round(player_center_y - (Screen.height // 2))
+
+        self.update_tile_loading(Singleton, Render, Screen, gl_context, Time, Keys, Cursor)
     #
     def update_tile_loading(self, Singleton, Render, Screen, gl_context, Time, Keys, Cursor):
         # adjust the offset depending on the map edges

@@ -275,8 +275,8 @@ class Player():
     #
     def _update_screen_position(self, Map, Screen, Time):
         # left-right movement
-        self.player_box_left = (Screen.width / 2) - Player.MAX_LEFT - self.ball_radius
-        self.player_box_right = (Screen.width / 2) + Player.MAX_RIGHT - self.ball_radius
+        self.player_box_left = (Screen.width // 2) - Player.MAX_LEFT - math.floor(self.ball_radius)
+        self.player_box_right = (Screen.width // 2) + Player.MAX_RIGHT - math.floor(self.ball_radius)
         if Map.reached_left_edge:
             self.screen_position_x = self.position_x
             if self.screen_position_x > self.player_box_left:
@@ -295,8 +295,8 @@ class Player():
             self.screen_position_x = move_number_to_desired_range(self.player_box_left, self.screen_position_x, self.player_box_right)
             Map.offset_x = round(self.screen_position_x - self.position_x)
         # up-down movement
-        self.player_box_up = (Screen.height / 2) - Player.MAX_UP - self.ball_radius
-        self.player_box_down = (Screen.height / 2) + Player.MAX_DOWN - self.ball_radius
+        self.player_box_up = (Screen.height // 2) - Player.MAX_UP - math.floor(self.ball_radius)
+        self.player_box_down = (Screen.height // 2) + Player.MAX_DOWN - math.floor(self.ball_radius)
         if Map.reached_top_edge:
             self.screen_position_y = self.position_y
             if self.screen_position_y > self.player_box_up:
