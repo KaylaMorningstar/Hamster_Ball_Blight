@@ -246,27 +246,29 @@ class Player():
             previous_offset_x = round(self.position_x)
             previous_offset_y = round(self.position_y)
             collision_encountered = False
+            a = (round(self.position_x), round(self.position_y), round(unimpeded_position_x), round(unimpeded_position_y))
             for (offset_x, offset_y) in bresenham(round(self.position_x), round(self.position_y), round(unimpeded_position_x), round(unimpeded_position_y)):
                 collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=True)
                 if number_of_collisions > 0:
+                    print('col1')
                     self.position_x = previous_offset_x
                     self.position_y = previous_offset_y
                     collision_encountered = True
-                    # print('collision')
                     break
                 previous_offset_x = offset_x
                 previous_offset_y = offset_y
             if not collision_encountered:
                 self.position_x = unimpeded_position_x
                 self.position_y = unimpeded_position_y
-            # print('s1', (self.position_x, self.position_y), self.force_normal_y, Time.current_tick)
+            #print('s1', (self.position_x, self.position_y), (self.force_normal_x, self.force_normal_y), a)
         # condition if a collision was detected last frame
         if self.collision_status == Player.COLLISION:
+            print('col2')
             # elastic collision
             self.position_x = (self.velocity_x * Time.delta_time) + self.position_x
             self.position_y = (self.velocity_y * Time.delta_time) + self.position_y
             # roll on slope
-            # print('s2', (self.position_x, self.position_y), self.force_normal_y, Time.current_tick)
+            #print('s2', (self.position_x, self.position_y), (self.force_normal_x, self.force_normal_y))
 
         self.ball_center_x = self.position_x + self.ball_radius
         self.ball_center_y = self.position_y + self.ball_radius
@@ -291,7 +293,7 @@ class Player():
             else:
                 self.screen_position_x -= Player.BALL_POSITION_ON_SCREEN_SPEED_X * Time.delta_time
             self.screen_position_x = move_number_to_desired_range(self.player_box_left, self.screen_position_x, self.player_box_right)
-            Map.offset_x = int(self.screen_position_x - self.position_x)
+            Map.offset_x = round(self.screen_position_x - self.position_x)
         # up-down movement
         self.player_box_up = (Screen.height / 2) - Player.MAX_UP - self.ball_radius
         self.player_box_down = (Screen.height / 2) + Player.MAX_DOWN - self.ball_radius
@@ -311,7 +313,8 @@ class Player():
             else:
                 self.screen_position_y -= Player.BALL_POSITION_ON_SCREEN_SPEED_Y * Time.delta_time
             self.screen_position_y = move_number_to_desired_range(self.player_box_up, self.screen_position_y, self.player_box_down)
-            Map.offset_y = int(self.screen_position_y - self.position_y)
+            Map.offset_y = round(self.screen_position_y - self.position_y)
+        print((self.position_x, self.position_y), (self.screen_position_x, self.screen_position_y), (Map.offset_x, Map.offset_y))
     #
     def _reset_forces(self):
         self.force_gravity_x = Player.DEFAULT_FORCE_GRAVITY_X

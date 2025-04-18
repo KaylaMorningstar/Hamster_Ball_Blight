@@ -1,4 +1,4 @@
-from Code.utilities import loading_and_unloading_images_manager, IMAGE_PATHS, LOADED_IN_MENU, LOADED_IN_GAME, LOADED_IN_EDITOR
+from Code.utilities import loading_and_unloading_images_manager, IMAGE_PATHS, LOADED_IN_MENU, LOADED_IN_GAME, LOADED_IN_EDITOR, COLORS
 from Code.Game.game_utilities import Map, StoredDraws
 from Code.Game.game_objects import Player
 from copy import deepcopy
@@ -38,3 +38,5 @@ def game_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
 
     # execute stored draws
     Singleton.stored_draws.draw(Render, Screen, gl_context)
+
+    Render.draw_string_of_characters(Screen, gl_context, f"({Singleton.player.position_x}, {Singleton.player.position_y}), ({Singleton.player.screen_position_x}, {Singleton.player.screen_position_y}), ({Singleton.map.offset_x}, {Singleton.map.offset_y})", [0, 0], 3, COLORS['RED'])
