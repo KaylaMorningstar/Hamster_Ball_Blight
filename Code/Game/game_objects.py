@@ -176,8 +176,8 @@ class Player():
                 number_of_collisions += 1
                 continue
             # get map collision pixel data
-            tile_x, pixel_x = divmod(x_pos+offset_x, Map.TILE_WH)
-            tile_y, pixel_y = divmod(y_pos+offset_y, Map.TILE_WH)
+            tile_x, pixel_x = divmod(x_pos+offset_x-1, Map.TILE_WH)
+            tile_y, pixel_y = divmod(y_pos+offset_y-1, Map.TILE_WH)
             pixel_collision = map_object.tiles[tile_x][tile_y].collision_bytearray[(pixel_y * Map.TILE_WH) + pixel_x]
             # record collisions from the map
             if (pixel_collision == Map.COLLISION) or (pixel_collision == Map.GRAPPLEABLE):
@@ -193,6 +193,7 @@ class Player():
         # get the normal force angle
         self.collision_status = Player.COLLISION
         self.normal_force_angle = round((math.degrees(math.atan2(cumulative_y / number_of_collisions, cumulative_x / number_of_collisions)) - 180) % 360, 2)
+        print(self.normal_force_angle)
     #
     def _get_normal_force(self, Time):
         # no normal force if the ball is undergoing ballistic motion
@@ -246,11 +247,9 @@ class Player():
             previous_offset_x = round(self.position_x)
             previous_offset_y = round(self.position_y)
             collision_encountered = False
-            a = (round(self.position_x), round(self.position_y), round(unimpeded_position_x), round(unimpeded_position_y))
             for (offset_x, offset_y) in bresenham(round(self.position_x), round(self.position_y), round(unimpeded_position_x), round(unimpeded_position_y)):
                 collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=True)
                 if number_of_collisions > 0:
-                    print('col1')
                     self.position_x = previous_offset_x
                     self.position_y = previous_offset_y
                     collision_encountered = True
@@ -260,15 +259,12 @@ class Player():
             if not collision_encountered:
                 self.position_x = unimpeded_position_x
                 self.position_y = unimpeded_position_y
-            #print('s1', (self.position_x, self.position_y), (self.force_normal_x, self.force_normal_y), a)
         # condition if a collision was detected last frame
         if self.collision_status == Player.COLLISION:
-            print('col2')
             # elastic collision
             self.position_x = (self.velocity_x * Time.delta_time) + self.position_x
             self.position_y = (self.velocity_y * Time.delta_time) + self.position_y
             # roll on slope
-            #print('s2', (self.position_x, self.position_y), (self.force_normal_x, self.force_normal_y))
 
         self.ball_center_x = self.position_x + self.ball_radius
         self.ball_center_y = self.position_y + self.ball_radius
@@ -314,7 +310,6 @@ class Player():
                 self.screen_position_y -= Player.BALL_POSITION_ON_SCREEN_SPEED_Y * Time.delta_time
             self.screen_position_y = move_number_to_desired_range(self.player_box_up, self.screen_position_y, self.player_box_down)
             Map.offset_y = round(self.screen_position_y - self.position_y)
-        print((self.position_x, self.position_y), (self.screen_position_x, self.screen_position_y), (Map.offset_x, Map.offset_y))
     #
     def _reset_forces(self):
         self.force_gravity_x = Player.DEFAULT_FORCE_GRAVITY_X

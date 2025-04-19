@@ -41,5 +41,3 @@ def game_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
 
     # execute stored draws
     Singleton.stored_draws.draw(Render, Screen, gl_context)
-
-    Render.draw_string_of_characters(Screen, gl_context, f"({Singleton.player.position_x}, {Singleton.player.position_y}), ({Singleton.player.screen_position_x}, {Singleton.player.screen_position_y}), ({Singleton.map.offset_x}, {Singleton.map.offset_y})", [0, 0], 3, COLORS['RED'])
