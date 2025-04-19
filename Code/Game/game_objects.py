@@ -1,7 +1,7 @@
 import pygame
 import math
 from copy import deepcopy
-from Code.utilities import atan2, move_number_to_desired_range, difference_between_angles
+from Code.utilities import atan2, move_number_to_desired_range, difference_between_angles, angle_in_range
 from Code.Game.game_utilities import Map
 from bresenham import bresenham
 
@@ -63,6 +63,17 @@ class Player():
     DEFAULT_FORCE_WATER_X = 0.0
     DEFAULT_FORCE_WATER_Y = 0.0
 
+    def set_gravity(self, gravity_x: float | None = None, gravity_y: float | None = None):
+        if gravity_x is not None:
+            Player.DEFAULT_FORCE_GRAVITY_X = gravity_x
+            self.force_gravity_x = gravity_x
+        if gravity_x is not None:
+            Player.DEFAULT_FORCE_GRAVITY_Y = gravity_y
+            self.force_gravity_y = gravity_y
+        self.gravity_angle = math.degrees(math.atan2(-self.force_gravity_y, self.force_gravity_x)) % 360
+        self.normal_force_lower_angle = (((self.gravity_angle - 180) % 360) - 90) % 360
+        self.normal_force_upper_angle = (((self.gravity_angle - 180) % 360) + 90) % 360
+    #
     def __init__(self, PATH: str):
         #
         # state
@@ -75,7 +86,15 @@ class Player():
         self.inner_ball_collision_path: str = 'inner_ball_collision.png'
         self.outer_ball_collision_path: str = 'outer_ball_collision.png'
         #
+        # force adjacent
+        self.normal_force_lower_angle: float
+        self.normal_force_upper_angle: float
+        self.gravity_angle: float
+        self.normal_force_angle: float | None = None
+        self.angle_of_motion: float | None = None
+        #
         # forces
+        self.set_gravity(gravity_x=Player.DEFAULT_FORCE_GRAVITY_X, gravity_y=Player.DEFAULT_FORCE_GRAVITY_Y)
         self.force_gravity_x: float = Player.DEFAULT_FORCE_GRAVITY_X
         self.force_gravity_y: float = Player.DEFAULT_FORCE_GRAVITY_Y
         self.force_movement_x: float = Player.DEFAULT_FORCE_MOVEMENT_X
@@ -88,10 +107,6 @@ class Player():
         self.force_water_y: float = Player.DEFAULT_FORCE_WATER_Y
         self.force_x: float = 0.0
         self.force_y: float = 0.0
-        #
-        # force adjacent
-        self.normal_force_angle: float | None = None
-        self.angle_of_motion: float | None = None
         #
         # acceleration, velocity, position
         self.acceleration_x: float = 0.0
@@ -193,17 +208,17 @@ class Player():
         # get the normal force angle
         self.collision_status = Player.COLLISION
         self.normal_force_angle = round((math.degrees(math.atan2(cumulative_y / number_of_collisions, cumulative_x / number_of_collisions)) - 180) % 360, 2)
-        print(self.normal_force_angle)
     #
     def _get_normal_force(self, Time):
         # no normal force if the ball is undergoing ballistic motion
         if self.normal_force_angle is None:
             return
         # normal force from gravity
-        if 0.0 <= self.normal_force_angle <= 180.0:
+        if angle_in_range(self.normal_force_lower_angle, self.normal_force_angle, self.normal_force_upper_angle):
             magnitude_of_gravity = math.sqrt((self.force_gravity_x ** 2) + (self.force_gravity_y ** 2))
             self.force_normal_x += magnitude_of_gravity * round(math.cos(math.radians(self.normal_force_angle)), 2)
             self.force_normal_y += magnitude_of_gravity * round(math.sin(math.radians(self.normal_force_angle)), 2)
+            print('s1', self.force_normal_x, self.force_normal_y)
         # normal force from impulse; no impulse if motionless
         if self.angle_of_motion is not None:
             # Fdt = mdv
