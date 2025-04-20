@@ -44,8 +44,8 @@ class Player():
     MAX_VELOCITY_Y = 900
 
     # force applied from movement
-    FORCE_MOVEMENT_X = 400
-    FORCE_MOVEMENT_Y = 400
+    FORCE_MOVEMENT_X = 600
+    FORCE_MOVEMENT_Y = 600
 
     # elasticity for the normal force
     MAX_ELASTICITY = 1.0
@@ -250,6 +250,8 @@ class Player():
         initial_velocity_y = self.velocity_y
         self.velocity_x = self.velocity_x + (self.acceleration_x * Time.delta_time)
         self.velocity_y = self.velocity_y + (self.acceleration_y * Time.delta_time)
+        self.velocity_x = move_number_to_desired_range(-Player.MAX_VELOCITY_X, self.velocity_x, Player.MAX_VELOCITY_X)
+        self.velocity_y = move_number_to_desired_range(-Player.MAX_VELOCITY_Y, self.velocity_y, Player.MAX_VELOCITY_Y)
         self.velocity = math.sqrt((self.velocity_x ** 2) + (self.velocity_y ** 2))
         self.angle_of_motion = None if self.velocity == 0.0 else math.degrees(math.atan2(-self.velocity_y, self.velocity_x)) % 360
         unimpeded_position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
