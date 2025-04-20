@@ -6,6 +6,11 @@ from Code.Game.game_utilities import Map
 from bresenham import bresenham
 
 
+# slopes
+# normal force from player movement
+# no impulse when sufficiently slow
+
+
 class Player():
     # collision vs no collision
     NO_COLLISION = 0
@@ -192,8 +197,8 @@ class Player():
                 number_of_collisions += 1
                 continue
             # get map collision pixel data
-            tile_x, pixel_x = divmod(x_pos+offset_x-1, Map.TILE_WH)
-            tile_y, pixel_y = divmod(y_pos+offset_y-1, Map.TILE_WH)
+            tile_x, pixel_x = divmod(x_pos+offset_x, Map.TILE_WH)
+            tile_y, pixel_y = divmod(y_pos+offset_y, Map.TILE_WH)
             pixel_collision = map_object.tiles[tile_x][tile_y].collision_bytearray[(pixel_y * Map.TILE_WH) + pixel_x]
             # record collisions from the map
             if (pixel_collision == Map.COLLISION) or (pixel_collision == Map.GRAPPLEABLE):
@@ -219,6 +224,11 @@ class Player():
             magnitude_of_gravity = math.sqrt((self.force_gravity_x ** 2) + (self.force_gravity_y ** 2))
             self.force_normal_x += magnitude_of_gravity * round(math.cos(math.radians(self.normal_force_angle)), 2)
             self.force_normal_y += magnitude_of_gravity * -round(math.sin(math.radians(self.normal_force_angle)), 2)
+        # normal force from player movement
+        if (self.force_movement_x != 0) and (self.force_movement_y != 0):
+            magnitude_of_movement = math.sqrt((self.force_movement_x ** 2) + (self.force_movement_y ** 2))
+            self.force_normal_x += magnitude_of_movement * round(math.cos(math.radians(self.normal_force_angle)), 2)
+            self.force_normal_y += magnitude_of_movement * -round(math.sin(math.radians(self.normal_force_angle)), 2)
         # normal force from impulse; no impulse if motionless
         if self.angle_of_motion is not None:
             # Fdt = mdv
@@ -369,8 +379,8 @@ class Player():
             for index_y in range(self.outer_ball_collision_image.get_height()):
                 if self.outer_ball_collision_image.get_at((index_x, index_y)) == (0, 0, 0, 255):
                     angle_from_center = atan2((index_x + 0.5 - self.ball_radius - 1), -(index_y + 0.5 - self.ball_radius - 1))
-                    self.outer_ball_collision_data[(index_x, index_y)] = (angle_from_center, math.cos(math.radians(angle_from_center)), math.sin(math.radians(angle_from_center)))
-                    self.outer_ball_collisions[(index_x, index_y)] = False
+                    self.outer_ball_collision_data[(index_x - 1, index_y - 1)] = (angle_from_center, math.cos(math.radians(angle_from_center)), math.sin(math.radians(angle_from_center)))
+                    self.outer_ball_collisions[(index_x - 1, index_y - 1)] = False
         # define a default collision to revert active collisions each frame
         self.inner_ball_collisions_default = deepcopy(self.inner_ball_collisions)
         self.outer_ball_collisions_default = deepcopy(self.outer_ball_collisions)
