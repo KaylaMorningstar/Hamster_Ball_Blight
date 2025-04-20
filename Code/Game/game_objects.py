@@ -7,8 +7,8 @@ from bresenham import bresenham
 
 
 # slopes
-# normal force from player movement
 # no impulse when sufficiently slow
+# friction
 
 
 class Player():
@@ -18,13 +18,6 @@ class Player():
 
     # states
     BALLISTIC = 0
-    FLAT_GROUND_STATIONARY = 1
-    FLAT_GROUND_LEFT = 2
-    FLAT_GROUND_RIGHT = 3
-    UP_LEFT_SLOPE = 4
-    DOWN_LEFT_SLOPE = 5
-    UP_RIGHT_SLOPE = 6
-    DOWN_RIGHT_SLOPE = 7
 
     # ball size
     BALL_WH = 69
@@ -44,9 +37,12 @@ class Player():
     BALL_POSITION_ON_SCREEN_SPEED_X = 6 * 60
     BALL_POSITION_ON_SCREEN_SPEED_Y = 3 * 60
 
-    # max velocity in x and y directions
+    # attrbiutes dictating how velocity should behave
     MAX_VELOCITY_X = 400
     MAX_VELOCITY_Y = 900
+    ANGLE_FOR_IMPULSE = 20
+    STOP_BOUNCING_SPEED = 100
+    FLAT_GROUND = 10
 
     # force applied from movement
     FORCE_MOVEMENT_X = 600
@@ -85,6 +81,7 @@ class Player():
         self.last_state: int = Player.BALLISTIC
         self.state: int = Player.BALLISTIC
         self.collision_status: int = Player.NO_COLLISION
+        self.on_a_slope: bool = False
         #
         # pathing
         self.player_image_folder_path: str = f'{PATH}\\Images\\not_always_loaded\\game\\player\\'
@@ -232,8 +229,30 @@ class Player():
         # normal force from impulse; no impulse if motionless
         if self.angle_of_motion is not None:
             # Fdt = mdv
-            # get the reflection angle
-            resulting_angle = self._reflect_angle(self.normal_force_angle, (self.angle_of_motion + 180) % 360)
+            # check whether the ball is on a slope
+            on_a_slope = (abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) < Player.ANGLE_FOR_IMPULSE)  # direction of movement roughly matches the angle of the slope
+            bouncing_low = ((self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED) and  # velocity is low in the direction of gravity
+                            abs(difference_between_angles(self.gravity_angle + 180, self.normal_force_angle)) < Player.FLAT_GROUND)  # ground is roughly flat in relation to gravity
+            # get the angle the ball will be moving after collision
+            # if the ball is roughly on a slope, then snap the ball to the slope
+            if on_a_slope:
+                slope_angle1 = (self.normal_force_angle + 90) % 360
+                slope_angle2 = (self.normal_force_angle - 90) % 360
+                if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) < Player.ANGLE_FOR_IMPULSE:
+                    resulting_angle = slope_angle1
+                elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) < Player.ANGLE_FOR_IMPULSE:
+                    resulting_angle = slope_angle2
+            # if the ball is bouncing without much speed, then snap the ball to the slope
+            elif bouncing_low:
+                slope_angle1 = (self.normal_force_angle + 90) % 360
+                slope_angle2 = (self.normal_force_angle - 90) % 360
+                if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) < 90:
+                    resulting_angle = slope_angle1
+                elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) < 90:
+                    resulting_angle = slope_angle2
+            # normal impulse collision
+            else:
+                resulting_angle = self._reflect_angle(self.normal_force_angle, (self.angle_of_motion + 180) % 360)
             # calculate elasticity
             elasticity = self._calculate_elasticity(self.angle_of_motion, resulting_angle)
             # calculate the final velocity in x and y directions
