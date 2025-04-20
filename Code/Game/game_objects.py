@@ -49,7 +49,7 @@ class Player():
 
     # elasticity for the normal force
     MAX_ELASTICITY = 1.0
-    MIN_ELASTICITY = 0.25
+    MIN_ELASTICITY = 0.35
 
     # forces are reset to these values each frame
     DEFAULT_FORCE_GRAVITY_X = 0.0
@@ -95,6 +95,7 @@ class Player():
         #
         # forces
         self.set_gravity(gravity_x=Player.DEFAULT_FORCE_GRAVITY_X, gravity_y=Player.DEFAULT_FORCE_GRAVITY_Y)
+        #self.set_gravity(400, 400)
         self.force_gravity_x: float = Player.DEFAULT_FORCE_GRAVITY_X
         self.force_gravity_y: float = Player.DEFAULT_FORCE_GRAVITY_Y
         self.force_movement_x: float = Player.DEFAULT_FORCE_MOVEMENT_X
@@ -217,8 +218,7 @@ class Player():
         if angle_in_range(self.normal_force_lower_angle, self.normal_force_angle, self.normal_force_upper_angle):
             magnitude_of_gravity = math.sqrt((self.force_gravity_x ** 2) + (self.force_gravity_y ** 2))
             self.force_normal_x += magnitude_of_gravity * round(math.cos(math.radians(self.normal_force_angle)), 2)
-            self.force_normal_y += magnitude_of_gravity * round(math.sin(math.radians(self.normal_force_angle)), 2)
-            print('s1', self.force_normal_x, self.force_normal_y)
+            self.force_normal_y += magnitude_of_gravity * -round(math.sin(math.radians(self.normal_force_angle)), 2)
         # normal force from impulse; no impulse if motionless
         if self.angle_of_motion is not None:
             # Fdt = mdv
@@ -227,7 +227,7 @@ class Player():
             # calculate elasticity
             elasticity = self._calculate_elasticity(self.angle_of_motion, resulting_angle)
             # calculate the final velocity in x and y directions
-            final_velocity = self.velocity
+            final_velocity = self.velocity * elasticity
             final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
             final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
             # add the impulse to the normal force
