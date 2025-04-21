@@ -7,8 +7,9 @@ from bresenham import bresenham
 
 
 # slopes
-# no impulse when sufficiently slow
 # friction
+# vertical speed becomes horizontal when on_a_slope or bouncing_low
+# normal force from movement incorrectly calculated; can enter walls
 
 
 class Player():
@@ -216,17 +217,7 @@ class Player():
         # no normal force if the ball is undergoing ballistic motion
         if self.normal_force_angle is None:
             return
-        # normal force from gravity
-        if angle_in_range(self.normal_force_lower_angle, self.normal_force_angle, self.normal_force_upper_angle):
-            magnitude_of_gravity = math.sqrt((self.force_gravity_x ** 2) + (self.force_gravity_y ** 2))
-            self.force_normal_x += magnitude_of_gravity * round(math.cos(math.radians(self.normal_force_angle)), 2)
-            self.force_normal_y += magnitude_of_gravity * -round(math.sin(math.radians(self.normal_force_angle)), 2)
-        # normal force from player movement
-        if (self.force_movement_x != 0) and (self.force_movement_y != 0):
-            magnitude_of_movement = math.sqrt((self.force_movement_x ** 2) + (self.force_movement_y ** 2))
-            self.force_normal_x += magnitude_of_movement * round(math.cos(math.radians(self.normal_force_angle)), 2)
-            self.force_normal_y += magnitude_of_movement * -round(math.sin(math.radians(self.normal_force_angle)), 2)
-        # normal force from impulse; no impulse if motionless
+        # on a slope, bouncing low, and final angle of motion
         if self.angle_of_motion is not None:
             # Fdt = mdv
             # check whether the ball is on a slope
@@ -253,6 +244,26 @@ class Player():
             # normal impulse collision
             else:
                 resulting_angle = self._reflect_angle(self.normal_force_angle, (self.angle_of_motion + 180) % 360)
+        # normal force from gravity
+        if angle_in_range(self.normal_force_lower_angle, self.normal_force_angle, self.normal_force_upper_angle):
+            magnitude_of_gravity = math.sqrt((self.force_gravity_x ** 2) + (self.force_gravity_y ** 2))
+            self.force_normal_x += magnitude_of_gravity * round(math.cos(math.radians(self.normal_force_angle)), 2)
+            self.force_normal_y += magnitude_of_gravity * -round(math.sin(math.radians(self.normal_force_angle)), 2)
+        # normal force from player movement
+        if ((self.force_movement_x != 0) or (self.force_movement_y != 0)):
+            magnitude_of_movement = math.sqrt((self.force_movement_x ** 2) + (self.force_movement_y ** 2))
+            force_of_movement_angle = math.degrees(math.atan2(-self.force_movement_y, self.force_movement_x)) % 360
+            movement_force_multiplier = math.cos(math.radians(difference_between_angles(force_of_movement_angle, self.normal_force_angle)))
+            magnitude_normal_force_from_movement = abs(magnitude_of_movement * movement_force_multiplier)
+            x = magnitude_normal_force_from_movement * round(math.cos(math.radians(self.normal_force_angle)), 2)
+            y = magnitude_normal_force_from_movement * -round(math.sin(math.radians(self.normal_force_angle)), 2)
+            self.force_normal_x += magnitude_normal_force_from_movement * round(math.cos(math.radians(self.normal_force_angle)), 2)
+            self.force_normal_y += magnitude_normal_force_from_movement * -round(math.sin(math.radians(self.normal_force_angle)), 2)
+            print('s1', (self.force_movement_x, self.force_movement_y), force_of_movement_angle, self.normal_force_angle, magnitude_normal_force_from_movement, (x, y))
+
+
+        # force from impulse
+        if self.angle_of_motion is not None:
             # calculate elasticity
             elasticity = self._calculate_elasticity(self.angle_of_motion, resulting_angle)
             # calculate the final velocity in x and y directions
@@ -311,6 +322,9 @@ class Player():
             self.position_x = (self.velocity_x * Time.delta_time) + self.position_x
             self.position_y = (self.velocity_y * Time.delta_time) + self.position_y
             # roll on slope
+        
+
+        print((self.force_x, self.force_y), (self.force_movement_x, self.force_movement_y), (self.force_normal_x, self.force_normal_y), (self.velocity_x, self.velocity_y), (self.position_x, self.position_y))
 
         self.ball_center_x = self.position_x + self.ball_radius
         self.ball_center_y = self.position_y + self.ball_radius
@@ -330,10 +344,11 @@ class Player():
                 Map.reached_right_edge = False
                 Map.offset_x = Screen.width - Map.map_wh[0]
         if (not Map.reached_left_edge and not Map.reached_right_edge):
-            if self.velocity_x < 0:
-                self.screen_position_x += Player.BALL_POSITION_ON_SCREEN_SPEED_X * Time.delta_time
-            else:
-                self.screen_position_x -= Player.BALL_POSITION_ON_SCREEN_SPEED_X * Time.delta_time
+            if abs(self.velocity_x) > 50:
+                if self.velocity_x < 0:
+                    self.screen_position_x += Player.BALL_POSITION_ON_SCREEN_SPEED_X * Time.delta_time
+                else:
+                    self.screen_position_x -= Player.BALL_POSITION_ON_SCREEN_SPEED_X * Time.delta_time
             self.screen_position_x = move_number_to_desired_range(self.player_box_left, self.screen_position_x, self.player_box_right)
             Map.offset_x = round(self.screen_position_x - self.position_x)
         # up-down movement
@@ -350,10 +365,11 @@ class Player():
                 Map.reached_bottom_edge = False
                 Map.offset_y = Screen.height - Map.map_wh[1]
         if (not Map.reached_top_edge and not Map.reached_bottom_edge):
-            if self.velocity_y < 0:
-                self.screen_position_y += Player.BALL_POSITION_ON_SCREEN_SPEED_Y * Time.delta_time
-            else:
-                self.screen_position_y -= Player.BALL_POSITION_ON_SCREEN_SPEED_Y * Time.delta_time
+            if abs(self.velocity_y) > 50:
+                if self.velocity_y < 0:
+                    self.screen_position_y += Player.BALL_POSITION_ON_SCREEN_SPEED_Y * Time.delta_time
+                else:
+                    self.screen_position_y -= Player.BALL_POSITION_ON_SCREEN_SPEED_Y * Time.delta_time
             self.screen_position_y = move_number_to_desired_range(self.player_box_up, self.screen_position_y, self.player_box_down)
             Map.offset_y = round(self.screen_position_y - self.position_y)
     #
