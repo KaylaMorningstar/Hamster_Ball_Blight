@@ -267,13 +267,16 @@ class Player():
             elasticity = self._calculate_elasticity(self.angle_of_motion, resulting_angle)
             # calculate the final velocity in x and y directions
             if self.on_a_slope or self.bouncing_low:
+                # calculate a multiplier to only get the velocity in the direction of the slope
                 speed_multiplier_angle = abs(difference_between_angles(self.angle_of_motion, resulting_angle))
                 speed_multiplier_angle = speed_multiplier_angle if speed_multiplier_angle > Player.MINIMUM_SLOPE_ANGLE else 0.0
                 final_speed_multiplier = math.cos(math.radians(speed_multiplier_angle))
+                # calculate x-y velocity
                 final_velocity = self.velocity * final_speed_multiplier * elasticity
                 final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
                 final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
             else:
+                # calculate x-y velocity
                 final_velocity = self.velocity * elasticity
                 final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
                 final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
@@ -493,6 +496,7 @@ class Player():
         return ball_collisions, number_of_collisions
     #
     def _readout(self, Time):
+        return
         print(200 * '_')
         print(f"{(self.force_x, self.force_y)=}")
         print(f"{(self.force_gravity_x, self.force_gravity_y)=}")
