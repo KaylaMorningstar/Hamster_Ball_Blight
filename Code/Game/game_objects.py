@@ -9,8 +9,8 @@ from bresenham import bresenham
 # slopes
 # friction
 # low speeds seem to not move the player
-# ballistic with the outer ball collision triggered; snapping to surface works, but velocity should be adjusted too
-# player movement should cancel out on_a_slope and bouncing_low
+# certain player movement should disallow on_a_slope and bouncing_low
+# ball twitches when player pushes against walls
 
 
 class Player():
@@ -255,34 +255,37 @@ class Player():
             self.force_normal_y += magnitude_of_gravity * -round(math.sin(math.radians(self.normal_force_angle)), 2)
         # normal force from player movement
         if ((self.force_movement_x != 0) or (self.force_movement_y != 0)):
-            magnitude_of_movement = math.sqrt((self.force_movement_x ** 2) + (self.force_movement_y ** 2))
             force_of_movement_angle = math.degrees(math.atan2(-self.force_movement_y, self.force_movement_x)) % 360
-            movement_force_multiplier = math.cos(math.radians(difference_between_angles(force_of_movement_angle, self.normal_force_angle)))
-            magnitude_normal_force_from_movement = abs(magnitude_of_movement * movement_force_multiplier)
-            self.force_normal_x += magnitude_normal_force_from_movement * round(math.cos(math.radians(self.normal_force_angle)), 2)
-            self.force_normal_y += magnitude_normal_force_from_movement * -round(math.sin(math.radians(self.normal_force_angle)), 2)
+            # force of movement must oppose the normal force angle to contribute to the normal force
+            if abs(difference_between_angles(force_of_movement_angle, self.normal_force_angle + 180)) <= 90:
+                magnitude_of_movement = math.sqrt((self.force_movement_x ** 2) + (self.force_movement_y ** 2))
+                movement_force_multiplier = math.cos(math.radians(difference_between_angles(force_of_movement_angle, self.normal_force_angle)))
+                magnitude_normal_force_from_movement = abs(magnitude_of_movement * movement_force_multiplier)
+                self.force_normal_x += magnitude_normal_force_from_movement * round(math.cos(math.radians(self.normal_force_angle)), 2)
+                self.force_normal_y += magnitude_normal_force_from_movement * -round(math.sin(math.radians(self.normal_force_angle)), 2)
         # force from impulse
         if self.angle_of_motion is not None:
-            # calculate elasticity
-            elasticity = self._calculate_elasticity(self.angle_of_motion, resulting_angle)
-            # calculate the final velocity in x and y directions
-            if self.on_a_slope or self.bouncing_low:
-                # calculate a multiplier to only get the velocity in the direction of the slope
-                speed_multiplier_angle = abs(difference_between_angles(self.angle_of_motion, resulting_angle))
-                speed_multiplier_angle = speed_multiplier_angle if speed_multiplier_angle > Player.MINIMUM_SLOPE_ANGLE else 0.0
-                final_speed_multiplier = math.cos(math.radians(speed_multiplier_angle))
-                # calculate x-y velocity
-                final_velocity = self.velocity * final_speed_multiplier * elasticity
-                final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
-                final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
-            else:
-                # calculate x-y velocity
-                final_velocity = self.velocity * elasticity
-                final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
-                final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
-            # add the impulse to the normal force
-            self.force_normal_x += Player.MASS * (final_velocity_x - self.velocity_x) / Time.delta_time
-            self.force_normal_y += Player.MASS * (final_velocity_y - self.velocity_y) / Time.delta_time
+            if abs(difference_between_angles(self.angle_of_motion, self.normal_force_angle + 180)) <= 90:
+                # calculate elasticity
+                elasticity = self._calculate_elasticity(self.angle_of_motion, resulting_angle)
+                # calculate the final velocity in x and y directions
+                if self.on_a_slope or self.bouncing_low:
+                    # calculate a multiplier to only get the velocity in the direction of the slope
+                    speed_multiplier_angle = abs(difference_between_angles(self.angle_of_motion, resulting_angle))
+                    speed_multiplier_angle = speed_multiplier_angle if speed_multiplier_angle > Player.MINIMUM_SLOPE_ANGLE else 0.0
+                    final_speed_multiplier = math.cos(math.radians(speed_multiplier_angle))
+                    # calculate x-y velocity
+                    final_velocity = self.velocity * final_speed_multiplier * elasticity
+                    final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
+                    final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
+                else:
+                    # calculate x-y velocity
+                    final_velocity = self.velocity * elasticity
+                    final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
+                    final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
+                # add the impulse to the normal force
+                self.force_normal_x += Player.MASS * (final_velocity_x - self.velocity_x) / Time.delta_time
+                self.force_normal_y += Player.MASS * (final_velocity_y - self.velocity_y) / Time.delta_time
     #
     def _reset_ball_collisions(self):
         self.inner_ball_collisions = deepcopy(self.inner_ball_collisions_default)
@@ -496,11 +499,10 @@ class Player():
         return ball_collisions, number_of_collisions
     #
     def _readout(self, Time):
-        return
-        print(200 * '_')
         print(f"{(self.force_x, self.force_y)=}")
         print(f"{(self.force_gravity_x, self.force_gravity_y)=}")
         print(f"{(self.force_movement_x, self.force_movement_y)=}")
         print(f"{(self.force_normal_x, self.force_normal_y)=}")
         print(f"{(self.velocity_x, self.velocity_y)=}")
         print(f"{(self.position_x, self.position_y)=}")
+        print(200 * '-')
