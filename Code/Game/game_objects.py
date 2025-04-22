@@ -9,7 +9,8 @@ from bresenham import bresenham
 # slopes
 # friction
 # vertical speed becomes horizontal when on_a_slope or bouncing_low
-# normal force from movement incorrectly calculated; can enter walls
+# can enter walls
+# ballistic with the outer ball collision triggered; snapping to surface works, but velocity should be adjusted too
 
 
 class Player():
@@ -83,6 +84,7 @@ class Player():
         self.state: int = Player.BALLISTIC
         self.collision_status: int = Player.NO_COLLISION
         self.on_a_slope: bool = False
+        self.bouncing_low: bool = False
         #
         # pathing
         self.player_image_folder_path: str = f'{PATH}\\Images\\not_always_loaded\\game\\player\\'
@@ -169,6 +171,7 @@ class Player():
         self._calculate_force()
         self._calculate_position(Singleton, Render, Screen, gl_context, Keys, Cursor, Time)
         self._update_screen_position(Singleton.map, Screen, Time)
+        self._readout(Time)
         self._reset_forces()
         self._draw(Singleton.stored_draws, Render, Screen, gl_context)
     #
@@ -221,20 +224,21 @@ class Player():
         if self.angle_of_motion is not None:
             # Fdt = mdv
             # check whether the ball is on a slope
-            on_a_slope = (abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) < Player.ANGLE_FOR_IMPULSE)  # direction of movement roughly matches the angle of the slope
-            bouncing_low = ((self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED) and  # velocity is low in the direction of gravity
-                            abs(difference_between_angles(self.gravity_angle + 180, self.normal_force_angle)) < Player.FLAT_GROUND)  # ground is roughly flat in relation to gravity
+            self.on_a_slope = (abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) < Player.ANGLE_FOR_IMPULSE)  # direction of movement roughly matches the angle of the slope
+            self.bouncing_low = ((self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED) and  # velocity is low in the direction of gravity
+                                 abs(difference_between_angles(self.gravity_angle + 180, self.normal_force_angle)) < Player.FLAT_GROUND)  # ground is roughly flat in relation to gravity
+            print(self.bouncing_low)
             # get the angle the ball will be moving after collision
             # if the ball is roughly on a slope, then snap the ball to the slope
-            if on_a_slope:
+            if self.on_a_slope:
                 slope_angle1 = (self.normal_force_angle + 90) % 360
                 slope_angle2 = (self.normal_force_angle - 90) % 360
                 if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) < Player.ANGLE_FOR_IMPULSE:
                     resulting_angle = slope_angle1
                 elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) < Player.ANGLE_FOR_IMPULSE:
                     resulting_angle = slope_angle2
-            # if the ball is bouncing without much speed, then snap the ball to the slope
-            elif bouncing_low:
+            # if the ball is bouncing without much speed, then snap the ball to the ground
+            elif self.bouncing_low:
                 slope_angle1 = (self.normal_force_angle + 90) % 360
                 slope_angle2 = (self.normal_force_angle - 90) % 360
                 if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) < 90:
@@ -255,13 +259,8 @@ class Player():
             force_of_movement_angle = math.degrees(math.atan2(-self.force_movement_y, self.force_movement_x)) % 360
             movement_force_multiplier = math.cos(math.radians(difference_between_angles(force_of_movement_angle, self.normal_force_angle)))
             magnitude_normal_force_from_movement = abs(magnitude_of_movement * movement_force_multiplier)
-            x = magnitude_normal_force_from_movement * round(math.cos(math.radians(self.normal_force_angle)), 2)
-            y = magnitude_normal_force_from_movement * -round(math.sin(math.radians(self.normal_force_angle)), 2)
             self.force_normal_x += magnitude_normal_force_from_movement * round(math.cos(math.radians(self.normal_force_angle)), 2)
             self.force_normal_y += magnitude_normal_force_from_movement * -round(math.sin(math.radians(self.normal_force_angle)), 2)
-            print('s1', (self.force_movement_x, self.force_movement_y), force_of_movement_angle, self.normal_force_angle, magnitude_normal_force_from_movement, (x, y))
-
-
         # force from impulse
         if self.angle_of_motion is not None:
             # calculate elasticity
@@ -288,10 +287,8 @@ class Player():
         self.acceleration_y = self.force_y / Player.MASS
         initial_velocity_x = self.velocity_x
         initial_velocity_y = self.velocity_y
-        self.velocity_x = self.velocity_x + (self.acceleration_x * Time.delta_time)
-        self.velocity_y = self.velocity_y + (self.acceleration_y * Time.delta_time)
-        self.velocity_x = move_number_to_desired_range(-Player.MAX_VELOCITY_X, self.velocity_x, Player.MAX_VELOCITY_X)
-        self.velocity_y = move_number_to_desired_range(-Player.MAX_VELOCITY_Y, self.velocity_y, Player.MAX_VELOCITY_Y)
+        self.velocity_x = move_number_to_desired_range(-Player.MAX_VELOCITY_X, self.velocity_x + (self.acceleration_x * Time.delta_time), Player.MAX_VELOCITY_X)
+        self.velocity_y = move_number_to_desired_range(-Player.MAX_VELOCITY_Y, self.velocity_y + (self.acceleration_y * Time.delta_time), Player.MAX_VELOCITY_Y)
         self.velocity = math.sqrt((self.velocity_x ** 2) + (self.velocity_y ** 2))
         self.angle_of_motion = None if self.velocity == 0.0 else math.degrees(math.atan2(-self.velocity_y, self.velocity_x)) % 360
         unimpeded_position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
@@ -305,7 +302,7 @@ class Player():
             previous_offset_y = round(self.position_y)
             collision_encountered = False
             for (offset_x, offset_y) in bresenham(round(self.position_x), round(self.position_y), round(unimpeded_position_x), round(unimpeded_position_y)):
-                collision_dict, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=True)
+                _, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=True)
                 if number_of_collisions > 0:
                     self.position_x = previous_offset_x
                     self.position_y = previous_offset_y
@@ -314,18 +311,45 @@ class Player():
                 previous_offset_x = offset_x
                 previous_offset_y = offset_y
             if not collision_encountered:
-                self.position_x = unimpeded_position_x
-                self.position_y = unimpeded_position_y
+                # check if the outer ball has collisions
+                _, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=False)
+                # if no outer ball collisions, then put the ball at its unimpeded position
+                if number_of_collisions == 0:
+                    self.position_x = unimpeded_position_x
+                    self.position_y = unimpeded_position_y
+                # if outer ball collisions, then snap ball to collisions
+                else:
+                    self.position_x = round(unimpeded_position_x)
+                    self.position_y = round(unimpeded_position_y)
         # condition if a collision was detected last frame
         if self.collision_status == Player.COLLISION:
+            unimpeded_position_x = (self.velocity_x * Time.delta_time) + self.position_x
+            unimpeded_position_y = (self.velocity_y * Time.delta_time) + self.position_y
+            previous_offset_x = round(self.position_x)
+            previous_offset_y = round(self.position_y)
+            collision_encountered = False
+            for (offset_x, offset_y) in bresenham(round(self.position_x), round(self.position_y), round(unimpeded_position_x), round(unimpeded_position_y)):
+                _, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=True)
+                if number_of_collisions > 0:
+                    self.position_x = previous_offset_x
+                    self.position_y = previous_offset_y
+                    collision_encountered = True
+                    break
+                previous_offset_x = offset_x
+                previous_offset_y = offset_y
+            if not collision_encountered:
+                # check if the outer ball has collisions
+                _, number_of_collisions = self._get_ball_collisions(Singleton.map, offset_x, offset_y, inner=False)
+                # if no outer ball collisions, then put the ball at its unimpeded position
+                if number_of_collisions == 0:
+                    self.position_x = unimpeded_position_x
+                    self.position_y = unimpeded_position_y
+                # if outer ball collisions, then snap ball to collisions
+                else:
+                    self.position_x = round(unimpeded_position_x)
+                    self.position_y = round(unimpeded_position_y)
             # elastic collision
-            self.position_x = (self.velocity_x * Time.delta_time) + self.position_x
-            self.position_y = (self.velocity_y * Time.delta_time) + self.position_y
             # roll on slope
-        
-
-        print((self.force_x, self.force_y), (self.force_movement_x, self.force_movement_y), (self.force_normal_x, self.force_normal_y), (self.velocity_x, self.velocity_y), (self.position_x, self.position_y))
-
         self.ball_center_x = self.position_x + self.ball_radius
         self.ball_center_y = self.position_y + self.ball_radius
     #
@@ -459,4 +483,13 @@ class Player():
                 ball_collisions[(offset_x, offset_y)] = True
                 continue
         return ball_collisions, number_of_collisions
-        
+    #
+    def _readout(self, Time):
+        return
+        print(200 * '_')
+        print(f"{(self.force_x, self.force_y)=}")
+        print(f"{(self.force_gravity_x, self.force_gravity_y)=}")
+        print(f"{(self.force_movement_x, self.force_movement_y)=}")
+        print(f"{(self.force_normal_x, self.force_normal_y)=}")
+        print(f"{(self.velocity_x, self.velocity_y)=}")
+        print(f"{(self.position_x, self.position_y)=}")
