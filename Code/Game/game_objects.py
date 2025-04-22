@@ -8,9 +8,9 @@ from bresenham import bresenham
 
 # slopes
 # friction
-# vertical speed becomes horizontal when on_a_slope or bouncing_low
-# can enter walls
+# low speeds seem to not move the player
 # ballistic with the outer ball collision triggered; snapping to surface works, but velocity should be adjusted too
+# player movement should cancel out on_a_slope and bouncing_low
 
 
 class Player():
@@ -45,6 +45,7 @@ class Player():
     ANGLE_FOR_IMPULSE = 20
     STOP_BOUNCING_SPEED = 100
     FLAT_GROUND = 10
+    MINIMUM_SLOPE_ANGLE = 1.5
 
     # force applied from movement
     FORCE_MOVEMENT_X = 600
@@ -227,23 +228,22 @@ class Player():
             self.on_a_slope = (abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) < Player.ANGLE_FOR_IMPULSE)  # direction of movement roughly matches the angle of the slope
             self.bouncing_low = ((self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED) and  # velocity is low in the direction of gravity
                                  abs(difference_between_angles(self.gravity_angle + 180, self.normal_force_angle)) < Player.FLAT_GROUND)  # ground is roughly flat in relation to gravity
-            print(self.bouncing_low)
             # get the angle the ball will be moving after collision
             # if the ball is roughly on a slope, then snap the ball to the slope
             if self.on_a_slope:
                 slope_angle1 = (self.normal_force_angle + 90) % 360
                 slope_angle2 = (self.normal_force_angle - 90) % 360
-                if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) < Player.ANGLE_FOR_IMPULSE:
+                if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) <= Player.ANGLE_FOR_IMPULSE:
                     resulting_angle = slope_angle1
-                elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) < Player.ANGLE_FOR_IMPULSE:
+                elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) <= Player.ANGLE_FOR_IMPULSE:
                     resulting_angle = slope_angle2
             # if the ball is bouncing without much speed, then snap the ball to the ground
             elif self.bouncing_low:
                 slope_angle1 = (self.normal_force_angle + 90) % 360
                 slope_angle2 = (self.normal_force_angle - 90) % 360
-                if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) < 90:
+                if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) <= 90:
                     resulting_angle = slope_angle1
-                elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) < 90:
+                elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) <= 90:
                     resulting_angle = slope_angle2
             # normal impulse collision
             else:
@@ -266,9 +266,17 @@ class Player():
             # calculate elasticity
             elasticity = self._calculate_elasticity(self.angle_of_motion, resulting_angle)
             # calculate the final velocity in x and y directions
-            final_velocity = self.velocity * elasticity
-            final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
-            final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
+            if self.on_a_slope or self.bouncing_low:
+                speed_multiplier_angle = abs(difference_between_angles(self.angle_of_motion, resulting_angle))
+                speed_multiplier_angle = speed_multiplier_angle if speed_multiplier_angle > Player.MINIMUM_SLOPE_ANGLE else 0.0
+                final_speed_multiplier = math.cos(math.radians(speed_multiplier_angle))
+                final_velocity = self.velocity * final_speed_multiplier * elasticity
+                final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
+                final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
+            else:
+                final_velocity = self.velocity * elasticity
+                final_velocity_x = final_velocity * math.cos(math.radians(resulting_angle))
+                final_velocity_y = -final_velocity * math.sin(math.radians(resulting_angle))
             # add the impulse to the normal force
             self.force_normal_x += Player.MASS * (final_velocity_x - self.velocity_x) / Time.delta_time
             self.force_normal_y += Player.MASS * (final_velocity_y - self.velocity_y) / Time.delta_time
@@ -485,7 +493,6 @@ class Player():
         return ball_collisions, number_of_collisions
     #
     def _readout(self, Time):
-        return
         print(200 * '_')
         print(f"{(self.force_x, self.force_y)=}")
         print(f"{(self.force_gravity_x, self.force_gravity_y)=}")
