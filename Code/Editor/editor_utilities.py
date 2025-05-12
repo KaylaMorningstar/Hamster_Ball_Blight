@@ -1874,7 +1874,7 @@ class RectangleEllipseTool(EditorTool):
 
     BRUSH_THICKNESS = 'Thickness: '
 
-    BRUSH_STYLE = 'Style: '
+    BRUSH_STYLE = 'Mode: '
     OPAQUE_RECTANGLE = 0
     HOLLOW_RECTANGLE = 1
     OPAQUE_ELLIPSE = 2

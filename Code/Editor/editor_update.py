@@ -786,10 +786,11 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 tool_attribute_lt[0] += current_tool.BRUSH_STYLE_WIDTH
                 brush_style_ltwh = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
                 # square or circle toggle
-                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
-                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=[brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]], rgba=COLORS['GREY'])
+                GREY_AREA_LTWH = [brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]]
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, GREY_AREA_LTWH):
+                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=GREY_AREA_LTWH, rgba=COLORS['GREY'])
                 Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=brush_style_ltwh)
-                if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
+                if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, GREY_AREA_LTWH):
                     current_tool.update_brush_style(Render, Screen, gl_context)
                 match current_tool.brush_style:
                     case PencilTool.CIRCLE_BRUSH:
@@ -957,10 +958,11 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 tool_attribute_lt[0] += current_tool.BRUSH_STYLE_WIDTH
                 brush_style_ltwh = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
                 # square or circle toggle
-                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
-                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=[brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]], rgba=COLORS['GREY'])
+                GREY_AREA_LTWH = [brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]]
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, GREY_AREA_LTWH):
+                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=GREY_AREA_LTWH, rgba=COLORS['GREY'])
                 Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=brush_style_ltwh)
-                if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
+                if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, GREY_AREA_LTWH):
                     current_tool.update_brush_style(Render, Screen, gl_context)
                 match current_tool.brush_style:
                     case LineTool.CIRCLE_BRUSH:
@@ -1022,10 +1024,11 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 tool_attribute_lt[0] += current_tool.BRUSH_STYLE_WIDTH
                 brush_style_ltwh = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
                 # opaque or hollow image
-                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
-                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=[brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]], rgba=COLORS['GREY'])
+                GREY_AREA_LTWH = [brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]]
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, GREY_AREA_LTWH):
+                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=GREY_AREA_LTWH, rgba=COLORS['GREY'])
                 Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=brush_style_ltwh)
-                if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, brush_style_ltwh):
+                if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, GREY_AREA_LTWH):
                     current_tool.update_brush_style(Render, Screen, gl_context)
                 STYLE_PIXEL_OFFSET = 4
                 HOLLOW_BORDER_THICKNESS = 2
