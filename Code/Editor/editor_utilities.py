@@ -1865,37 +1865,78 @@ class CurvyLineTool(EditorTool):
         super().__init__(active)
 
 
-class RectangleTool(EditorTool):
+class RectangleEllipseTool(EditorTool):
     NAME = 'Empty rectangle'
     INDEX = 8
-    def __init__(self, active: bool):
+
+    NOT_DRAWING = 0
+    DRAWING = 1
+
+    BRUSH_THICKNESS = 'Thickness: '
+
+    BRUSH_STYLE = 'Style: '
+    OPAQUE_RECTANGLE = 0
+    HOLLOW_RECTANGLE = 1
+    OPAQUE_ELLIPSE = 2
+    HOLLOW_ELLIPSE = 3
+    _MIN_BRUSH_STYLE = 0
+    _MAX_BRUSH_STYLE = 3
+
+    _MIN_BRUSH_THICKNESS = 1
+    _MAX_BRUSH_THICKNESS = 64
+
+    def __init__(self, active: bool, render_instance, screen_instance, gl_context):
+        self.state = RectangleEllipseTool.NOT_DRAWING  # (NOT_DRAWING = 0, DRAWING = 1)
+        self.BRUSH_STYLE_WIDTH = get_text_width(render_instance, RectangleEllipseTool.BRUSH_STYLE, RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        self.BRUSH_THICKNESS_WIDTH = get_text_width(render_instance, RectangleEllipseTool.BRUSH_THICKNESS, RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        self._brush_thickness: int = RectangleEllipseTool._MIN_BRUSH_THICKNESS
+        self.brush_style: int = RectangleEllipseTool.OPAQUE_RECTANGLE
+        self.start_xy: array = array('i', [0, 0])
+        self.start_left_top_xy: array = array('i', [0, 0])
+        self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(RectangleEllipseTool._MIN_BRUSH_THICKNESS, RectangleEllipseTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(RectangleEllipseTool._MAX_BRUSH_THICKNESS)) - 1) * RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], RectangleEllipseTool._TEXT_BACKGROUND_COLOR, RectangleEllipseTool._TEXT_COLOR, RectangleEllipseTool._TEXT_HIGHLIGHT_COLOR, RectangleEllipseTool._HIGHLIGHT_COLOR, RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE, RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [RectangleEllipseTool._MIN_BRUSH_THICKNESS, RectangleEllipseTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(RectangleEllipseTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
         super().__init__(active)
 
+    @property
+    def brush_thickness(self):
+        return self._brush_thickness
 
-class EllipseTool(EditorTool):
-    NAME = 'Empty ellipse'
-    INDEX = 9
-    def __init__(self, active: bool):
-        super().__init__(active)
+    def update_brush_style(self, render_instance, screen_instance, gl_context):
+        self.brush_style += 1
+        if self.brush_style > RectangleEllipseTool._MAX_BRUSH_STYLE:
+            self.brush_style = RectangleEllipseTool._MIN_BRUSH_STYLE
+
+    def update_brush_thickness(self, brush_thickness: int):
+        self._brush_thickness = move_number_to_desired_range(RectangleEllipseTool._MIN_BRUSH_THICKNESS, brush_thickness, RectangleEllipseTool._MAX_BRUSH_THICKNESS)
+
+    def brush_thickness_is_valid(self, brush_thickness: Any):
+        try:
+            int(brush_thickness)
+        except:
+            return False
+        if not (RectangleEllipseTool._MIN_BRUSH_THICKNESS <= int(brush_thickness) <= RectangleEllipseTool._MAX_BRUSH_THICKNESS):
+            return False
+        if int(brush_thickness) == self._brush_thickness:
+            return False
+        return True
 
 
 class BlurTool(EditorTool):
     NAME = 'Blur'
-    INDEX = 10
+    INDEX = 9
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class JumbleTool(EditorTool):
     NAME = 'Jumble'
-    INDEX = 11
+    INDEX = 10
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class EyedropTool(EditorTool):
     NAME = 'Eyedropper'
-    INDEX = 12
+    INDEX = 11
     def __init__(self, active: bool):
         super().__init__(active)
 
@@ -1984,8 +2025,7 @@ class EditorMap():
             BucketTool(False),
             LineTool(False, render_instance, screen_instance, gl_context),
             CurvyLineTool(False),
-            RectangleTool(False),
-            EllipseTool(False),
+            RectangleEllipseTool(False, render_instance, screen_instance, gl_context),
             BlurTool(False),
             JumbleTool(False),
             EyedropTool(False)
@@ -2610,11 +2650,41 @@ class EditorMap():
                 case CurvyLineTool.INDEX:
                     pass
 
-                case RectangleTool.INDEX:
-                    pass
+                case RectangleEllipseTool.INDEX:
+                    cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
+                    pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
+                    ltrb = self._get_ltrb_pixels_on_map()
 
-                case EllipseTool.INDEX:
-                    pass
+                    # get the leftest pixel that needs to be drawn
+                    pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
+                    if pixel_offset_x == 1:
+                        pixel_offset_x = 0
+                    pixel_offset_x *= self.pixel_scale
+                    leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
+                    leftest_brush_pixel = pos_x - ((self.current_tool.brush_thickness - 1) // 2)
+                    pixel_x = leftest_pixel + ((leftest_brush_pixel - ltrb[0]) * self.pixel_scale)
+
+                    # get the topest pixel that needs to be drawn
+                    pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
+                    if pixel_offset_y == 1:
+                        pixel_offset_y = 0
+                    pixel_offset_y *= self.pixel_scale
+                    topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
+                    topest_brush_pixel = pos_y - ((self.current_tool.brush_thickness - 1) // 2)
+                    pixel_y = topest_pixel + ((topest_brush_pixel - ltrb[1]) * self.pixel_scale)
+
+                    ltwh = [pixel_x, pixel_y, self.current_tool.brush_thickness * self.pixel_scale, self.current_tool.brush_thickness * self.pixel_scale]
+
+                    # condition if cursor is on the map
+                    if cursor_on_map:
+                        cursors.add_cursor_this_frame('cursor_big_crosshair')
+                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
+
+                    # change drawing state
+                    if (self.current_tool.state == LineTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
+                        self.current_tool.state = LineTool.DRAWING
+                    elif (self.current_tool.state == LineTool.DRAWING) and keys_class_instance.editor_primary.released:
+                        self.current_tool.state = LineTool.NOT_DRAWING
 
                 case BlurTool.INDEX:
                     pass

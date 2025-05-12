@@ -5,7 +5,7 @@ from copy import deepcopy
 from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, ceil_scaled, floor_scaled, LOADED_IN_EDITOR, LOADED_IN_GAME, LOADED_IN_MENU, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
 from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes, update_collision_selector
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap, get_tf_circle
-from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleTool, EllipseTool, BlurTool, JumbleTool, EyedropTool
+from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleEllipseTool, BlurTool, JumbleTool, EyedropTool
 from Code.Editor.editor_utilities import MapModes, EditorModes, CollisionSelector, CollisionMode
 import random
 
@@ -227,8 +227,7 @@ class EditorSingleton():
                                            (deepcopy(BucketTool.NAME), deepcopy(BucketTool.INDEX)),
                                            (deepcopy(LineTool.NAME), deepcopy(LineTool.INDEX)),
                                            (deepcopy(CurvyLineTool.NAME), deepcopy(CurvyLineTool.INDEX)),
-                                           (deepcopy(RectangleTool.NAME), deepcopy(RectangleTool.INDEX)),
-                                           (deepcopy(EllipseTool.NAME), deepcopy(EllipseTool.INDEX)),
+                                           (deepcopy(RectangleEllipseTool.NAME), deepcopy(RectangleEllipseTool.INDEX)),
                                            (deepcopy(BlurTool.NAME), deepcopy(BlurTool.INDEX)),
                                            (deepcopy(JumbleTool.NAME), deepcopy(JumbleTool.INDEX)),
                                            (deepcopy(EyedropTool.NAME), deepcopy(EyedropTool.INDEX))]

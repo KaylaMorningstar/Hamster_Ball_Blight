@@ -344,7 +344,6 @@ IMAGE_PATHS = {
     'Line':              [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Line.png'],
     'Curvy line':        [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Curvy line.png'],
     'Empty rectangle':   [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Empty rectangle.png'],
-    'Empty ellipse':     [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Empty ellipse.png'],
     'Blur':              [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Blur.png'],
     'Jumble':            [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Jumble.png'],
     'Eyedropper':        [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Eyedropper.png'],
