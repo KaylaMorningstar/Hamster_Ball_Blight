@@ -1019,11 +1019,11 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
 
             case RectangleEllipseTool.INDEX:
                 # brush style
-                # text for the brush style (opaque or hollow square or circle)
+                # text for the brush style (full or hollow square or circle)
                 Render.draw_string_of_characters(Screen, gl_context, string=RectangleEllipseTool.BRUSH_STYLE, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=RectangleEllipseTool.ATTRIBUTE_TEXT_COLOR)
                 tool_attribute_lt[0] += current_tool.BRUSH_STYLE_WIDTH
                 brush_style_ltwh = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
-                # opaque or hollow image
+                # full or hollow image
                 GREY_AREA_LTWH = [brush_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), brush_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]]
                 if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, GREY_AREA_LTWH):
                     Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=GREY_AREA_LTWH, rgba=COLORS['GREY'])
@@ -1035,11 +1035,11 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 CIRCLE_PIXEL_SIZE = 1
                 STYLE_IMAGE_LTWH = [brush_style_ltwh[0] + STYLE_PIXEL_OFFSET, brush_style_ltwh[1] + STYLE_PIXEL_OFFSET, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH - (2 * STYLE_PIXEL_OFFSET), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT - (2 * STYLE_PIXEL_OFFSET)]
                 match current_tool.brush_style:
-                    case RectangleEllipseTool.OPAQUE_RECTANGLE:
+                    case RectangleEllipseTool.FULL_RECTANGLE:
                         Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=STYLE_IMAGE_LTWH, rgba=COLORS['BLACK'])
                     case RectangleEllipseTool.HOLLOW_RECTANGLE:
                         Render.draw_rectangle(Screen, gl_context, ltwh=STYLE_IMAGE_LTWH, border_thickness=HOLLOW_BORDER_THICKNESS, border_color=COLORS['BLACK'], coloring_border=True, inner_color=COLORS['WHITE'], coloring_inside=False)
-                    case RectangleEllipseTool.OPAQUE_ELLIPSE:
+                    case RectangleEllipseTool.FULL_ELLIPSE:
                         Render.draw_circle(Screen, gl_context, ltwh=STYLE_IMAGE_LTWH, circle_size=Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH - (2 * STYLE_PIXEL_OFFSET), circle_pixel_size=CIRCLE_PIXEL_SIZE, rgba=COLORS['BLACK'])
                     case RectangleEllipseTool.HOLLOW_ELLIPSE:
                         Render.draw_circle(Screen, gl_context, ltwh=STYLE_IMAGE_LTWH, circle_size=Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH - (2 * STYLE_PIXEL_OFFSET), circle_pixel_size=CIRCLE_PIXEL_SIZE, rgba=COLORS['BLACK'])
