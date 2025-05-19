@@ -1259,10 +1259,6 @@ def get_circle_tf_indexes(diameter: int):
     return true_indexes
 
 
-def get_tf_square(size: int):
-    return [[True for _ in range(size)] for _ in range(size)]
-
-
 def get_perfect_circle_with_edge_angles(diameter: int):
     # get which pixels are part of the circle
     center = diameter / 2
@@ -1870,6 +1866,7 @@ class RectangleEllipseTool(EditorTool):
     INDEX = 8
 
     RECTANGLE_ELLIPSE_REFERENCE = 'rectangle_ellipse'
+    RECTANGLE_ELLIPSE_REFERENCE2 = 'rectangle_ellipse2'  # used for hollow ellipses
 
     NOT_DRAWING = 0
     DRAWING = 1
@@ -2749,7 +2746,34 @@ class EditorMap():
                                                 # record what was edited for ctrl-Z
                                                 map_edit[tile_name] = original_pixel_color
                             case RectangleEllipseTool.FULL_ELLIPSE:
-                                pass
+                                ellipse_center_x = (x1 + x2 + 1) / 2
+                                ellipse_center_y = (y1 + y2 + 1) / 2
+                                ellipse_radius_x = (abs(x1 - x2) + 1) / 2
+                                ellipse_radius_y = (abs(y1 - y2) + 1) / 2
+                                for edited_pixel_x in range(x1, x2 + 1):
+                                    for edited_pixel_y in range(y1, y2 + 1):
+                                        x_inside_ellipse = ((edited_pixel_x + 0.5 - ellipse_center_x) ** 2) / (ellipse_radius_x ** 2)
+                                        y_inside_ellipse = ((edited_pixel_y + 0.5 - ellipse_center_y) ** 2) / (ellipse_radius_y ** 2)
+                                        if (x_inside_ellipse + y_inside_ellipse <= 1):
+                                            if map_edit.get(tile_name := (edited_pixel_x, edited_pixel_y)) is None:
+                                                # get the tile and pixel being edited
+                                                tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                                tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                                # don't try to draw outside of map bounds
+                                                if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                                    tile = self.tile_array[tile_x][tile_y]
+                                                    # load the tile if it isn't loaded
+                                                    if tile.pg_image is None:
+                                                        tile.load(render_instance, screen_instance, gl_context)
+                                                    reload_tiles[tile.image_reference] = tile
+                                                    # make the edit
+                                                    original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                    tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                    # collision map edit
+                                                    tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
+                                                    # record what was edited for ctrl-Z
+                                                    map_edit[tile_name] = original_pixel_color
                             case RectangleEllipseTool.HOLLOW_ELLIPSE:
                                 pass
 
@@ -2778,9 +2802,21 @@ class EditorMap():
                                         render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.draw_rectangle, {'ltwh': rectangle_ellipse_ltwh, 'border_thickness': round(self.current_tool.brush_thickness * self.pixel_scale), 'border_color': rgba_to_glsl(current_color_rgba), 'coloring_border': True, 'inner_color': COLORS['WHITE'], 'coloring_inside': False})
                                         self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
                                     case RectangleEllipseTool.FULL_ELLIPSE:
-                                        pass
+                                        x1 = min(self.current_tool.start_left_top_xy[0], leftest_brush_pixel)
+                                        y1 = min(self.current_tool.start_left_top_xy[1], topest_brush_pixel)
+                                        x2 = max(self.current_tool.start_left_top_xy[0], leftest_brush_pixel) + self.current_tool.brush_thickness - 1
+                                        y2 = max(self.current_tool.start_left_top_xy[1], topest_brush_pixel) + self.current_tool.brush_thickness - 1
+                                        ellipse_wh = [abs(x1 - x2) + 1, abs(y1 - y2) + 1]
+                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.draw_ellipse, {'ltwh': rectangle_ellipse_ltwh, 'ellipse_wh': ellipse_wh, 'pixel_size': self.pixel_scale, 'rgba': rgba_to_glsl(current_color_rgba)})
+                                        self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
                                     case RectangleEllipseTool.HOLLOW_ELLIPSE:
-                                        pass
+                                        x1 = min(self.current_tool.start_left_top_xy[0], leftest_brush_pixel)
+                                        y1 = min(self.current_tool.start_left_top_xy[1], topest_brush_pixel)
+                                        x2 = max(self.current_tool.start_left_top_xy[0], leftest_brush_pixel) + self.current_tool.brush_thickness - 1
+                                        y2 = max(self.current_tool.start_left_top_xy[1], topest_brush_pixel) + self.current_tool.brush_thickness - 1
+                                        ellipse_wh = [abs(x1 - x2) + 1, abs(y1 - y2) + 1]
+                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.draw_hollow_ellipse, {'ltwh': rectangle_ellipse_ltwh, 'ellipse_wh': ellipse_wh, 'pixel_size': self.pixel_scale, 'ellipse_thickness': self.current_tool.brush_thickness, 'rgba': rgba_to_glsl(current_color_rgba)})
+                                        self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
 
                 case BlurTool.INDEX:
                     pass

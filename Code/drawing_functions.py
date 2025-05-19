@@ -81,6 +81,8 @@ class RenderObjects():
         self.programs['invert_white'] = DrawInvertWhite(gl_context)
         self.programs['circle_outline'] = DrawCircleOutline(gl_context)
         self.programs['draw_circle'] = DrawCircle(gl_context)
+        self.programs['draw_ellipse'] = DrawEllipse(gl_context)
+        self.programs['draw_hollow_ellipse'] = DrawHollowEllipse(gl_context)
         self.programs['draw_line'] = DrawLine(gl_context)
         self.programs['draw_collision_tile'] = DrawCollisionTile(gl_context)
     #
@@ -435,6 +437,57 @@ class RenderObjects():
         program['height'] = ltwh[3]
         program['circle_size'] = circle_size
         program['circle_pixel_size'] = circle_pixel_size
+        program['red'] = rgba[0]
+        program['green'] = rgba[1]
+        program['blue'] = rgba[2]
+        program['alpha'] = rgba[3]
+        quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
+        renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
+        renderable_object.texture.use(0)
+        renderer.render(mode=moderngl.TRIANGLE_STRIP)
+        quads.release()
+        renderer.release()
+    #
+    def draw_ellipse(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], ellipse_wh: list[int, int], pixel_size: float, rgba: list[float, float, float, float]):
+        # 'draw_ellipse', DrawEllipse
+        program = self.programs['draw_ellipse'].program
+        renderable_object = self.renderable_objects['black_pixel']
+        topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
+        topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
+        topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
+        bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
+        program['aspect'] = Screen.aspect
+        program['width'] = ltwh[2]
+        program['height'] = ltwh[3]
+        program['ellipse_width'] = ellipse_wh[0]
+        program['ellipse_height'] = ellipse_wh[1]
+        program['pixel_size'] = pixel_size
+        program['red'] = rgba[0]
+        program['green'] = rgba[1]
+        program['blue'] = rgba[2]
+        program['alpha'] = rgba[3]
+        quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
+        renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
+        renderable_object.texture.use(0)
+        renderer.render(mode=moderngl.TRIANGLE_STRIP)
+        quads.release()
+        renderer.release()
+    #
+    def draw_hollow_ellipse(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], ellipse_wh: list[int, int], pixel_size: float, ellipse_thickness: int, rgba: list[float, float, float, float]):
+        # 'draw_hollow_ellipse', DrawHollowEllipse
+        program = self.programs['draw_hollow_ellipse'].program
+        renderable_object = self.renderable_objects['black_pixel']
+        topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
+        topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
+        topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
+        bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
+        program['aspect'] = Screen.aspect
+        program['width'] = ltwh[2]
+        program['height'] = ltwh[3]
+        program['ellipse_width'] = ellipse_wh[0]
+        program['ellipse_height'] = ellipse_wh[1]
+        program['pixel_size'] = pixel_size
+        program['ellipse_thickness'] = ellipse_thickness
         program['red'] = rgba[0]
         program['green'] = rgba[1]
         program['blue'] = rgba[2]
@@ -1575,6 +1628,154 @@ class DrawCircle():
             float editor_circle_radius = pow(((circle_size - 0.5) / 2), 2);
 
             if (editor_radial_distance < editor_circle_radius) {
+                f_color = vec4(
+                texture(tex, uvs).r + red, 
+                texture(tex, uvs).g + green, 
+                texture(tex, uvs).b + blue, 
+                texture(tex, uvs).a * alpha
+                );
+            }
+        }
+        '''
+        self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
+class DrawEllipse():
+    def __init__(self, gl_context):
+        self.VERTICE_SHADER = '''
+        #version 330 core
+
+        uniform float aspect;
+
+        in vec2 vert;
+        in vec2 texcoord;
+        out vec2 uvs;
+
+        void main() {
+            uvs = texcoord;
+            gl_Position = vec4(
+            vert.x / aspect, 
+            vert.y, 0.0, 1.0
+            );
+        }
+        '''
+        self.FRAGMENT_SHADER = '''
+        #version 330 core
+        #extension GL_EXT_shader_framebuffer_fetch : require
+
+        uniform sampler2D tex;
+
+        // size of the image
+        uniform int width;
+        uniform int height;
+
+        // size of the ellipse scaled by the pixel size
+        uniform float ellipse_width;
+        uniform float ellipse_height;
+
+        uniform float pixel_size;
+
+        uniform float red;
+        uniform float green;
+        uniform float blue;
+        uniform float alpha;
+
+        in vec2 uvs;
+        out vec4 f_color;
+
+        void main() {
+            vec3 destination_color = gl_LastFragData[0].rgb;
+            f_color = vec4(texture(tex, uvs).rgba);
+            f_color.rgb = destination_color;
+
+            float pixel_x = round(uvs.x * (width - 1)) + 0.5;
+            float pixel_y = round(uvs.y * (height - 1)) + 0.5;
+
+            float editor_center_x = ellipse_width / 2;
+            float editor_center_y = ellipse_height / 2;
+            float editor_pixel_x = floor(pixel_x / pixel_size) + 0.5;
+            float editor_pixel_y = floor(pixel_y / pixel_size) + 0.5;
+            float x_inside = (pow(editor_pixel_x - editor_center_x, 2)) / pow((ellipse_width / 2), 2);
+            float y_inside = (pow(editor_pixel_y - editor_center_y, 2)) / pow((ellipse_height / 2), 2);
+
+            if (x_inside + y_inside <= 1) {
+                f_color = vec4(
+                texture(tex, uvs).r + red, 
+                texture(tex, uvs).g + green, 
+                texture(tex, uvs).b + blue, 
+                texture(tex, uvs).a * alpha
+                );
+            }
+        }
+        '''
+        self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
+class DrawHollowEllipse():
+    def __init__(self, gl_context):
+        self.VERTICE_SHADER = '''
+        #version 330 core
+
+        uniform float aspect;
+
+        in vec2 vert;
+        in vec2 texcoord;
+        out vec2 uvs;
+
+        void main() {
+            uvs = texcoord;
+            gl_Position = vec4(
+            vert.x / aspect, 
+            vert.y, 0.0, 1.0
+            );
+        }
+        '''
+        self.FRAGMENT_SHADER = '''
+        #version 330 core
+        #extension GL_EXT_shader_framebuffer_fetch : require
+
+        uniform sampler2D tex;
+
+        // size of the image
+        uniform int width;
+        uniform int height;
+
+        // size of the ellipse scaled by the pixel size
+        uniform float ellipse_width;
+        uniform float ellipse_height;
+
+        uniform float pixel_size;
+
+        uniform float ellipse_thickness;
+
+        uniform float red;
+        uniform float green;
+        uniform float blue;
+        uniform float alpha;
+
+        in vec2 uvs;
+        out vec4 f_color;
+
+        void main() {
+            vec3 destination_color = gl_LastFragData[0].rgb;
+            f_color = vec4(texture(tex, uvs).rgba);
+            f_color.rgb = destination_color;
+
+            float pixel_x = round(uvs.x * (width - 1)) + 0.5;
+            float pixel_y = round(uvs.y * (height - 1)) + 0.5;
+
+            float editor_center_x = ellipse_width / 2;
+            float editor_center_y = ellipse_height / 2;
+            float editor_pixel_x = floor(pixel_x / pixel_size) + 0.5;
+            float editor_pixel_y = floor(pixel_y / pixel_size) + 0.5;
+
+            float x_inside_border = (pow(editor_pixel_x - editor_center_x, 2)) / pow((ellipse_width / 2), 2);
+            float y_inside_border = (pow(editor_pixel_y - editor_center_y, 2)) / pow((ellipse_height / 2), 2);
+            bool inside_border = x_inside_border + y_inside_border <= 1;
+
+            float ellipse_thickness2 = ellipse_thickness + 1;
+
+            if (inside_border) {
                 f_color = vec4(
                 texture(tex, uvs).r + red, 
                 texture(tex, uvs).g + green, 
