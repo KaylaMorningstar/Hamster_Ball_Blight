@@ -450,6 +450,10 @@ class RenderObjects():
     #
     def draw_ellipse(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], ellipse_wh: list[int, int], pixel_size: float, rgba: list[float, float, float, float]):
         # 'draw_ellipse', DrawEllipse
+        # only draw ellipses that are a pixel or bigger
+        if any([dimension == 0 for dimension in ellipse_wh]) or any([dimension == 0 for dimension in ltwh]):
+            return
+        print(ellipse_wh)
         program = self.programs['draw_ellipse'].program
         renderable_object = self.renderable_objects['black_pixel']
         topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect

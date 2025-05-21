@@ -2782,10 +2782,23 @@ class EditorMap():
                             render_instance.write_pixels_from_bytearray(tile.collision_image_reference, tile.collision_bytearray)
                             tile.save()
 
-                    # shader showing how map will look once draw is released
                     match self.current_tool.state:
+                        # shader on the map when not actively drawing
                         case RectangleEllipseTool.NOT_DRAWING:
-                            pass
+                            if cursor_on_map:
+                                match self.current_tool.brush_style:
+                                    case RectangleEllipseTool.FULL_RECTANGLE:
+                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': 'black_pixel', 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color})
+                                        self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
+                                    case RectangleEllipseTool.HOLLOW_RECTANGLE:
+                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': 'black_pixel', 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color})
+                                        self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
+                                    case RectangleEllipseTool.FULL_ELLIPSE:
+                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.draw_ellipse, {'ltwh': [round(dimension) for dimension in ltwh], 'ellipse_wh': [round(ltwh[2] / self.pixel_scale), round(ltwh[2] / self.pixel_scale)], 'pixel_size': self.pixel_scale, 'rgba': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color})
+                                        self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
+                                    case RectangleEllipseTool.HOLLOW_ELLIPSE:
+                                        pass
+                        # shader showing how map will look once draw is released
                         case RectangleEllipseTool.DRAWING:
                             # draw accordng to brush style
                             if cursor_on_map:
@@ -2796,10 +2809,10 @@ class EditorMap():
                                 rectangle_ellipse_ltwh = [round(min(x1, x2) - (((self.current_tool.brush_thickness - 1) // 2) * self.pixel_scale)), round(min(y1, y2) - (((self.current_tool.brush_thickness - 1) // 2) * self.pixel_scale)), round(abs(x1 - x2) + (self.current_tool.brush_thickness * self.pixel_scale)), round(abs(y1 - y2) + (self.current_tool.brush_thickness * self.pixel_scale))]
                                 match self.current_tool.brush_style:
                                     case RectangleEllipseTool.FULL_RECTANGLE:
-                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': 'black_pixel', 'ltwh': rectangle_ellipse_ltwh, 'rgba': rgba_to_glsl(current_color_rgba)})
+                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': 'black_pixel', 'ltwh': rectangle_ellipse_ltwh, 'rgba': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color})
                                         self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
                                     case RectangleEllipseTool.HOLLOW_RECTANGLE:
-                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.draw_rectangle, {'ltwh': rectangle_ellipse_ltwh, 'border_thickness': round(self.current_tool.brush_thickness * self.pixel_scale), 'border_color': rgba_to_glsl(current_color_rgba), 'coloring_border': True, 'inner_color': COLORS['WHITE'], 'coloring_inside': False})
+                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.draw_rectangle, {'ltwh': rectangle_ellipse_ltwh, 'border_thickness': round(self.current_tool.brush_thickness * self.pixel_scale), 'border_color': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color, 'coloring_border': True, 'inner_color': COLORS['WHITE'], 'coloring_inside': False})
                                         self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
                                     case RectangleEllipseTool.FULL_ELLIPSE:
                                         x1 = min(self.current_tool.start_left_top_xy[0], leftest_brush_pixel)
@@ -2807,7 +2820,7 @@ class EditorMap():
                                         x2 = max(self.current_tool.start_left_top_xy[0], leftest_brush_pixel) + self.current_tool.brush_thickness - 1
                                         y2 = max(self.current_tool.start_left_top_xy[1], topest_brush_pixel) + self.current_tool.brush_thickness - 1
                                         ellipse_wh = [abs(x1 - x2) + 1, abs(y1 - y2) + 1]
-                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.draw_ellipse, {'ltwh': rectangle_ellipse_ltwh, 'ellipse_wh': ellipse_wh, 'pixel_size': self.pixel_scale, 'rgba': rgba_to_glsl(current_color_rgba)})
+                                        render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.draw_ellipse, {'ltwh': rectangle_ellipse_ltwh, 'ellipse_wh': ellipse_wh, 'pixel_size': self.pixel_scale, 'rgba': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color})
                                         self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
                                     case RectangleEllipseTool.HOLLOW_ELLIPSE:
                                         x1 = min(self.current_tool.start_left_top_xy[0], leftest_brush_pixel)
