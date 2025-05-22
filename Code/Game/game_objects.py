@@ -44,12 +44,14 @@ class Player():
     BALL_POSITION_ON_SCREEN_SPEED_Y = 3 * 60
 
     # attrbiutes dictating how velocity should behave
-    MAX_VELOCITY_X = 400
+    MAX_VELOCITY_X = 900
     MAX_VELOCITY_Y = 900
-    ANGLE_FOR_IMPULSE = 20
+    ANGLE_FOR_IMPULSE = 30
     STOP_BOUNCING_SPEED = 100
     FLAT_GROUND = 10
     MINIMUM_SLOPE_ANGLE = 1.5
+    MAX_PIXEL_OFFSET_FROM_SLOPES = 10
+    MIN_PIXEL_OFFSET_FROM_SLOPES = 3
 
     # force applied from movement
     FORCE_MOVEMENT_X = 600
@@ -106,7 +108,6 @@ class Player():
         #
         # forces
         self.set_gravity(gravity_x=Player.DEFAULT_FORCE_GRAVITY_X, gravity_y=Player.DEFAULT_FORCE_GRAVITY_Y)
-        #self.set_gravity(400, 400)
         self.force_gravity_x: float = Player.DEFAULT_FORCE_GRAVITY_X
         self.force_gravity_y: float = Player.DEFAULT_FORCE_GRAVITY_Y
         self.force_movement_x: float = Player.DEFAULT_FORCE_MOVEMENT_X
@@ -344,10 +345,13 @@ class Player():
                     collision_encountered = True
                     self.position_x = round(unimpeded_position_x)
                     self.position_y = round(unimpeded_position_y)
+
         # condition if a collision was detected last frame
         if self.collision_status == Player.COLLISION:
             unimpeded_position_x = (self.velocity_x * Time.delta_time) + self.position_x
             unimpeded_position_y = (self.velocity_y * Time.delta_time) + self.position_y
+
+            # position calculation when not on a slope
             if not self.on_a_slope:
                 previous_offset_x = round(self.position_x)
                 previous_offset_y = round(self.position_y)
@@ -373,68 +377,119 @@ class Player():
                         collision_encountered = True
                         self.position_x = round(unimpeded_position_x)
                         self.position_y = round(unimpeded_position_y)
+            
             if self.on_a_slope:
-                horizontal_slope = (45 <= self.normal_force_angle <= 135) or (225 <= self.normal_force_angle <= 315)
-                if horizontal_slope:
-                    range1_start = round(self.position_x)
-                    range2_start = round(self.position_y)
-                    valid_range1 = deepcopy(range1_start)
-                    valid_range2 = deepcopy(range2_start)
-                    range1_val = deepcopy(range1_start)
-                    range2_val = deepcopy(range2_start)
-                    in_range1 = lambda current_x: (round(self.position_x) <= current_x <= round(unimpeded_position_x)) or (round(self.position_x) >= current_x >= round(unimpeded_position_x))
-                    in_range2 = lambda current_y: (round(self.position_y) <= current_y <= round(unimpeded_position_y)) or ((round(self.position_y) >= current_y >= round(unimpeded_position_y)))
-                    range1_incrementor = 1 if self.velocity_x >= 0 else -1
-                    range2_incrementor = 1 if self.velocity_y >= 0 else -1
-                    get_current_angle = lambda range1_val, range2_val: math.degrees(math.atan2(range2_start - range2_val, range1_val - range1_start)) % 360
-                    get_offset_x = lambda range1_val, range2_val: range1_val
-                    get_offset_y = lambda range1_val, range2_val: range2_val
-                else:
-                    range1_start = round(self.position_y)
-                    range2_start = round(self.position_x)
-                    valid_range1 = deepcopy(range1_start)
-                    valid_range2 = deepcopy(range2_start)
-                    range1_val = deepcopy(range1_start)
-                    range2_val = deepcopy(range2_start)
-                    in_range1 = lambda current_y: (round(self.position_y) <= current_y <= round(unimpeded_position_y)) or ((round(self.position_y) >= current_y >= round(unimpeded_position_y)))
-                    in_range2 = lambda current_x: (round(self.position_x) <= current_x <= round(unimpeded_position_x)) or ((round(self.position_x) >= current_x >= round(unimpeded_position_x)))
-                    range1_incrementor = 1 if self.velocity_y >= 0 else -1
-                    range2_incrementor = 1 if self.velocity_x >= 0 else -1
-                    get_current_angle = lambda range1_val, range2_val: math.degrees(math.atan2(range1_start - range1_val, range2_val - range2_start)) % 360
-                    get_offset_x = lambda range1_val, range2_val: range2_val
-                    get_offset_y = lambda range1_val, range2_val: range1_val
-                while in_range1(range1_val):
-                    while in_range2(range2_val):
-                        #print((range1_incrementor, range2_incrementor), (round(self.position_x), round(self.position_y)), (round(unimpeded_position_x), round(unimpeded_position_y)), (range1_val, range2_val), get_current_angle(range1_val, range2_val), self.angle_of_motion, (get_offset_x(range1_val, range2_val), get_offset_y(range1_val, range2_val)), Time.current_tick)
-
-                        # check that the angle is valid
-                        current_angle = get_current_angle(range1_val, range2_val)
-                        angle_is_acceptable = abs(current_angle - self.angle_of_motion) <= Player.ANGLE_FOR_IMPULSE
-                        #print(current_angle, (range2_start - range2_val, range1_val - range1_start))
-                        # if not angle_is_acceptable:
-                        #     range2_val += range2_incrementor
-                        #     continue
-                        # check that the ball isn't in a wall
-                        _, number_of_collisions = self._get_ball_collisions(Singleton.map, get_offset_x(range1_val, range2_val), get_offset_y(range1_val, range2_val), inner=True)
-                        if number_of_collisions != 0:
-                            range2_val += range2_incrementor
+                exit_slope = False
+                new_position_x = self.position_x
+                new_position_y = self.position_y
+                normal_angle_cos = math.cos(math.radians(self.normal_force_angle))
+                normal_angle_sin = math.sin(math.radians(self.normal_force_angle))
+                max_slope_offset_x = Player.MAX_PIXEL_OFFSET_FROM_SLOPES * normal_angle_cos
+                max_slope_offset_y = - Player.MAX_PIXEL_OFFSET_FROM_SLOPES * normal_angle_sin
+                min_slope_offset_x = - Player.MIN_PIXEL_OFFSET_FROM_SLOPES * normal_angle_cos
+                min_slope_offset_y = Player.MIN_PIXEL_OFFSET_FROM_SLOPES * normal_angle_sin
+                # check points from the current position to the next unimpeded position
+                for (unimpeded_x_pos, unimpeded_y_pos) in bresenham(round(self.position_x), round(self.position_y), round(unimpeded_position_x), round(unimpeded_position_y)):
+                    # allow for slight offsets in the direction of the normal force to allow for the ball to stay on the slope
+                    for (x_pos, y_pos) in bresenham(round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y), round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)):
+                        valid, on_a_slope, normal_angle = self._validate_offset_position_on_slope(Singleton.map, x_pos, y_pos)
+                        # ball has been impeded by a collision
+                        if not valid:
+                            #print('s1', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                             continue
-                        valid_range1 = range1_val
-                        valid_range2 = range2_val
+                        # exit slope if there's no collision with the ball's final valid position
+                        if not on_a_slope:
+                            #print('s2', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                            exit_slope = True
+                            new_position_x = x_pos
+                            new_position_y = y_pos - 1
+                            break
+                        # exit slope if there is a collision on the ball's final valid position, but the angle between motion and the slope is too different
+                        if abs(abs(difference_between_angles(self.angle_of_motion, normal_angle)) - 90) >= Player.ANGLE_FOR_IMPULSE:
+                            #print('s3', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                            exit_slope = True
+                            new_position_x = x_pos
+                            new_position_y = y_pos
+                            break
+                        # ball position is valid and ball is still attached to the slope
+                        #print('s4', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                        exit_slope = False
+                        new_position_x = x_pos
+                        new_position_y = y_pos
                         break
-                    range2_val = deepcopy(range2_start)
-                    range1_val += range1_incrementor
+                
+                #print('frame', exit_slope)
+                self.exit_slope = exit_slope
+                self.position_x = new_position_x
+                self.position_y = new_position_y
+            
 
-                if (valid_range1 == range1_start) and (valid_range2 == range2_start):
-                    self.exit_slope = True
-                if horizontal_slope:
-                    self.position_x = valid_range1
-                    self.position_y = valid_range2
-                else:
-                    self.position_x = valid_range2
-                    self.position_y = valid_range1
-                # self.position_x = unimpeded_position_x
-                # self.position_y = unimpeded_position_y
+
+
+
+            # # position calculation when on a slope
+            # if self.on_a_slope:
+            #     horizontal_slope = (45 <= self.normal_force_angle <= 135) or (225 <= self.normal_force_angle <= 315)
+            #     if horizontal_slope:
+            #         range1_start = round(self.position_x)
+            #         range2_start = round(self.position_y)
+            #         valid_range1 = deepcopy(range1_start)
+            #         valid_range2 = deepcopy(range2_start)
+            #         range1_val = deepcopy(range1_start)
+            #         range2_val = deepcopy(range2_start)
+            #         in_range1 = lambda current_x: (round(self.position_x) <= current_x <= round(unimpeded_position_x)) or (round(self.position_x) >= current_x >= round(unimpeded_position_x))
+            #         in_range2 = lambda current_y: (round(self.position_y) <= current_y <= round(unimpeded_position_y)) or ((round(self.position_y) >= current_y >= round(unimpeded_position_y)))
+            #         range1_incrementor = 1 if self.velocity_x >= 0 else -1
+            #         range2_incrementor = 1 if self.velocity_y >= 0 else -1
+            #         get_current_angle = lambda range1_val, range2_val: math.degrees(math.atan2(range2_start - range2_val, range1_val - range1_start)) % 360
+            #         get_offset_x = lambda range1_val, range2_val: range1_val
+            #         get_offset_y = lambda range1_val, range2_val: range2_val
+            #     else:
+            #         range1_start = round(self.position_y)
+            #         range2_start = round(self.position_x)
+            #         valid_range1 = deepcopy(range1_start)
+            #         valid_range2 = deepcopy(range2_start)
+            #         range1_val = deepcopy(range1_start)
+            #         range2_val = deepcopy(range2_start)
+            #         in_range1 = lambda current_y: (round(self.position_y) <= current_y <= round(unimpeded_position_y)) or ((round(self.position_y) >= current_y >= round(unimpeded_position_y)))
+            #         in_range2 = lambda current_x: (round(self.position_x) <= current_x <= round(unimpeded_position_x)) or ((round(self.position_x) >= current_x >= round(unimpeded_position_x)))
+            #         range1_incrementor = 1 if self.velocity_y >= 0 else -1
+            #         range2_incrementor = 1 if self.velocity_x >= 0 else -1
+            #         get_current_angle = lambda range1_val, range2_val: math.degrees(math.atan2(range1_start - range1_val, range2_val - range2_start)) % 360
+            #         get_offset_x = lambda range1_val, range2_val: range2_val
+            #         get_offset_y = lambda range1_val, range2_val: range1_val
+            #     while in_range1(range1_val):
+            #         while in_range2(range2_val):
+            #             #print((range1_incrementor, range2_incrementor), (round(self.position_x), round(self.position_y)), (round(unimpeded_position_x), round(unimpeded_position_y)), (range1_val, range2_val), get_current_angle(range1_val, range2_val), self.angle_of_motion, (get_offset_x(range1_val, range2_val), get_offset_y(range1_val, range2_val)), Time.current_tick)
+
+            #             # check that the angle is valid
+            #             current_angle = get_current_angle(range1_val, range2_val)
+            #             angle_is_acceptable = abs(current_angle - self.angle_of_motion) <= Player.ANGLE_FOR_IMPULSE
+            #             #print(current_angle, (range2_start - range2_val, range1_val - range1_start))
+            #             # if not angle_is_acceptable:
+            #             #     range2_val += range2_incrementor
+            #             #     continue
+            #             # check that the ball isn't in a wall
+            #             _, number_of_collisions = self._get_ball_collisions(Singleton.map, get_offset_x(range1_val, range2_val), get_offset_y(range1_val, range2_val), inner=True)
+            #             if number_of_collisions != 0:
+            #                 range2_val += range2_incrementor
+            #                 continue
+            #             valid_range1 = range1_val
+            #             valid_range2 = range2_val
+            #             break
+            #         range2_val = deepcopy(range2_start)
+            #         range1_val += range1_incrementor
+
+            #     if (valid_range1 == range1_start) and (valid_range2 == range2_start):
+            #         self.exit_slope = True
+            #     if horizontal_slope:
+            #         self.position_x = valid_range1
+            #         self.position_y = valid_range2
+            #     else:
+            #         self.position_x = valid_range2
+            #         self.position_y = valid_range1
+            #     # self.position_x = unimpeded_position_x
+            #     # self.position_y = unimpeded_position_y
 
         # recalculate where the center of the ball is
         self.ball_center_x = self.position_x + self.ball_radius
@@ -570,6 +625,55 @@ class Player():
                 ball_collisions[(offset_x, offset_y)] = True
                 continue
         return ball_collisions, number_of_collisions
+    #
+    def _validate_offset_position_on_slope(self, collision_map, x_pos, y_pos):
+        valid = True
+        on_a_slope = True
+        normal_angle = 0.0
+
+        # inner ball
+        for (offset_x, offset_y), (_, cos_angle, sin_angle) in self.inner_ball_collision_data.items():
+            # collision may have already been recorded from an object
+            if self.inner_ball_collisions[(offset_x, offset_y)]:
+                valid = False
+                return valid, on_a_slope, normal_angle
+            # get map collision pixel data
+            tile_x, pixel_x = divmod(x_pos+offset_x, Map.TILE_WH)
+            tile_y, pixel_y = divmod(y_pos+offset_y, Map.TILE_WH)
+            pixel_collision = collision_map.tiles[tile_x][tile_y].collision_bytearray[(pixel_y * Map.TILE_WH) + pixel_x]
+            # record collisions from the map
+            if (pixel_collision == Map.COLLISION) or (pixel_collision == Map.GRAPPLEABLE):
+                valid = False
+                return valid, on_a_slope, normal_angle
+
+        # outer ball
+        number_of_collisions = 0
+        cumulative_x = 0
+        cumulative_y = 0
+        for (offset_x, offset_y), (_, cos_angle, sin_angle) in self.outer_ball_collision_data.items():
+            # collision may have already been recorded from an object
+            if self.outer_ball_collisions[(offset_x, offset_y)]:
+                cumulative_x += cos_angle
+                cumulative_y += sin_angle
+                number_of_collisions += 1
+                continue
+            # get map collision pixel data
+            tile_x, pixel_x = divmod(x_pos+offset_x, Map.TILE_WH)
+            tile_y, pixel_y = divmod(y_pos+offset_y, Map.TILE_WH)
+            pixel_collision = collision_map.tiles[tile_x][tile_y].collision_bytearray[(pixel_y * Map.TILE_WH) + pixel_x]
+            # record collisions from the map
+            if (pixel_collision == Map.COLLISION) or (pixel_collision == Map.GRAPPLEABLE):
+                cumulative_x += cos_angle
+                cumulative_y += sin_angle
+                number_of_collisions += 1
+                continue
+        # end the function if there was no collision
+        if number_of_collisions == 0:
+            on_a_slope = False
+            return valid, on_a_slope, normal_angle
+        # get the normal force angle
+        normal_angle = round((math.degrees(math.atan2(cumulative_y / number_of_collisions, cumulative_x / number_of_collisions)) - 180) % 360, 2)
+        return valid, on_a_slope, normal_angle
     #
     def _readout(self, Time):
         return

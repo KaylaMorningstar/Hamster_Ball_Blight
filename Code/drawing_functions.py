@@ -453,7 +453,6 @@ class RenderObjects():
         # only draw ellipses that are a pixel or bigger
         if any([dimension == 0 for dimension in ellipse_wh]) or any([dimension == 0 for dimension in ltwh]):
             return
-        print(ellipse_wh)
         program = self.programs['draw_ellipse'].program
         renderable_object = self.renderable_objects['black_pixel']
         topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect

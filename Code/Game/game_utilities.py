@@ -71,7 +71,6 @@ class Map():
         # initialize map offset and loaded tiles
         self.offset_x = -round(player_center_x - (Screen.width // 2))
         self.offset_y = -round(player_center_y - (Screen.height // 2))
-
         self.update_tile_loading(Singleton, Render, Screen, gl_context, Time, Keys, Cursor)
     #
     def update_tile_loading(self, Singleton, Render, Screen, gl_context, Time, Keys, Cursor):
