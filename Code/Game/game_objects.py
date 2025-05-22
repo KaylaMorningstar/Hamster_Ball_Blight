@@ -46,8 +46,8 @@ class Player():
     # attrbiutes dictating how velocity should behave
     MAX_VELOCITY_X = 900
     MAX_VELOCITY_Y = 900
-    ANGLE_FOR_IMPULSE = 30
-    STOP_BOUNCING_SPEED = 100
+    ANGLE_FOR_IMPULSE = 20
+    STOP_BOUNCING_SPEED = 150
     FLAT_GROUND = 10
     MINIMUM_SLOPE_ANGLE = 1.5
     MAX_PIXEL_OFFSET_FROM_SLOPES = 10
@@ -230,8 +230,10 @@ class Player():
         # on a slope, bouncing low, and final angle of motion
         if self.angle_of_motion is not None:
             # Fdt = mdv
-            # check whether the ball is on a slope
-            self.on_a_slope = ((abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) <= Player.ANGLE_FOR_IMPULSE) and  # direction of movement roughly matches the angle of the slope
+            # check whether the ball is on a sloped
+
+            self.on_a_slope = (((abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) <= Player.ANGLE_FOR_IMPULSE) or  # direction of movement roughly matches the angle of the slope
+                               (self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED)) and  # ball isn't moving with the slope, but it is moving slowly
                                not self.exit_slope)
             self.bouncing_low = ((self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED) and  # velocity is low in the direction of gravity
                                  abs(difference_between_angles(self.gravity_angle + 180, self.normal_force_angle)) < Player.FLAT_GROUND and  # ground is roughly flat in relation to gravity
@@ -241,9 +243,9 @@ class Player():
             if self.on_a_slope:
                 slope_angle1 = (self.normal_force_angle + 90) % 360
                 slope_angle2 = (self.normal_force_angle - 90) % 360
-                if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) <= Player.ANGLE_FOR_IMPULSE:
+                if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) <= 90:
                     resulting_angle = slope_angle1
-                elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) <= Player.ANGLE_FOR_IMPULSE:
+                elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) <= 90:
                     resulting_angle = slope_angle2
             # if the ball is bouncing without much speed, then snap the ball to the ground
             elif self.bouncing_low:
@@ -417,79 +419,10 @@ class Player():
                         new_position_x = x_pos
                         new_position_y = y_pos
                         break
-                
                 #print('frame', exit_slope)
                 self.exit_slope = exit_slope
                 self.position_x = new_position_x
                 self.position_y = new_position_y
-            
-
-
-
-
-            # # position calculation when on a slope
-            # if self.on_a_slope:
-            #     horizontal_slope = (45 <= self.normal_force_angle <= 135) or (225 <= self.normal_force_angle <= 315)
-            #     if horizontal_slope:
-            #         range1_start = round(self.position_x)
-            #         range2_start = round(self.position_y)
-            #         valid_range1 = deepcopy(range1_start)
-            #         valid_range2 = deepcopy(range2_start)
-            #         range1_val = deepcopy(range1_start)
-            #         range2_val = deepcopy(range2_start)
-            #         in_range1 = lambda current_x: (round(self.position_x) <= current_x <= round(unimpeded_position_x)) or (round(self.position_x) >= current_x >= round(unimpeded_position_x))
-            #         in_range2 = lambda current_y: (round(self.position_y) <= current_y <= round(unimpeded_position_y)) or ((round(self.position_y) >= current_y >= round(unimpeded_position_y)))
-            #         range1_incrementor = 1 if self.velocity_x >= 0 else -1
-            #         range2_incrementor = 1 if self.velocity_y >= 0 else -1
-            #         get_current_angle = lambda range1_val, range2_val: math.degrees(math.atan2(range2_start - range2_val, range1_val - range1_start)) % 360
-            #         get_offset_x = lambda range1_val, range2_val: range1_val
-            #         get_offset_y = lambda range1_val, range2_val: range2_val
-            #     else:
-            #         range1_start = round(self.position_y)
-            #         range2_start = round(self.position_x)
-            #         valid_range1 = deepcopy(range1_start)
-            #         valid_range2 = deepcopy(range2_start)
-            #         range1_val = deepcopy(range1_start)
-            #         range2_val = deepcopy(range2_start)
-            #         in_range1 = lambda current_y: (round(self.position_y) <= current_y <= round(unimpeded_position_y)) or ((round(self.position_y) >= current_y >= round(unimpeded_position_y)))
-            #         in_range2 = lambda current_x: (round(self.position_x) <= current_x <= round(unimpeded_position_x)) or ((round(self.position_x) >= current_x >= round(unimpeded_position_x)))
-            #         range1_incrementor = 1 if self.velocity_y >= 0 else -1
-            #         range2_incrementor = 1 if self.velocity_x >= 0 else -1
-            #         get_current_angle = lambda range1_val, range2_val: math.degrees(math.atan2(range1_start - range1_val, range2_val - range2_start)) % 360
-            #         get_offset_x = lambda range1_val, range2_val: range2_val
-            #         get_offset_y = lambda range1_val, range2_val: range1_val
-            #     while in_range1(range1_val):
-            #         while in_range2(range2_val):
-            #             #print((range1_incrementor, range2_incrementor), (round(self.position_x), round(self.position_y)), (round(unimpeded_position_x), round(unimpeded_position_y)), (range1_val, range2_val), get_current_angle(range1_val, range2_val), self.angle_of_motion, (get_offset_x(range1_val, range2_val), get_offset_y(range1_val, range2_val)), Time.current_tick)
-
-            #             # check that the angle is valid
-            #             current_angle = get_current_angle(range1_val, range2_val)
-            #             angle_is_acceptable = abs(current_angle - self.angle_of_motion) <= Player.ANGLE_FOR_IMPULSE
-            #             #print(current_angle, (range2_start - range2_val, range1_val - range1_start))
-            #             # if not angle_is_acceptable:
-            #             #     range2_val += range2_incrementor
-            #             #     continue
-            #             # check that the ball isn't in a wall
-            #             _, number_of_collisions = self._get_ball_collisions(Singleton.map, get_offset_x(range1_val, range2_val), get_offset_y(range1_val, range2_val), inner=True)
-            #             if number_of_collisions != 0:
-            #                 range2_val += range2_incrementor
-            #                 continue
-            #             valid_range1 = range1_val
-            #             valid_range2 = range2_val
-            #             break
-            #         range2_val = deepcopy(range2_start)
-            #         range1_val += range1_incrementor
-
-            #     if (valid_range1 == range1_start) and (valid_range2 == range2_start):
-            #         self.exit_slope = True
-            #     if horizontal_slope:
-            #         self.position_x = valid_range1
-            #         self.position_y = valid_range2
-            #     else:
-            #         self.position_x = valid_range2
-            #         self.position_y = valid_range1
-            #     # self.position_x = unimpeded_position_x
-            #     # self.position_y = unimpeded_position_y
 
         # recalculate where the center of the ball is
         self.ball_center_x = self.position_x + self.ball_radius
