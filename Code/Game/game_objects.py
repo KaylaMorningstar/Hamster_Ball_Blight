@@ -51,11 +51,15 @@ class Player():
     FLAT_GROUND = 10
     MINIMUM_SLOPE_ANGLE = 1.5
     MAX_PIXEL_OFFSET_FROM_SLOPES = 10
-    MIN_PIXEL_OFFSET_FROM_SLOPES = 3
+    MIN_PIXEL_OFFSET_FROM_SLOPES = 2
+    MOTION_RELATIVE_TO_NORMAL_ANGLE = 80
 
     # force applied from movement
     FORCE_MOVEMENT_X = 600
     FORCE_MOVEMENT_Y = 600
+    AIRBORNE_FORCE_MOVEMENT_X = 500
+    MIN_FORCE_MOVEMENT_X = 300
+    MAX_MOVEMENT_ANGLE = 90
 
     # elasticity for the normal force
     MAX_ELASTICITY = 1.0
@@ -171,8 +175,8 @@ class Player():
         self.last_state = self.state
         self.last_position_x = self.position_x
         self.last_position_y = self.position_y
-        self._update_player_controls(Keys)
         self._get_normal_force_angle(Singleton.map)
+        self._update_player_controls(Keys)
         self._get_normal_force(Time)
         self._reset_ball_collisions()
         self._calculate_force()
@@ -183,14 +187,32 @@ class Player():
         self._draw(Singleton.stored_draws, Render, Screen, gl_context)
     #
     def _update_player_controls(self, Keys):
-        if Keys.left.pressed:
-            self.force_movement_x = -Player.FORCE_MOVEMENT_X
-        if Keys.right.pressed:
-            self.force_movement_x = Player.FORCE_MOVEMENT_X
-        if Keys.float_up.pressed:
-            self.force_movement_y = -Player.FORCE_MOVEMENT_Y
-        if Keys.sink_down.pressed:
-            self.force_movement_y = Player.FORCE_MOVEMENT_Y
+        if self.on_a_slope and self.normal_force_angle is not None:
+            if Keys.left.pressed:
+                angle_of_movement = self.normal_force_angle + 180 - Player.MOTION_RELATIVE_TO_NORMAL_ANGLE
+                normal_gravity_angle_difference = min(abs(difference_between_angles(self.normal_force_angle + 180, self.gravity_angle)), Player.MAX_MOVEMENT_ANGLE)
+                force_movement = max(Player.FORCE_MOVEMENT_X * math.cos(math.radians(normal_gravity_angle_difference)), Player.MIN_FORCE_MOVEMENT_X)
+                self.force_movement_x = force_movement * math.cos(math.radians(angle_of_movement))
+                self.force_movement_y = -force_movement * math.sin(math.radians(angle_of_movement))
+            if Keys.right.pressed:
+                angle_of_movement = self.normal_force_angle + 180 + Player.MOTION_RELATIVE_TO_NORMAL_ANGLE
+                normal_gravity_angle_difference = min(abs(difference_between_angles(self.normal_force_angle + 180, self.gravity_angle)), Player.MAX_MOVEMENT_ANGLE)
+                force_movement = max(Player.FORCE_MOVEMENT_X * math.cos(math.radians(normal_gravity_angle_difference)), Player.MIN_FORCE_MOVEMENT_X)
+                self.force_movement_x = force_movement * math.cos(math.radians(angle_of_movement))
+                self.force_movement_y = -force_movement * math.sin(math.radians(angle_of_movement))
+            if Keys.float_up.pressed:
+                self.force_movement_y = -Player.FORCE_MOVEMENT_Y
+            if Keys.sink_down.pressed:
+                self.force_movement_y = Player.FORCE_MOVEMENT_Y
+        else:
+            if Keys.left.pressed:
+                self.force_movement_x = -Player.AIRBORNE_FORCE_MOVEMENT_X
+            if Keys.right.pressed:
+                self.force_movement_x = Player.AIRBORNE_FORCE_MOVEMENT_X
+            if Keys.float_up.pressed:
+                self.force_movement_y = -Player.FORCE_MOVEMENT_Y
+            if Keys.sink_down.pressed:
+                self.force_movement_y = Player.FORCE_MOVEMENT_Y
     #
     def _get_normal_force_angle(self, map_object):
         number_of_collisions = 0
