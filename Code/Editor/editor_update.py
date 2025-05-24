@@ -1074,7 +1074,23 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 pass
 
             case JumbleTool.INDEX:
-                pass
+                # jumble width
+                # text
+                Render.draw_string_of_characters(Screen, gl_context, string=JumbleTool.JUMBLE_SIZE, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=JumbleTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.JUMBLE_SIZE_WIDTH
+                # text input
+                current_tool.jumble_size_text_input.background_ltwh[0] = tool_attribute_lt[0] + JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                current_tool.jumble_size_text_input.background_ltwh[1] = tool_attribute_lt[1] + JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
+                current_tool.jumble_size_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
+                new_jumble_size = current_tool.jumble_size_text_input.current_string
+                if current_tool.jumble_size_is_valid(new_jumble_size):
+                    current_tool.update_jumble_size(new_jumble_size)
+                tool_attribute_lt[0] += current_tool.jumble_size_text_input.background_ltwh[2]
+                # information stuff in footer
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
+                    footer_information.append(FooterInfo.CURSOR_POSITION)
+                    footer_information.append(FooterInfo.SEPARATOR)
+                footer_information.append(FooterInfo.MAP_SIZE)
 
             case EyedropTool.INDEX:
                 # information stuff in footer

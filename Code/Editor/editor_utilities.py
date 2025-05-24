@@ -1929,8 +1929,54 @@ class BlurTool(EditorTool):
 class JumbleTool(EditorTool):
     NAME = 'Jumble'
     INDEX = 10
-    def __init__(self, active: bool):
+
+    NOT_JUMBLING = 0
+    JUMBLING = 1
+
+    JUMBLE_SIZE = 'Size: '
+
+    _MIN_JUMBLE_SIZE = 1
+    _MAX_JUMBLE_SIZE = 64
+
+    SPEED_IS_MOVEMENT = 0
+    SPEED_IS_TIME = 1
+    _MIN_TIME_TYPE = 0
+    _MAX_TIME_TYPE = 1
+
+    def __init__(self, active: bool, render_instance, screen_instance, gl_context):
+        self.state = JumbleTool.NOT_JUMBLING  # (NOT_JUMBLING = 0, JUMBLING = 1)
+        # surfaces used while jumbling
+        self.jumble_circle_true_indexes: list[list[int, int]]
+        # attributes
+        self._jumble_size: int = JumbleTool._MIN_JUMBLE_SIZE  # width of the jumble tool
+        # tool attribute word width
+        self.JUMBLE_SIZE_WIDTH = get_text_width(render_instance, JumbleTool.JUMBLE_SIZE, JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        # text inputs for attributes
+        self.jumble_size_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(jumble_size) + 'px', JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for jumble_size in range(JumbleTool._MIN_JUMBLE_SIZE, JumbleTool._MAX_JUMBLE_SIZE + 1)]) + (2 * JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(JumbleTool._MAX_JUMBLE_SIZE)) - 1) * JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], JumbleTool._TEXT_BACKGROUND_COLOR, JumbleTool._TEXT_COLOR, JumbleTool._TEXT_HIGHLIGHT_COLOR, JumbleTool._HIGHLIGHT_COLOR, JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE, JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [JumbleTool._MIN_JUMBLE_SIZE, JumbleTool._MAX_JUMBLE_SIZE], True, False, False, True, len(str(JumbleTool._MAX_JUMBLE_SIZE)), True, str(self.jumble_size), ending_characters='px')
+        # update tool attribute values
+        self.number_of_jumble_pixels: int
+        self.update_jumble_size(JumbleTool._MIN_JUMBLE_SIZE)
         super().__init__(active)
+
+    @property
+    def jumble_size(self):
+        return self._jumble_size
+
+    def jumble_size_is_valid(self, jumble_size: Any):
+        try:
+            int(jumble_size)
+        except:
+            return False
+        if not (JumbleTool._MIN_JUMBLE_SIZE <= int(jumble_size) <= JumbleTool._MAX_JUMBLE_SIZE):
+            return False
+        if int(jumble_size) == self._jumble_size:
+            return False
+        return True
+
+    def update_jumble_size(self, jumble_size):
+        self._jumble_size = int(jumble_size)
+        self.jumble_circle_true_indexes = [tuple(indexes) for indexes in get_circle_tf_indexes(self._jumble_size)]
+        self.number_of_jumble_pixels = len(self.jumble_circle_true_indexes)
 
 
 class EyedropTool(EditorTool):
@@ -2026,7 +2072,7 @@ class EditorMap():
             CurvyLineTool(False),
             RectangleEllipseTool(False, render_instance, screen_instance, gl_context),
             BlurTool(False),
-            JumbleTool(False),
+            JumbleTool(False, render_instance, screen_instance, gl_context),
             EyedropTool(False)
         ]
         self.current_tool: EditorTool = self.tools[5]
@@ -2835,7 +2881,66 @@ class EditorMap():
                     pass
 
                 case JumbleTool.INDEX:
-                    pass
+                    cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
+                    pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
+                    ltrb = self._get_ltrb_pixels_on_map()
+                    circle_outline_thickness = EditorMap.CIRCLE_OUTLINE_THICKNESS_ZOOMED_OUT if EditorMap._ZOOM[self.zoom_index][0] != 1 else EditorMap.CIRCLE_OUTLINE_THICKNESS_ZOOMED_IN
+
+                    if self.current_tool.jumble_size % 2 == 0:
+                        half_jumble_size = self.current_tool.jumble_size // 2
+                    else:
+                        half_jumble_size = (self.current_tool.jumble_size + 1) // 2
+                    # get the leftest pixel that needs to be drawn
+                    pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
+                    if pixel_offset_x == 1:
+                        pixel_offset_x = 0
+                    pixel_offset_x *= self.pixel_scale
+                    leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
+                    leftest_jumble_pixel = pos_x + 1
+                    pixel_x = leftest_pixel + ((leftest_jumble_pixel - ltrb[0] - half_jumble_size) * self.pixel_scale) - circle_outline_thickness
+
+                    # get the topest pixel that needs to be drawn
+                    pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
+                    if pixel_offset_y == 1:
+                        pixel_offset_y = 0
+                    pixel_offset_y *= self.pixel_scale
+                    topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
+                    topest_jumble_pixel = pos_y + 1
+                    pixel_y = topest_pixel + ((topest_jumble_pixel - ltrb[1] - half_jumble_size) * self.pixel_scale) - circle_outline_thickness
+
+                    ltwh = [pixel_x, pixel_y, int((self.current_tool.jumble_size * self.pixel_scale) + (2 * circle_outline_thickness)), int((self.current_tool.jumble_size * self.pixel_scale) + (2 * circle_outline_thickness))]
+
+                    # condition if cursor is on the map
+                    if cursor_on_map:
+                        cursors.add_cursor_this_frame('cursor_big_crosshair')
+                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.jumble_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale})
+                        self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
+                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
+
+                    # change drawing state
+                    if (self.current_tool.state == JumbleTool.NOT_JUMBLING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
+                        self.current_tool.state = JumbleTool.JUMBLING
+                        self.map_edits.append(self.PixelChange(new_rgba=current_color_rgba))
+                    elif (self.current_tool.state == JumbleTool.JUMBLING) and keys_class_instance.editor_primary.released:
+                        self.current_tool.state = JumbleTool.NOT_JUMBLING
+
+                    try:
+                        match self.current_tool.state:
+                            case JumbleTool.NOT_JUMBLING:
+                                pass
+                            case JumbleTool.JUMBLING:
+                                print('frame', (leftest_jumble_pixel, topest_jumble_pixel))
+                                # setup for jumbling
+                                reload_tiles = {}
+                                map_edit = self.map_edits[-1].change_dict
+                                max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
+                                outline_left, outline_top = pos_x - ((self.current_tool.jumble_size - 1) // 2), pos_y - ((self.current_tool.jumble_size - 1) // 2)
+
+                                for (jumble_offset_x, jumble_offset_y) in self.current_tool.jumble_circle_true_indexes:
+                                    if map_edit.get(tile_name := (edited_pixel_x := leftest_jumble_pixel+jumble_offset_x, edited_pixel_y := topest_jumble_pixel+jumble_offset_y)) is None:
+                                        print(edited_pixel_x, edited_pixel_y)
+                    except:
+                        raise CaseBreak
 
                 case EyedropTool.INDEX:
                     if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
