@@ -2968,9 +2968,9 @@ class EditorMap():
                                         collision2 = tile2.collision_bytearray[collision_index2]
                                         reload_tiles[tile2.image_reference] = tile2
                                         # make the swap
-                                        tile1.pg_image.set_at((pixel_x1, pixel_y1), tuple(color2))
+                                        tile1.pg_image.set_at((pixel_x1, pixel_y1), color2)
                                         tile1.collision_bytearray[collision_index1] = collision2
-                                        tile2.pg_image.set_at((pixel_x2, pixel_y2), tuple(color1))
+                                        tile2.pg_image.set_at((pixel_x2, pixel_y2), color1)
                                         tile2.collision_bytearray[collision_index2] = collision1
                                         # record what was edited for ctrl-Z
 
