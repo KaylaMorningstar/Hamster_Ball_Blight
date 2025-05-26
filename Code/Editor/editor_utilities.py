@@ -6,7 +6,7 @@ from abc import ABC
 from array import array
 from bresenham import bresenham
 from typing import Any
-from random import choice, shuffle
+from random import choice, shuffle, randint
 from enum import unique, Enum
 
 
@@ -1954,7 +1954,7 @@ class JumbleTool(EditorTool):
         # text inputs for attributes
         self.jumble_size_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(jumble_size) + 'px', JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for jumble_size in range(JumbleTool._MIN_JUMBLE_SIZE, JumbleTool._MAX_JUMBLE_SIZE + 1)]) + (2 * JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(JumbleTool._MAX_JUMBLE_SIZE)) - 1) * JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], JumbleTool._TEXT_BACKGROUND_COLOR, JumbleTool._TEXT_COLOR, JumbleTool._TEXT_HIGHLIGHT_COLOR, JumbleTool._HIGHLIGHT_COLOR, JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE, JumbleTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [JumbleTool._MIN_JUMBLE_SIZE, JumbleTool._MAX_JUMBLE_SIZE], True, False, False, True, len(str(JumbleTool._MAX_JUMBLE_SIZE)), True, str(self.jumble_size), ending_characters='px')
         # update tool attribute values
-        self.number_of_jumble_pixels: int
+        self.max_jumble_pixel: int
         self.update_jumble_size(JumbleTool._MIN_JUMBLE_SIZE)
         super().__init__(active)
 
@@ -1976,7 +1976,7 @@ class JumbleTool(EditorTool):
     def update_jumble_size(self, jumble_size):
         self._jumble_size = int(jumble_size)
         self.jumble_circle_true_indexes = [tuple(indexes) for indexes in get_circle_tf_indexes(self._jumble_size)]
-        self.number_of_jumble_pixels = len(self.jumble_circle_true_indexes)
+        self.max_jumble_pixel = len(self.jumble_circle_true_indexes) - 1
 
 
 class EyedropTool(EditorTool):
@@ -2896,8 +2896,8 @@ class EditorMap():
                         pixel_offset_x = 0
                     pixel_offset_x *= self.pixel_scale
                     leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
-                    leftest_jumble_pixel = pos_x + 1
-                    pixel_x = leftest_pixel + ((leftest_jumble_pixel - ltrb[0] - half_jumble_size) * self.pixel_scale) - circle_outline_thickness
+                    leftest_jumble_pixel = pos_x - ((self.current_tool.jumble_size - 1) // 2)
+                    pixel_x = leftest_pixel + ((pos_x + 1 - ltrb[0] - half_jumble_size) * self.pixel_scale) - circle_outline_thickness
 
                     # get the topest pixel that needs to be drawn
                     pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
@@ -2905,8 +2905,8 @@ class EditorMap():
                         pixel_offset_y = 0
                     pixel_offset_y *= self.pixel_scale
                     topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
-                    topest_jumble_pixel = pos_y + 1
-                    pixel_y = topest_pixel + ((topest_jumble_pixel - ltrb[1] - half_jumble_size) * self.pixel_scale) - circle_outline_thickness
+                    topest_jumble_pixel = pos_y - ((self.current_tool.jumble_size - 1) // 2)
+                    pixel_y = topest_pixel + ((pos_y + 1 - ltrb[1] - half_jumble_size) * self.pixel_scale) - circle_outline_thickness
 
                     ltwh = [pixel_x, pixel_y, int((self.current_tool.jumble_size * self.pixel_scale) + (2 * circle_outline_thickness)), int((self.current_tool.jumble_size * self.pixel_scale) + (2 * circle_outline_thickness))]
 
@@ -2929,18 +2929,57 @@ class EditorMap():
                             case JumbleTool.NOT_JUMBLING:
                                 pass
                             case JumbleTool.JUMBLING:
-                                print('frame', (leftest_jumble_pixel, topest_jumble_pixel))
                                 # setup for jumbling
                                 reload_tiles = {}
                                 map_edit = self.map_edits[-1].change_dict
                                 max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
+                                max_pixel_x, max_pixel_y = self.original_map_wh[0] - 1, self.original_map_wh[1] - 1
                                 outline_left, outline_top = pos_x - ((self.current_tool.jumble_size - 1) // 2), pos_y - ((self.current_tool.jumble_size - 1) // 2)
 
                                 for (jumble_offset_x, jumble_offset_y) in self.current_tool.jumble_circle_true_indexes:
                                     if map_edit.get(tile_name := (edited_pixel_x := leftest_jumble_pixel+jumble_offset_x, edited_pixel_y := topest_jumble_pixel+jumble_offset_y)) is None:
-                                        print(edited_pixel_x, edited_pixel_y)
-                    except:
-                        raise CaseBreak
+                                        # skip the pixel if it's outside of the map
+                                        if not ((0 <= edited_pixel_x <= max_pixel_x) and (0 <= edited_pixel_y <= max_pixel_y)):
+                                            continue
+                                        # get a pixel position for (edited_pixel_x, edited_pixel_y) to swap with
+                                        while True:
+                                            new_offset_x, new_offset_y = self.current_tool.jumble_circle_true_indexes[randint(0, self.current_tool.max_jumble_pixel)]
+                                            new_location_x, new_location_y = leftest_jumble_pixel+new_offset_x, topest_jumble_pixel+new_offset_y
+                                            if (0 <= new_location_x <= max_pixel_x) and (0 <= new_location_y <= max_pixel_y):
+                                                break
+                                        # get information about the first pixel
+                                        tile_x1, pixel_x1 = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                        tile_y1, pixel_y1 = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                        tile1 = self.tile_array[tile_x1][tile_y1]
+                                        if tile1.pg_image is None:
+                                            tile1.load(render_instance, screen_instance, gl_context)
+                                        color1 = tile1.pg_image.get_at((pixel_x1, pixel_y1))
+                                        collision_index1 = (pixel_y1 * EditorMap.TILE_WH) + pixel_x1
+                                        collision1 = tile1.collision_bytearray[collision_index1]
+                                        reload_tiles[tile1.image_reference] = tile1
+                                        # get information about the second pixel
+                                        tile_x2, pixel_x2 = divmod(new_location_x, self.initial_tile_wh[0])
+                                        tile_y2, pixel_y2 = divmod(new_location_y, self.initial_tile_wh[1])
+                                        tile2 = self.tile_array[tile_x2][tile_y2]
+                                        if tile2.pg_image is None:
+                                            tile2.load(render_instance, screen_instance, gl_context)
+                                        color2 = tile2.pg_image.get_at((pixel_x2, pixel_y2))
+                                        collision_index2 = (pixel_y2 * EditorMap.TILE_WH) + pixel_x2
+                                        collision2 = tile2.collision_bytearray[collision_index2]
+                                        reload_tiles[tile2.image_reference] = tile2
+                                        # make the swap
+                                        tile1.pg_image.set_at((pixel_x1, pixel_y1), tuple(color2))
+                                        tile1.collision_bytearray[collision_index1] = collision2
+                                        tile2.pg_image.set_at((pixel_x2, pixel_y2), tuple(color1))
+                                        tile2.collision_bytearray[collision_index2] = collision1
+                                        # record what was edited for ctrl-Z
+
+                                for tile in reload_tiles.values():
+                                    render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
+                                    render_instance.write_pixels_from_bytearray(tile.collision_image_reference, tile.collision_bytearray)
+                                    tile.save()
+                    except CaseBreak:
+                        pass
 
                 case EyedropTool.INDEX:
                     if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
