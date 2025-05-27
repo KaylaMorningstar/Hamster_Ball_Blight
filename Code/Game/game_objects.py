@@ -6,15 +6,11 @@ from Code.Game.game_utilities import Map, get_vector_magnitude_in_direction, get
 from bresenham import bresenham
 
 
-# slopes
 # friction
-# low speeds seem to not move the player
 # screen movement should be revised
-# certain player movement should disallow on_a_slope and bouncing_low
 # ball twitches when player pushes against walls
 # tools
-# force the player to stay inside the map
-# slopes with low speeds don't work
+# turning around on slopes makes the ball stall
 
 
 class Player():
