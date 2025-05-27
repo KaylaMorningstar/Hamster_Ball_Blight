@@ -2,7 +2,7 @@ import pygame
 import math
 from copy import deepcopy
 from Code.utilities import atan2, move_number_to_desired_range, difference_between_angles, angle_in_range
-from Code.Game.game_utilities import Map
+from Code.Game.game_utilities import Map, get_vector_magnitude_in_direction, get_xy_vector_components
 from bresenham import bresenham
 
 
@@ -419,29 +419,29 @@ class Player():
                         valid, on_a_slope, normal_angle = self._validate_offset_position_on_slope(Singleton.map, x_pos, y_pos)
                         # ball has been impeded by a collision
                         if not valid:
-                            #print('s1', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                            print('s1', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                             continue
                         # exit slope if there's no collision with the ball's final valid position
                         if not on_a_slope:
-                            #print('s2', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                            print('s2', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                             exit_slope = True
                             new_position_x = x_pos
                             new_position_y = y_pos - 1
                             break
                         # exit slope if there is a collision on the ball's final valid position, but the angle between motion and the slope is too different
                         if abs(abs(difference_between_angles(self.angle_of_motion, normal_angle)) - 90) >= Player.ANGLE_FOR_IMPULSE:
-                            #print('s3', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                            print('s3', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                             exit_slope = True
                             new_position_x = x_pos
                             new_position_y = y_pos
                             break
                         # ball position is valid and ball is still attached to the slope
-                        #print('s4', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                        print('s4', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                         exit_slope = False
                         new_position_x = x_pos
                         new_position_y = y_pos
                         break
-                #print('frame', exit_slope)
+                print('frame', exit_slope)
                 self.exit_slope = exit_slope
                 self.position_x = new_position_x
                 self.position_y = new_position_y

@@ -1,9 +1,10 @@
 import pygame
 import io
+import math
 from array import array
 from copy import deepcopy
 from glob import glob
-from Code.utilities import move_number_to_desired_range, get_all_paths_in_directory
+from Code.utilities import move_number_to_desired_range, get_all_paths_in_directory, difference_between_angles
 
 class Map():
     TILE_EXTENSION = ''
@@ -187,3 +188,10 @@ class StoredDraws():
 
 def rectangles_overlap(ltwh1, ltwh2):
     return (ltwh1[0] < ltwh2[0] + ltwh2[2]) and (ltwh1[0] + ltwh1[2] > ltwh2[0]) and (ltwh1[1] < ltwh2[1] + ltwh2[3]) and (ltwh1[1] + ltwh1[3] > ltwh2[1])
+
+def get_vector_magnitude_in_direction(vector_length: int | float, vector_angle: int | float, resulting_angle: int | float):
+    return vector_length * math.cos(math.radians(difference_between_angles(vector_angle, resulting_angle)))
+
+def get_xy_vector_components(vector_length: int | float, vector_angle: int | float):
+    return (vector_length * math.cos(math.radians(vector_angle)),
+            vector_length * math.sin(math.radians(vector_angle)))
