@@ -57,7 +57,7 @@ class Player():
     # force applied from movement
     FORCE_MOVEMENT_X = 600
     FORCE_MOVEMENT_Y = 600
-    AIRBORNE_FORCE_MOVEMENT_X = 500
+    AIRBORNE_FORCE_MOVEMENT = 500
     MIN_FORCE_MOVEMENT_X = 300
     MAX_MOVEMENT_ANGLE = 90
 
@@ -188,30 +188,32 @@ class Player():
     def _update_player_controls(self, Keys):
         if self.on_a_slope and self.normal_force_angle is not None:
             if Keys.left.pressed:
-                angle_of_movement = self.normal_force_angle + 180 - Player.MOTION_RELATIVE_TO_NORMAL_ANGLE
-                normal_gravity_angle_difference = min(abs(difference_between_angles(self.normal_force_angle + 180, self.gravity_angle)), Player.MAX_MOVEMENT_ANGLE)
-                force_movement = max(Player.FORCE_MOVEMENT_X * math.cos(math.radians(normal_gravity_angle_difference)), Player.MIN_FORCE_MOVEMENT_X)
-                self.force_movement_x = force_movement * math.cos(math.radians(angle_of_movement))
-                self.force_movement_y = -force_movement * math.sin(math.radians(angle_of_movement))
+                self.force_movement_x = -Player.FORCE_MOVEMENT_X
+                # angle_of_movement = self.normal_force_angle + 180 - Player.MOTION_RELATIVE_TO_NORMAL_ANGLE
+                # normal_gravity_angle_difference = min(abs(difference_between_angles(self.normal_force_angle + 180, self.gravity_angle)), Player.MAX_MOVEMENT_ANGLE)
+                # force_movement = max(Player.FORCE_MOVEMENT_X * math.cos(math.radians(normal_gravity_angle_difference)), Player.MIN_FORCE_MOVEMENT_X)
+                # self.force_movement_x = force_movement * math.cos(math.radians(angle_of_movement))
+                # self.force_movement_y = -force_movement * math.sin(math.radians(angle_of_movement))
             if Keys.right.pressed:
-                angle_of_movement = self.normal_force_angle + 180 + Player.MOTION_RELATIVE_TO_NORMAL_ANGLE
-                normal_gravity_angle_difference = min(abs(difference_between_angles(self.normal_force_angle + 180, self.gravity_angle)), Player.MAX_MOVEMENT_ANGLE)
-                force_movement = max(Player.FORCE_MOVEMENT_X * math.cos(math.radians(normal_gravity_angle_difference)), Player.MIN_FORCE_MOVEMENT_X)
-                self.force_movement_x = force_movement * math.cos(math.radians(angle_of_movement))
-                self.force_movement_y = -force_movement * math.sin(math.radians(angle_of_movement))
+                self.force_movement_x = Player.FORCE_MOVEMENT_X
+                # angle_of_movement = self.normal_force_angle + 180 + Player.MOTION_RELATIVE_TO_NORMAL_ANGLE
+                # normal_gravity_angle_difference = min(abs(difference_between_angles(self.normal_force_angle + 180, self.gravity_angle)), Player.MAX_MOVEMENT_ANGLE)
+                # force_movement = max(Player.FORCE_MOVEMENT_X * math.cos(math.radians(normal_gravity_angle_difference)), Player.MIN_FORCE_MOVEMENT_X)
+                # self.force_movement_x = force_movement * math.cos(math.radians(angle_of_movement))
+                # self.force_movement_y = -force_movement * math.sin(math.radians(angle_of_movement))
             if Keys.float_up.pressed:
                 self.force_movement_y = -Player.FORCE_MOVEMENT_Y
             if Keys.sink_down.pressed:
                 self.force_movement_y = Player.FORCE_MOVEMENT_Y
         else:
             if Keys.left.pressed:
-                self.force_movement_x = -Player.AIRBORNE_FORCE_MOVEMENT_X
+                self.force_movement_x = -Player.AIRBORNE_FORCE_MOVEMENT
             if Keys.right.pressed:
-                self.force_movement_x = Player.AIRBORNE_FORCE_MOVEMENT_X
+                self.force_movement_x = Player.AIRBORNE_FORCE_MOVEMENT
             if Keys.float_up.pressed:
-                self.force_movement_y = -Player.FORCE_MOVEMENT_Y
+                self.force_movement_y = -Player.AIRBORNE_FORCE_MOVEMENT
             if Keys.sink_down.pressed:
-                self.force_movement_y = Player.FORCE_MOVEMENT_Y
+                self.force_movement_y = Player.AIRBORNE_FORCE_MOVEMENT
     #
     def _get_normal_force_angle(self, map_object):
         number_of_collisions = 0
@@ -252,9 +254,12 @@ class Player():
         if self.angle_of_motion is not None:
             # Fdt = mdv
             # check whether the ball is on a sloped
-
+            # self.on_a_slope = (((abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) <= Player.ANGLE_FOR_IMPULSE) or  # direction of movement roughly matches the angle of the slope
+            #                    (self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED)) and  # ball isn't moving with the slope, but it is moving slowly
+            #                    not self.exit_slope)
+            print((abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) <= Player.ANGLE_FOR_IMPULSE), abs(get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, self.normal_force_angle)) <= Player.ANGLE_FOR_IMPULSE)
             self.on_a_slope = (((abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) <= Player.ANGLE_FOR_IMPULSE) or  # direction of movement roughly matches the angle of the slope
-                               (self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED)) and  # ball isn't moving with the slope, but it is moving slowly
+                               (abs(get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, self.normal_force_angle)) <= Player.ANGLE_FOR_IMPULSE)) and  # ball isn't moving with the slope, but it is moving slowly
                                not self.exit_slope)
             self.bouncing_low = ((self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED) and  # velocity is low in the direction of gravity
                                  abs(difference_between_angles(self.gravity_angle + 180, self.normal_force_angle)) < Player.FLAT_GROUND and  # ground is roughly flat in relation to gravity
@@ -426,19 +431,19 @@ class Player():
                             continue
                         # if (abs(get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, (self.normal_force_angle + 180) % 360)) > Player.STOP_BOUNCING_SPEED):
                         # exit slope if there's no collision with the ball's final valid position
-                        if not on_a_slope:
-                            #print('s2', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
-                            exit_slope = True
-                            new_position_x = x_pos
-                            new_position_y = y_pos
-                            break
-                        # exit slope if there is a collision on the ball's final valid position, but the angle between motion and the slope is too different and the ball is moving quick enough to bounce
-                        if (abs(abs(difference_between_angles(self.angle_of_motion, normal_angle)) - 90) >= Player.ANGLE_FOR_IMPULSE):
-                            #print('s3', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
-                            exit_slope = True
-                            new_position_x = x_pos
-                            new_position_y = y_pos
-                            break
+                        # if not on_a_slope:
+                        #     #print('s2', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                        #     exit_slope = True
+                        #     new_position_x = x_pos
+                        #     new_position_y = y_pos
+                        #     break
+                        # # exit slope if there is a collision on the ball's final valid position, but the angle between motion and the slope is too different and the ball is moving quick enough to bounce
+                        # if (abs(abs(difference_between_angles(self.angle_of_motion, normal_angle)) - 90) >= Player.ANGLE_FOR_IMPULSE):
+                        #     #print('s3', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                        #     exit_slope = True
+                        #     new_position_x = x_pos
+                        #     new_position_y = y_pos
+                        #     break
                         # ball position is valid and ball is still attached to the slope
                         #print('s4', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                         exit_slope = False
@@ -448,7 +453,7 @@ class Player():
                             new_velocity = get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, slope_angle1)
                             new_velocity_x = new_velocity * math.cos(math.radians(slope_angle1))
                             new_velocity_y = - new_velocity * math.sin(math.radians(slope_angle1))
-                        elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) <= 90.0:
+                        else:
                             new_velocity = get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, slope_angle2)
                             new_velocity_x = new_velocity * math.cos(math.radians(slope_angle2))
                             new_velocity_y = - new_velocity * math.sin(math.radians(slope_angle2))
