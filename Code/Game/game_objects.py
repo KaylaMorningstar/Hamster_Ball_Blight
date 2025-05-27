@@ -182,7 +182,6 @@ class Player():
         self._calculate_force()
         self._calculate_position(Singleton, Render, Screen, gl_context, Keys, Cursor, Time)
         self._update_screen_position(Singleton.map, Screen, Time)
-        self._readout(Time)
         self._reset_forces()
         self._draw(Singleton.stored_draws, Render, Screen, gl_context)
     #
@@ -406,6 +405,10 @@ class Player():
                 exit_slope = False
                 new_position_x = self.position_x
                 new_position_y = self.position_y
+                new_velocity_x = self.velocity_x
+                new_velocity_y = self.velocity_y
+                slope_angle1 = (self.normal_force_angle + 90) % 360
+                slope_angle2 = (self.normal_force_angle - 90) % 360
                 normal_angle_cos = math.cos(math.radians(self.normal_force_angle))
                 normal_angle_sin = math.sin(math.radians(self.normal_force_angle))
                 max_slope_offset_x = Player.MAX_PIXEL_OFFSET_FROM_SLOPES * normal_angle_cos
@@ -419,32 +422,42 @@ class Player():
                         valid, on_a_slope, normal_angle = self._validate_offset_position_on_slope(Singleton.map, x_pos, y_pos)
                         # ball has been impeded by a collision
                         if not valid:
-                            print('s1', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                            #print('s1', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                             continue
+                        # if (abs(get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, (self.normal_force_angle + 180) % 360)) > Player.STOP_BOUNCING_SPEED):
                         # exit slope if there's no collision with the ball's final valid position
                         if not on_a_slope:
-                            print('s2', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                            #print('s2', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                             exit_slope = True
                             new_position_x = x_pos
-                            new_position_y = y_pos - 1
+                            new_position_y = y_pos
                             break
-                        # exit slope if there is a collision on the ball's final valid position, but the angle between motion and the slope is too different
-                        if abs(abs(difference_between_angles(self.angle_of_motion, normal_angle)) - 90) >= Player.ANGLE_FOR_IMPULSE:
-                            print('s3', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                        # exit slope if there is a collision on the ball's final valid position, but the angle between motion and the slope is too different and the ball is moving quick enough to bounce
+                        if (abs(abs(difference_between_angles(self.angle_of_motion, normal_angle)) - 90) >= Player.ANGLE_FOR_IMPULSE):
+                            #print('s3', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                             exit_slope = True
                             new_position_x = x_pos
                             new_position_y = y_pos
                             break
                         # ball position is valid and ball is still attached to the slope
-                        print('s4', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
+                        #print('s4', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                         exit_slope = False
                         new_position_x = x_pos
                         new_position_y = y_pos
+                        if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) <= 90.0:
+                            new_velocity = get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, slope_angle1)
+                            new_velocity_x = new_velocity * math.cos(math.radians(slope_angle1))
+                            new_velocity_y = - new_velocity * math.sin(math.radians(slope_angle1))
+                        elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) <= 90.0:
+                            new_velocity = get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, slope_angle2)
+                            new_velocity_x = new_velocity * math.cos(math.radians(slope_angle2))
+                            new_velocity_y = - new_velocity * math.sin(math.radians(slope_angle2))
                         break
-                print('frame', exit_slope)
                 self.exit_slope = exit_slope
                 self.position_x = new_position_x
                 self.position_y = new_position_y
+                self.velocity_x = new_velocity_x
+                self.velocity_y = new_velocity_y
 
         # recalculate where the center of the ball is
         self.ball_center_x = self.position_x + self.ball_radius
@@ -630,8 +643,7 @@ class Player():
         normal_angle = round((math.degrees(math.atan2(cumulative_y / number_of_collisions, cumulative_x / number_of_collisions)) - 180) % 360, 2)
         return valid, on_a_slope, normal_angle
     #
-    def _readout(self, Time):
-        return
+    def _readout(self):
         print(f"{(self.force_x, self.force_y)=}")
         print(f"{(self.force_gravity_x, self.force_gravity_y)=}")
         print(f"{(self.force_movement_x, self.force_movement_y)=}")
