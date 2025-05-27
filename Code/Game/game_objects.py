@@ -53,10 +53,11 @@ class Player():
     MAX_PIXEL_OFFSET_FROM_SLOPES = 10
     MIN_PIXEL_OFFSET_FROM_SLOPES = 2
     MOTION_RELATIVE_TO_NORMAL_ANGLE = 80
+    POSITIVE_X_ANGLE = 0.0
+    POSITIVE_Y_ANGLE = 270.0
 
     # force applied from movement
-    FORCE_MOVEMENT_X = 600
-    FORCE_MOVEMENT_Y = 600
+    FORCE_MOVEMENT = 600
     AIRBORNE_FORCE_MOVEMENT = 500
     MIN_FORCE_MOVEMENT_X = 300
     MAX_MOVEMENT_ANGLE = 90
@@ -188,23 +189,13 @@ class Player():
     def _update_player_controls(self, Keys):
         if self.on_a_slope and self.normal_force_angle is not None:
             if Keys.left.pressed:
-                self.force_movement_x = -Player.FORCE_MOVEMENT_X
-                # angle_of_movement = self.normal_force_angle + 180 - Player.MOTION_RELATIVE_TO_NORMAL_ANGLE
-                # normal_gravity_angle_difference = min(abs(difference_between_angles(self.normal_force_angle + 180, self.gravity_angle)), Player.MAX_MOVEMENT_ANGLE)
-                # force_movement = max(Player.FORCE_MOVEMENT_X * math.cos(math.radians(normal_gravity_angle_difference)), Player.MIN_FORCE_MOVEMENT_X)
-                # self.force_movement_x = force_movement * math.cos(math.radians(angle_of_movement))
-                # self.force_movement_y = -force_movement * math.sin(math.radians(angle_of_movement))
+                self.force_movement_x = -Player.FORCE_MOVEMENT * abs(math.sin(math.radians(abs(difference_between_angles(self.gravity_angle, Player.POSITIVE_X_ANGLE)))))
             if Keys.right.pressed:
-                self.force_movement_x = Player.FORCE_MOVEMENT_X
-                # angle_of_movement = self.normal_force_angle + 180 + Player.MOTION_RELATIVE_TO_NORMAL_ANGLE
-                # normal_gravity_angle_difference = min(abs(difference_between_angles(self.normal_force_angle + 180, self.gravity_angle)), Player.MAX_MOVEMENT_ANGLE)
-                # force_movement = max(Player.FORCE_MOVEMENT_X * math.cos(math.radians(normal_gravity_angle_difference)), Player.MIN_FORCE_MOVEMENT_X)
-                # self.force_movement_x = force_movement * math.cos(math.radians(angle_of_movement))
-                # self.force_movement_y = -force_movement * math.sin(math.radians(angle_of_movement))
+                self.force_movement_x = Player.FORCE_MOVEMENT * abs(math.sin(math.radians(abs(difference_between_angles(self.gravity_angle, Player.POSITIVE_X_ANGLE)))))
             if Keys.float_up.pressed:
-                self.force_movement_y = -Player.FORCE_MOVEMENT_Y
+                self.force_movement_y = -Player.FORCE_MOVEMENT * abs(math.sin(math.radians(abs(difference_between_angles(self.gravity_angle, Player.POSITIVE_Y_ANGLE)))))
             if Keys.sink_down.pressed:
-                self.force_movement_y = Player.FORCE_MOVEMENT_Y
+                self.force_movement_y = Player.FORCE_MOVEMENT * abs(math.sin(math.radians(abs(difference_between_angles(self.gravity_angle, Player.POSITIVE_Y_ANGLE)))))
         else:
             if Keys.left.pressed:
                 self.force_movement_x = -Player.AIRBORNE_FORCE_MOVEMENT
@@ -254,12 +245,8 @@ class Player():
         if self.angle_of_motion is not None:
             # Fdt = mdv
             # check whether the ball is on a sloped
-            # self.on_a_slope = (((abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) <= Player.ANGLE_FOR_IMPULSE) or  # direction of movement roughly matches the angle of the slope
-            #                    (self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED)) and  # ball isn't moving with the slope, but it is moving slowly
-            #                    not self.exit_slope)
-            print((abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) <= Player.ANGLE_FOR_IMPULSE), abs(get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, self.normal_force_angle)) <= Player.ANGLE_FOR_IMPULSE)
             self.on_a_slope = (((abs(90 - (difference_between_angles(self.angle_of_motion, self.normal_force_angle) % 180)) <= Player.ANGLE_FOR_IMPULSE) or  # direction of movement roughly matches the angle of the slope
-                               (abs(get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, self.normal_force_angle)) <= Player.ANGLE_FOR_IMPULSE)) and  # ball isn't moving with the slope, but it is moving slowly
+                               (abs(get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, self.normal_force_angle)) <= Player.STOP_BOUNCING_SPEED)) and  # ball isn't moving with the slope, but it is moving slowly
                                not self.exit_slope)
             self.bouncing_low = ((self.velocity * math.cos(math.radians(abs(difference_between_angles(self.angle_of_motion, self.gravity_angle)))) < Player.STOP_BOUNCING_SPEED) and  # velocity is low in the direction of gravity
                                  abs(difference_between_angles(self.gravity_angle + 180, self.normal_force_angle)) < Player.FLAT_GROUND and  # ground is roughly flat in relation to gravity
