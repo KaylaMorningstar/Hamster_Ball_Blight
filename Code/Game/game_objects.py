@@ -18,6 +18,8 @@ from bresenham import bresenham
 
 
 class Player():
+    ZERO = 0.0
+
     # collision vs no collision
     NO_COLLISION = 0
     COLLISION = 1
@@ -110,6 +112,7 @@ class Player():
         self.gravity_angle: float
         self.normal_force_angle: float | None = None
         self.angle_of_motion: float | None = None
+        self.angle_of_force: float | None = None
         #
         # forces
         self.set_gravity(gravity_x=Player.DEFAULT_FORCE_GRAVITY_X, gravity_y=Player.DEFAULT_FORCE_GRAVITY_Y)
@@ -123,29 +126,30 @@ class Player():
         self.force_normal_y: float = Player.DEFAULT_FORCE_NORMAL_Y
         self.force_water_x: float = Player.DEFAULT_FORCE_WATER_X
         self.force_water_y: float = Player.DEFAULT_FORCE_WATER_Y
-        self.force_x: float = 0.0
-        self.force_y: float = 0.0
+        self.force_x: float = Player.ZERO
+        self.force_y: float = Player.ZERO
+        self.force: float = Player.ZERO
         #
         # acceleration, velocity, position
-        self.acceleration_x: float = 0.0
-        self.acceleration_y: float = 0.0
-        self.velocity_x: float = 0.0
-        self.velocity_y: float = 0.0
-        self.velocity: float = 0.0
-        self.last_position_x: float = 0.0
-        self.last_position_y: float = 0.0
+        self.acceleration_x: float = Player.ZERO
+        self.acceleration_y: float = Player.ZERO
+        self.velocity_x: float = Player.ZERO
+        self.velocity_y: float = Player.ZERO
+        self.velocity: float = Player.ZERO
+        self.last_position_x: float = Player.ZERO
+        self.last_position_y: float = Player.ZERO
         self.position_x: float = 1700.0
         self.position_y: float = 900.0
-        self.ball_center_x: float = 0.0
-        self.ball_center_y: float = 0.0
+        self.ball_center_x: float = Player.ZERO
+        self.ball_center_y: float = Player.ZERO
         #
         # screen position
-        self.screen_position_x: float = 0.0
-        self.screen_position_y: float = 0.0
-        self.player_box_left: float = 0.0
-        self.player_box_top: float = 0.0
-        self.player_box_right: float = 0.0
-        self.player_box_bottom: float = 0.0
+        self.screen_position_x: float = Player.ZERO
+        self.screen_position_y: float = Player.ZERO
+        self.player_box_left: float = Player.ZERO
+        self.player_box_top: float = Player.ZERO
+        self.player_box_right: float = Player.ZERO
+        self.player_box_bottom: float = Player.ZERO
         #
         # inner collision
         self.inner_ball_collision_image: pygame.Surface | None = None
@@ -188,6 +192,7 @@ class Player():
     #
     def _update_player_controls(self, Keys):
         if self.on_a_slope and self.normal_force_angle is not None:
+            # calculate force of movement based on player input
             if Keys.left.pressed:
                 self.force_movement_x = -Player.FORCE_MOVEMENT * abs(math.sin(math.radians(abs(difference_between_angles(self.gravity_angle, Player.POSITIVE_X_ANGLE)))))
             if Keys.right.pressed:
@@ -197,6 +202,7 @@ class Player():
             if Keys.sink_down.pressed:
                 self.force_movement_y = Player.FORCE_MOVEMENT * abs(math.sin(math.radians(abs(difference_between_angles(self.gravity_angle, Player.POSITIVE_Y_ANGLE)))))
         else:
+            # calculate force of movement based on player input
             if Keys.left.pressed:
                 self.force_movement_x = -Player.AIRBORNE_FORCE_MOVEMENT
             if Keys.right.pressed:
@@ -317,6 +323,8 @@ class Player():
     def _calculate_force(self):
         self.force_x = self.force_gravity_x + self.force_movement_x + self.force_tool_x + self.force_normal_x + self.force_water_x
         self.force_y = self.force_gravity_y + self.force_movement_y + self.force_tool_y + self.force_normal_y + self.force_water_y
+        self.force = math.hypot(self.force_x, self.force_y)
+        self.angle_of_force = None if self.force == 0.0 else math.degrees(math.atan2(-self.force_y, self.force_x)) % 360
     #
     def _calculate_position(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
         # get where the ball would be if it were unimpeded by walls or objects
@@ -327,7 +335,7 @@ class Player():
         initial_velocity_y = self.velocity_y
         self.velocity_x = move_number_to_desired_range(-Player.MAX_VELOCITY_X, self.velocity_x + (self.acceleration_x * Time.delta_time), Player.MAX_VELOCITY_X)
         self.velocity_y = move_number_to_desired_range(-Player.MAX_VELOCITY_Y, self.velocity_y + (self.acceleration_y * Time.delta_time), Player.MAX_VELOCITY_Y)
-        self.velocity = math.sqrt((self.velocity_x ** 2) + (self.velocity_y ** 2))
+        self.velocity = math.hypot(self.velocity_x, self.velocity_y)
         self.angle_of_motion = None if self.velocity == 0.0 else math.degrees(math.atan2(-self.velocity_y, self.velocity_x)) % 360
         unimpeded_position_x = ((1 / 2) * (self.velocity_x + initial_velocity_x) * Time.delta_time) + self.position_x
         unimpeded_position_y = ((1 / 2) * (self.velocity_y + initial_velocity_y) * Time.delta_time) + self.position_y
@@ -392,7 +400,7 @@ class Player():
                         collision_encountered = True
                         self.position_x = round(unimpeded_position_x)
                         self.position_y = round(unimpeded_position_y)
-            
+
             if self.on_a_slope:
                 exit_slope = False
                 new_position_x = self.position_x
@@ -433,17 +441,39 @@ class Player():
                         #     break
                         # ball position is valid and ball is still attached to the slope
                         #print('s4', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
-                        exit_slope = False
-                        new_position_x = x_pos
-                        new_position_y = y_pos
-                        if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) <= 90.0:
-                            new_velocity = get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, slope_angle1)
-                            new_velocity_x = new_velocity * math.cos(math.radians(slope_angle1))
-                            new_velocity_y = - new_velocity * math.sin(math.radians(slope_angle1))
+                        if self.angle_of_force is None:
+                            remain_connected_to_slope = True
                         else:
-                            new_velocity = get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, slope_angle2)
-                            new_velocity_x = new_velocity * math.cos(math.radians(slope_angle2))
-                            new_velocity_y = - new_velocity * math.sin(math.radians(slope_angle2))
+                            remain_connected_to_slope = abs(get_vector_magnitude_in_direction(self.force, self.angle_of_force, self.normal_force_angle)) <= 500
+                        if remain_connected_to_slope:
+                            exit_slope = False
+                            new_position_x = x_pos
+                            new_position_y = y_pos
+                            if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) <= 90.0:
+                                new_velocity = get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, slope_angle1)
+                                new_velocity_x = new_velocity * math.cos(math.radians(slope_angle1))
+                                new_velocity_y = - new_velocity * math.sin(math.radians(slope_angle1))
+                            elif abs(difference_between_angles(self.angle_of_motion, slope_angle2)) <= 90.0:
+                                new_velocity = get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, slope_angle2)
+                                new_velocity_x = new_velocity * math.cos(math.radians(slope_angle2))
+                                new_velocity_y = - new_velocity * math.sin(math.radians(slope_angle2))
+                        else:
+                            exit_slope = True
+                            possible_x_pos = x_pos
+                            possible_y_pos = y_pos
+                            if (abs(difference_between_angles(self.gravity_angle + 180, self.normal_force_angle)) > 90):
+                                if (abs(difference_between_angles(self.normal_force_angle, 0.0)) < 90.0):
+                                    possible_x_pos = x_pos + 1
+                                if (abs(difference_between_angles(self.normal_force_angle, 90.0)) < 90.0):
+                                    possible_y_pos = y_pos - 1
+                                if (abs(difference_between_angles(self.normal_force_angle, 180.0)) < 90.0):
+                                    possible_x_pos = x_pos - 1
+                                if (abs(difference_between_angles(self.normal_force_angle, 270.0)) < 90.0):
+                                    possible_y_pos = y_pos + 1
+                            valid, _, _ = self._validate_offset_position_on_slope(Singleton.map, possible_x_pos, possible_y_pos)
+                            if valid:
+                                new_position_x = possible_x_pos
+                                new_position_y = possible_y_pos
                         break
                 self.exit_slope = exit_slope
                 self.position_x = new_position_x
@@ -636,6 +666,9 @@ class Player():
         return valid, on_a_slope, normal_angle
     #
     def _readout(self):
+        print(f"{self.angle_of_motion=}")
+        print(f"{self.normal_force_angle=}")
+        print(f"{self.angle_of_force=}")
         print(f"{(self.force_x, self.force_y)=}")
         print(f"{(self.force_gravity_x, self.force_gravity_y)=}")
         print(f"{(self.force_movement_x, self.force_movement_y)=}")
