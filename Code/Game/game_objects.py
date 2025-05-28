@@ -9,8 +9,8 @@ from bresenham import bresenham
 # friction
 # screen movement should be revised
 # ball twitches when player pushes against walls
+# ball can awkwardly follow a slope when it should exit the slope like a ramp
 # tools
-# turning around on slopes makes the ball stall
 
 
 class Player():
@@ -242,6 +242,8 @@ class Player():
     def _get_normal_force(self, Time):
         # no normal force if the ball is undergoing ballistic motion
         if self.normal_force_angle is None:
+            self.on_a_slope = False
+            self.bouncing_low = False
             return
         # on a slope, bouncing low, and final angle of motion
         if self.angle_of_motion is not None:
@@ -422,7 +424,8 @@ class Player():
                             continue
                         # if (abs(get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, (self.normal_force_angle + 180) % 360)) > Player.STOP_BOUNCING_SPEED):
                         # exit slope if there's no collision with the ball's final valid position
-                        # if not on_a_slope:
+                        # if not on_a_slope or (abs(difference_between_angles(normal_angle, self.normal_force_angle)) > 5.0):
+                        #     print('s2')
                         #     #print('s2', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                         #     exit_slope = True
                         #     new_position_x = x_pos
@@ -440,7 +443,9 @@ class Player():
                         if self.angle_of_force is None:
                             remain_connected_to_slope = True
                         else:
-                            remain_connected_to_slope = abs(get_vector_magnitude_in_direction(self.force, self.angle_of_force, self.normal_force_angle)) <= 500
+                            remain_connected_to_slope = ((abs(get_vector_magnitude_in_direction(self.force, self.angle_of_force, self.normal_force_angle)) <= 500) and not  # felt a strong force in the direction of the normal force
+                                                         (abs(difference_between_angles(self.normal_force_angle, self.gravity_angle)) < 90.0) and  # normal force is pointing in the same direction as gravity
+                                                         on_a_slope)
                         if remain_connected_to_slope:
                             exit_slope = False
                             new_position_x = x_pos
@@ -454,6 +459,7 @@ class Player():
                                 new_velocity_x = new_velocity * math.cos(math.radians(slope_angle2))
                                 new_velocity_y = - new_velocity * math.sin(math.radians(slope_angle2))
                         else:
+                            print('exit', (abs(get_vector_magnitude_in_direction(self.force, self.angle_of_force, self.normal_force_angle))))
                             exit_slope = True
                             possible_x_pos = x_pos
                             possible_y_pos = y_pos
@@ -622,6 +628,7 @@ class Player():
             # collision may have already been recorded from an object
             if self.inner_ball_collisions[(offset_x, offset_y)]:
                 valid = False
+                on_a_slope = False
                 return valid, on_a_slope, normal_angle
             # get map collision pixel data
             tile_x, pixel_x = divmod(x_pos+offset_x, Map.TILE_WH)
@@ -630,6 +637,7 @@ class Player():
             # record collisions from the map
             if (pixel_collision == Map.COLLISION) or (pixel_collision == Map.GRAPPLEABLE):
                 valid = False
+                on_a_slope = False
                 return valid, on_a_slope, normal_angle
 
         # outer ball
@@ -662,6 +670,7 @@ class Player():
         return valid, on_a_slope, normal_angle
     #
     def _readout(self):
+        print(f"{self.on_a_slope}")
         print(f"{self.angle_of_motion=}")
         print(f"{self.normal_force_angle=}")
         print(f"{self.angle_of_force=}")
