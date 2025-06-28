@@ -420,17 +420,13 @@ class Player():
                         valid, on_a_slope, normal_angle = self._validate_offset_position_on_slope(Singleton.map, x_pos, y_pos)
                         # ball has been impeded by a collision
                         if not valid:
-                            #print('s1', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                             continue
-                        # if (abs(get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, (self.normal_force_angle + 180) % 360)) > Player.STOP_BOUNCING_SPEED):
-                        # exit slope if there's no collision with the ball's final valid position
-                        # if not on_a_slope or (abs(difference_between_angles(normal_angle, self.normal_force_angle)) > 5.0):
-                        #     print('s2')
-                        #     #print('s2', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
-                        #     exit_slope = True
-                        #     new_position_x = x_pos
-                        #     new_position_y = y_pos
-                        #     break
+                        # exit slope if there's no collision with the ball's final valid position or the ball is exiting a ledge
+                        if not on_a_slope or ((abs(difference_between_angles(normal_angle, self.normal_force_angle)) > 5.0) and ((abs(difference_between_angles(self.angle_of_motion + 90, self.normal_force_angle)) > 5.0) or (abs(difference_between_angles(self.angle_of_motion - 90, self.normal_force_angle)) > 5.0))):
+                            exit_slope = True
+                            new_position_x = x_pos
+                            new_position_y = y_pos
+                            break
                         # # exit slope if there is a collision on the ball's final valid position, but the angle between motion and the slope is too different and the ball is moving quick enough to bounce
                         # if (abs(abs(difference_between_angles(self.angle_of_motion, normal_angle)) - 90) >= Player.ANGLE_FOR_IMPULSE):
                         #     #print('s3', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
@@ -439,12 +435,11 @@ class Player():
                         #     new_position_y = y_pos
                         #     break
                         # ball position is valid and ball is still attached to the slope
-                        #print('s4', (x_pos, y_pos), (round(unimpeded_x_pos + min_slope_offset_x), round(unimpeded_y_pos + min_slope_offset_y)), (round(unimpeded_x_pos + max_slope_offset_x), round(unimpeded_y_pos + max_slope_offset_y)))
                         if self.angle_of_force is None:
                             remain_connected_to_slope = True
                         else:
                             remain_connected_to_slope = ((abs(get_vector_magnitude_in_direction(self.force, self.angle_of_force, self.normal_force_angle)) <= 500) and not  # felt a strong force in the direction of the normal force
-                                                         (abs(difference_between_angles(self.normal_force_angle, self.gravity_angle)) < 90.0) and  # normal force is pointing in the same direction as gravity
+                                                         (abs(difference_between_angles(self.normal_force_angle, self.gravity_angle)) < 100.0) and  # exit slope if normal force angle roughly matches gravity angle
                                                          on_a_slope)
                         if remain_connected_to_slope:
                             exit_slope = False
@@ -459,10 +454,11 @@ class Player():
                                 new_velocity_x = new_velocity * math.cos(math.radians(slope_angle2))
                                 new_velocity_y = - new_velocity * math.sin(math.radians(slope_angle2))
                         else:
-                            print('exit', (abs(get_vector_magnitude_in_direction(self.force, self.angle_of_force, self.normal_force_angle))))
                             exit_slope = True
                             possible_x_pos = x_pos
                             possible_y_pos = y_pos
+                            new_velocity_x = self.velocity_x
+                            new_velocity_y = self.velocity_y
                             if (abs(difference_between_angles(self.gravity_angle + 180, self.normal_force_angle)) > 90):
                                 if (abs(difference_between_angles(self.normal_force_angle, 0.0)) < 90.0):
                                     possible_x_pos = x_pos + 1
