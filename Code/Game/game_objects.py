@@ -108,6 +108,7 @@ class Player():
         self.gravity_angle: float
         self.normal_force_angle: float | None = None
         self.angle_of_motion: float | None = None
+        self.angle_of_movement: float | None = None
         self.angle_of_force: float | None = None
         #
         # forces
@@ -171,6 +172,41 @@ class Player():
         self._initialize_ball_collision()
         #
         # tools (water jet, grapple, etc)
+        self.spout = Player.Spout = Player.Spout()
+        self.tool1: Player.NoTool | Player.WaterJet | Player.Grapple = Player.WaterJet()
+        self.tool2: Player.NoTool | Player.WaterJet | Player.Grapple = Player.Grapple()
+    #
+    class Spout():
+        def __init__(self):
+            self.visible: bool = True
+            self.rotation: float = 0.0
+        def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
+            pass
+            # self.rotation = math.degrees(math.atan2(-self.force_movement_y, self.force_movement_x)) % 360
+    #
+    class PlayerTool():
+        def __init__(self):
+            pass
+        def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
+            raise NotImplementedError
+    #
+    class NoTool(PlayerTool):
+        def __init__(self):
+            super().__init__()
+        def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
+            pass
+    #
+    class WaterJet(PlayerTool):
+        def __init__(self):
+            super().__init__()
+        def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
+            pass
+    #
+    class Grapple(PlayerTool):
+        def __init__(self):
+            super().__init__()
+        def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
+            pass
     #
     def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
         self.last_state = self.state
@@ -178,6 +214,7 @@ class Player():
         self.last_position_y = self.position_y
         self._get_normal_force_angle(Singleton.map)
         self._update_player_controls(Keys)
+        self._update_tools(Singleton, Render, Screen, gl_context, Keys, Cursor, Time)
         self._get_normal_force(Time)
         self._reset_ball_collisions()
         self._calculate_force()
@@ -187,6 +224,7 @@ class Player():
         self._draw(Singleton.stored_draws, Render, Screen, gl_context)
     #
     def _update_player_controls(self, Keys):
+        # movement controls
         if self.on_a_slope and self.normal_force_angle is not None:
             # calculate force of movement based on player input
             if Keys.left.pressed:
@@ -207,6 +245,13 @@ class Player():
                 self.force_movement_y = -Player.AIRBORNE_FORCE_MOVEMENT
             if Keys.sink_down.pressed:
                 self.force_movement_y = Player.AIRBORNE_FORCE_MOVEMENT
+        # get the angle that the player is moving
+        self.angle_of_movement = None if (self.force_movement_x == 0.0 and self.force_movement_y == 0.0) else math.degrees(math.atan2(-self.force_movement_y, self.force_movement_x)) % 360
+    #
+    def _update_tools(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
+        self.spout.update(Singleton, Render, Screen, gl_context, Keys, Cursor, Time)
+        self.tool1.update(Singleton, Render, Screen, gl_context, Keys, Cursor, Time)
+        self.tool2.update(Singleton, Render, Screen, gl_context, Keys, Cursor, Time)
     #
     def _get_normal_force_angle(self, map_object):
         number_of_collisions = 0
@@ -445,6 +490,10 @@ class Player():
                             exit_slope = False
                             new_position_x = x_pos
                             new_position_y = y_pos
+                            # if (self.angle_of_movement is not None) and :
+                            #     new_velocity = 0.0
+                            #     new_velocity_x = 0.0
+                            #     new_velocity_y = 0.0
                             if abs(difference_between_angles(self.angle_of_motion, slope_angle1)) <= 90.0:
                                 new_velocity = get_vector_magnitude_in_direction(self.velocity, self.angle_of_motion, slope_angle1)
                                 new_velocity_x = new_velocity * math.cos(math.radians(slope_angle1))
