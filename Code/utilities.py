@@ -361,5 +361,6 @@ IMAGE_PATHS = {
     # player
     'player_ball_front': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\game\\player\\ball_front.png'],
     # game cursors
-    'default_cursor': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\game\\cursors\\default_cursor.png'],
+    'classic_cursor1': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\cursors\\classic_cursor1.png'],
+    'classic_cursor2': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\cursors\\classic_cursor2.png'],
 }

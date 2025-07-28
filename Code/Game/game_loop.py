@@ -25,6 +25,7 @@ def game_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
         loading_and_unloading_images_manager(Screen, Render, gl_context, IMAGE_PATHS, [LOADED_IN_GAME], [LOADED_IN_MENU, LOADED_IN_EDITOR])
         Api.api_initiated_singletons['Game'] = Api.api_singletons['Game'](Render, Screen, gl_context, Time, Keys, Cursor, PATH)
         Api.setup_required = False
+    Cursor.add_cursor_this_frame('classic_cursor')
     # get the singleton for the game
     Singleton = Api.api_initiated_singletons[Api.current_api]
 
