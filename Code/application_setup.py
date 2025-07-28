@@ -105,26 +105,6 @@ class CursorClass():
             'cursor_i_beam': Cursor(name='cursor_i_beam', offset_x=-6, offset_y=-9, priority=2, images=['cursor_i_beam'], render_functions=[Render.invert_white])
             }
         self.current_cursor: Cursor | None = None
-        # self.cursors = {
-        #     # [offset_x, offset_y, priority]
-        #     # higher priority > lower priority
-        #     'black_pixel': [0, 0, 9999],  # used for debugging
-        #     'cursor_arrow': [0, 0, 1],
-        #     'cursor_crosshair': [-3, -3, 5],
-        #     'cursor_big_crosshair': [-10, -10, 7],
-        #     'cursor_nesw': [-13, -13, 99],
-        #     'cursor_eyedrop': [0, -21, 6],
-        #     'cursor_i_beam': [-6, -9, 2]
-        #     }
-        # self.current_cursor = ['', 0]
-        # self.last_cursor = ['', 0]
-        # self.reset_current_cursor()
-    #
-    def prepare_cursor_for_use(self, name: str, **kwargs):
-        pass
-    #
-    def remove_cursor_from_use():
-        pass
     #
     def update_cursor(self, Screen, gl_context, Render, Keys):
         # check that a cursor was added this frame
@@ -146,24 +126,6 @@ class CursorClass():
             self.current_cursor = new_cursor
         elif self.current_cursor.priority < new_cursor.priority:
             self.current_cursor = new_cursor
-    #
-    # def update_cursor(self, Screen, gl_context, Render, Keys):
-    #     # self.add_cursor_this_frame('black_pixel')
-    #     match self.current_cursor[0]:
-    #         case 'cursor_arrow' | 'cursor_crosshair' | 'cursor_nesw' | 'cursor_eyedrop':
-    #             Render.basic_rect_ltwh_to_quad(Screen, gl_context, self.current_cursor[0], [Keys.cursor_x_pos.value + self.cursors[self.current_cursor[0]][0], Keys.cursor_y_pos.value + self.cursors[self.current_cursor[0]][1], Render.renderable_objects[self.current_cursor[0]].ORIGINAL_WIDTH, Render.renderable_objects[self.current_cursor[0]].ORIGINAL_HEIGHT])
-    #         case 'cursor_i_beam' | 'cursor_big_crosshair' | 'black_pixel':
-    #             Render.invert_white(Screen, gl_context, self.current_cursor[0], [Keys.cursor_x_pos.value + self.cursors[self.current_cursor[0]][0], Keys.cursor_y_pos.value + self.cursors[self.current_cursor[0]][1], Render.renderable_objects[self.current_cursor[0]].ORIGINAL_WIDTH, Render.renderable_objects[self.current_cursor[0]].ORIGINAL_HEIGHT])
-    #     self.last_cursor = self.current_cursor
-    #     self.reset_current_cursor()
-    # #
-    # def add_cursor_this_frame(self, added_cursor: str):
-    #     # if priority of the added cursor is higher than the priority of the current highest priority cursor
-    #     if self.cursors[added_cursor][2] > self.current_cursor[1]:
-    #         self.current_cursor = [added_cursor, self.cursors[added_cursor][2]]
-    # #
-    # def reset_current_cursor(self):
-    #     self.current_cursor = ['', 0]
     #
     @staticmethod
     def set_cursor_pos(Keys, x_pos: int | None = None, y_pos: int | None = None):
