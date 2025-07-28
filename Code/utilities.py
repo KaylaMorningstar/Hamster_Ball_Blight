@@ -324,7 +324,7 @@ IMAGE_PATHS = {
     '#': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\pound.png'],
     '\\': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\back_slash.png'],
     '/': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\forward_slash.png'],
-    # cursors
+    # editor cursors
     'cursor_arrow': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_arrow.png'],
     'cursor_crosshair': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_crosshair.png'],
     'cursor_big_crosshair': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_big_crosshair.png'],
@@ -359,5 +359,7 @@ IMAGE_PATHS = {
     # test
     # 'map': [[LOADED_IN_EDITOR], 'C:\\Users\\Kayle\\Desktop\\OLD_HAMSTER\\HAMSTER_BALL_BLITZ\\data\\Images\\Forest\\Forest1.png']
     # player
-    'player_ball_front': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\game\\player\\ball_front.png']
+    'player_ball_front': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\game\\player\\ball_front.png'],
+    # game cursors
+    'default_cursor': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\game\\cursors\\default_cursor.png'],
 }

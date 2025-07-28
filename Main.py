@@ -4,14 +4,14 @@ if __name__ == '__main__':
     import os
     PATH = os.getcwd()
     #
-    # initialize time and keys
-    from Code.application_setup import application_setup
-    Time, Keys, Cursor = application_setup()
-    Cursor.set_cursor_visibility(False)
-    #
     # initialize visuals
     from Code.drawing_functions import initialize_display
     Screen, Render, gl_context = initialize_display()
+    #
+    # initialize time and keys
+    from Code.application_setup import application_setup
+    Time, Keys, Cursor = application_setup(Render)
+    Cursor.set_cursor_visibility(False)
     #
     # load permanently loaded images
     from Code.utilities import IMAGE_PATHS, loading_and_unloading_images_manager, ALWAYS_LOADED

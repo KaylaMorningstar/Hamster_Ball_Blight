@@ -181,8 +181,8 @@ class Player():
             self.visible: bool = True
             self.rotation: float = 0.0
         def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
-            pass
-            # self.rotation = math.degrees(math.atan2(-self.force_movement_y, self.force_movement_x)) % 360
+            print((Keys.cursor_y_pos.value, Keys.cursor_x_pos.value))
+            self.rotation = math.degrees(math.atan2(-Keys.cursor_y_pos.value, Keys.cursor_x_pos.value)) % 360
     #
     class PlayerTool():
         def __init__(self):

@@ -329,12 +329,13 @@ def update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, C
 
 
 def editor_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
-    Cursor.add_cursor_this_frame('cursor_arrow')
     if Api.setup_required:
         loading_and_unloading_images_manager(Screen, Render, gl_context, IMAGE_PATHS, [LOADED_IN_EDITOR], [LOADED_IN_MENU, LOADED_IN_GAME])
         Api.api_initiated_singletons['Editor'] = Api.api_singletons['Editor'](Render, Screen, gl_context, PATH)
         Api.setup_required = False
+        # Cursor.prepare_cursor_for_use(Cursor.BLACK_PIXEL, offset_x=0, offset_y=0)
     #
+    Cursor.add_cursor_this_frame('cursor_arrow')
     Singleton = Api.api_initiated_singletons[Api.current_api]
     update_image(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)
     update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor)

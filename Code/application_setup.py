@@ -3,11 +3,11 @@ import pyperclip
 from Code.utilities import move_number_to_desired_range, get_time
 from Code.Editor.editor_loop import editor_loop, EditorSingleton
 from Code.Game.game_loop import game_loop, GameSingleton
-from typing import Callable
+from typing import Callable, Iterable
 from Code.utilities import COLORS
 
 
-def application_setup():
+def application_setup(Render):
     pygame.init()
     #
     # timing
@@ -17,7 +17,7 @@ def application_setup():
     Keys = KeysClass()
     #
     # cursor
-    Cursor = CursorClass()
+    Cursor = CursorClass(Render)
     #
     return Time, Keys, Cursor
 
@@ -78,40 +78,92 @@ class TimingClass():
         Render.draw_string_of_characters(Screen, gl_context, fps, lt, TimingClass._TEXT_PIXEL_SIZE, COLORS['BLACK'])
 
 
+class Cursor():
+    def __init__(self, name: str, offset_x: int, offset_y: int, priority: int, images: Iterable[str], render_functions: Iterable[Callable] | None):
+        self.name: str = name
+        self.offset_x: int = offset_x
+        self.offset_y: int = offset_y
+        self.priority: int = priority
+        self.images: Iterable[str] = images
+        self.render_functions: Iterable[Callable] = render_functions
+
+
 class CursorClass():
-    def __init__(self):
+
+    DEFAULT_OFFSET = 0
+    DEFAULT_PRIORITY = 0
+    DEFAULT_IMAGE = 'black_pixel'
+
+    def __init__(self, Render):
         self.cursors = {
-            # [offset_x, offset_y, priority]
-            # higher priority > lower priority
-            'black_pixel': [0, 0, 9999],  # used for debugging
-            'cursor_arrow': [0, 0, 1],
-            'cursor_crosshair': [-3, -3, 5],
-            'cursor_big_crosshair': [-10, -10, 7],
-            'cursor_nesw': [-13, -13, 99],
-            'cursor_eyedrop': [0, -21, 6],
-            'cursor_i_beam': [-6, -9, 2]
+            'black_pixel': Cursor(name='black_pixel', offset_x=0, offset_y=0, priority=9999, images=['black_pixel'], render_functions=[Render.invert_white]),  # used for debugging
+            'cursor_arrow': Cursor(name='cursor_arrow', offset_x=0, offset_y=0, priority=1, images=['cursor_arrow'], render_functions=[Render.basic_rect_ltwh_to_quad]),
+            'cursor_crosshair': Cursor(name='cursor_crosshair', offset_x=-3, offset_y=-3, priority=5, images=['cursor_crosshair'], render_functions=[Render.basic_rect_ltwh_to_quad]),
+            'cursor_big_crosshair': Cursor(name='cursor_big_crosshair', offset_x=-10, offset_y=-10, priority=7, images=['cursor_big_crosshair'], render_functions=[Render.invert_white]),
+            'cursor_nesw': Cursor(name='cursor_nesw', offset_x=-13, offset_y=-13, priority=99, images=['cursor_nesw'], render_functions=[Render.basic_rect_ltwh_to_quad]),
+            'cursor_eyedrop': Cursor(name='cursor_eyedrop', offset_x=0, offset_y=-21, priority=6, images=['cursor_eyedrop'], render_functions=[Render.basic_rect_ltwh_to_quad]),
+            'cursor_i_beam': Cursor(name='cursor_i_beam', offset_x=-6, offset_y=-9, priority=2, images=['cursor_i_beam'], render_functions=[Render.invert_white])
             }
-        self.current_cursor = ['', 0]
-        self.last_cursor = ['', 0]
-        self.reset_current_cursor()
+        self.current_cursor: Cursor | None = None
+        # self.cursors = {
+        #     # [offset_x, offset_y, priority]
+        #     # higher priority > lower priority
+        #     'black_pixel': [0, 0, 9999],  # used for debugging
+        #     'cursor_arrow': [0, 0, 1],
+        #     'cursor_crosshair': [-3, -3, 5],
+        #     'cursor_big_crosshair': [-10, -10, 7],
+        #     'cursor_nesw': [-13, -13, 99],
+        #     'cursor_eyedrop': [0, -21, 6],
+        #     'cursor_i_beam': [-6, -9, 2]
+        #     }
+        # self.current_cursor = ['', 0]
+        # self.last_cursor = ['', 0]
+        # self.reset_current_cursor()
+    #
+    def prepare_cursor_for_use(self, name: str, **kwargs):
+        pass
+    #
+    def remove_cursor_from_use():
+        pass
     #
     def update_cursor(self, Screen, gl_context, Render, Keys):
-        # self.add_cursor_this_frame('black_pixel')
-        match self.current_cursor[0]:
-            case 'cursor_arrow' | 'cursor_crosshair' | 'cursor_nesw' | 'cursor_eyedrop':
-                Render.basic_rect_ltwh_to_quad(Screen, gl_context, self.current_cursor[0], [Keys.cursor_x_pos.value + self.cursors[self.current_cursor[0]][0], Keys.cursor_y_pos.value + self.cursors[self.current_cursor[0]][1], Render.renderable_objects[self.current_cursor[0]].ORIGINAL_WIDTH, Render.renderable_objects[self.current_cursor[0]].ORIGINAL_HEIGHT])
-            case 'cursor_i_beam' | 'cursor_big_crosshair' | 'black_pixel':
-                Render.invert_white(Screen, gl_context, self.current_cursor[0], [Keys.cursor_x_pos.value + self.cursors[self.current_cursor[0]][0], Keys.cursor_y_pos.value + self.cursors[self.current_cursor[0]][1], Render.renderable_objects[self.current_cursor[0]].ORIGINAL_WIDTH, Render.renderable_objects[self.current_cursor[0]].ORIGINAL_HEIGHT])
-        self.last_cursor = self.current_cursor
-        self.reset_current_cursor()
+        # check that a cursor was added this frame
+        if self.current_cursor is None:
+            return
+        # draw every layer of the cursor
+        for image, render_function in zip(self.current_cursor.images, self.current_cursor.render_functions):
+            render_function(Screen, gl_context, image, [Keys.cursor_x_pos.value + self.current_cursor.offset_x, Keys.cursor_y_pos.value + self.current_cursor.offset_y, Render.renderable_objects[image].ORIGINAL_WIDTH, Render.renderable_objects[image].ORIGINAL_HEIGHT])
+        # reset the cursor for next frame
+        self.current_cursor = None
     #
     def add_cursor_this_frame(self, added_cursor: str):
-        # if priority of the added cursor is higher than the priority of the current highest priority cursor
-        if self.cursors[added_cursor][2] > self.current_cursor[1]:
-            self.current_cursor = [added_cursor, self.cursors[added_cursor][2]]
+        # check that the new cursor exists
+        new_cursor = self.cursors.get(added_cursor)
+        if new_cursor is None:
+            return
+        # select which cursor should be used based on priority
+        if self.current_cursor is None:
+            self.current_cursor = new_cursor
+        elif self.current_cursor.priority < new_cursor.priority:
+            self.current_cursor = new_cursor
     #
-    def reset_current_cursor(self):
-        self.current_cursor = ['', 0]
+    # def update_cursor(self, Screen, gl_context, Render, Keys):
+    #     # self.add_cursor_this_frame('black_pixel')
+    #     match self.current_cursor[0]:
+    #         case 'cursor_arrow' | 'cursor_crosshair' | 'cursor_nesw' | 'cursor_eyedrop':
+    #             Render.basic_rect_ltwh_to_quad(Screen, gl_context, self.current_cursor[0], [Keys.cursor_x_pos.value + self.cursors[self.current_cursor[0]][0], Keys.cursor_y_pos.value + self.cursors[self.current_cursor[0]][1], Render.renderable_objects[self.current_cursor[0]].ORIGINAL_WIDTH, Render.renderable_objects[self.current_cursor[0]].ORIGINAL_HEIGHT])
+    #         case 'cursor_i_beam' | 'cursor_big_crosshair' | 'black_pixel':
+    #             Render.invert_white(Screen, gl_context, self.current_cursor[0], [Keys.cursor_x_pos.value + self.cursors[self.current_cursor[0]][0], Keys.cursor_y_pos.value + self.cursors[self.current_cursor[0]][1], Render.renderable_objects[self.current_cursor[0]].ORIGINAL_WIDTH, Render.renderable_objects[self.current_cursor[0]].ORIGINAL_HEIGHT])
+    #     self.last_cursor = self.current_cursor
+    #     self.reset_current_cursor()
+    # #
+    # def add_cursor_this_frame(self, added_cursor: str):
+    #     # if priority of the added cursor is higher than the priority of the current highest priority cursor
+    #     if self.cursors[added_cursor][2] > self.current_cursor[1]:
+    #         self.current_cursor = [added_cursor, self.cursors[added_cursor][2]]
+    # #
+    # def reset_current_cursor(self):
+    #     self.current_cursor = ['', 0]
     #
     @staticmethod
     def set_cursor_pos(Keys, x_pos: int | None = None, y_pos: int | None = None):

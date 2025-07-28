@@ -4,7 +4,7 @@ import math
 from array import array
 from copy import deepcopy
 from glob import glob
-from Code.utilities import move_number_to_desired_range, get_all_paths_in_directory, difference_between_angles
+from Code.utilities import move_number_to_desired_range, get_all_paths_in_directory, difference_between_angles, COLORS
 
 class Map():
     TILE_EXTENSION = ''
@@ -181,9 +181,6 @@ class StoredDraws():
             for reference in current_level:
                 Render.execute_stored_draw(Screen, gl_context, reference)
         self.stored_draws_references = deepcopy(self.default_stored_draws)
-
-
-
 
 
 def rectangles_overlap(ltwh1, ltwh2):
