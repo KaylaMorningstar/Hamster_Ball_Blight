@@ -27,7 +27,6 @@ class Player():
     BALL_WH = 69
 
     # used for drawing
-    PRETTY_BALL_FRONT_REFERENCE = 'player_ball_front'
     PRETTY_BALL_ORDER = 5
 
     # used for force calculations
@@ -88,6 +87,10 @@ class Player():
         self.normal_force_upper_angle = (((self.gravity_angle - 180) % 360) + 90) % 360
     #
     def __init__(self, PATH: str):
+        #
+        # image references
+        self.ball_front_reference: str = 'player_ball_front'
+        self.spout_reference: str = 'classic_spout'
         #
         # state
         self.last_state: int = Player.BALLISTIC
@@ -176,13 +179,16 @@ class Player():
         self.tool1: Player.NoTool | Player.WaterJet | Player.Grapple = Player.WaterJet()
         self.tool2: Player.NoTool | Player.WaterJet | Player.Grapple = Player.Grapple()
     #
-    class Spout():
+    class Spout:
+        _ROTATION_FACTOR = 10
         def __init__(self):
             self.visible: bool = True
             self.rotation: float = 0.0
         def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
-            print((Keys.cursor_y_pos.value, Keys.cursor_x_pos.value))
-            self.rotation = math.degrees(math.atan2(-Keys.cursor_y_pos.value, Keys.cursor_x_pos.value)) % 360
+            ball_center_x = Singleton.player.screen_position_x + Singleton.player.ball_radius
+            ball_center_y = Singleton.player.screen_position_y + Singleton.player.ball_radius
+            ideal_rotation = math.degrees(math.atan2(ball_center_y - Keys.cursor_y_pos.value, Keys.cursor_x_pos.value - ball_center_x)) % 360
+            self.rotation = (self.rotation + ((difference_between_angles(self.rotation, ideal_rotation)) * Time.delta_time * Player.Spout._ROTATION_FACTOR)) % 360
     #
     class PlayerTool():
         def __init__(self):
@@ -590,8 +596,10 @@ class Player():
     #
     def _draw(self, stored_draws, Render, Screen, gl_context):
         # draw the front of the ball
-        Render.store_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Render.basic_rect_ltwh_to_quad, {'object_name': Player.PRETTY_BALL_FRONT_REFERENCE, 'ltwh': [round(self.screen_position_x), round(self.screen_position_y), self.ball_width, self.ball_height]})
-        stored_draws.add_draw(Player.PRETTY_BALL_FRONT_REFERENCE, Player.PRETTY_BALL_ORDER)
+        Render.store_draw(self.ball_front_reference, Render.basic_rect_ltwh_to_quad, {'object_name': self.ball_front_reference, 'ltwh': [round(self.screen_position_x), round(self.screen_position_y), self.ball_width, self.ball_height]})
+        stored_draws.add_draw(self.ball_front_reference, Player.PRETTY_BALL_ORDER)
+        Render.store_draw(self.spout_reference, Render.rotation_rect_ltwhr_to_quad, {'object_name': self.spout_reference, 'ltwhr': [round(self.screen_position_x), round(self.screen_position_y), self.ball_width, self.ball_height, self.spout.rotation]})
+        stored_draws.add_draw(self.spout_reference, Player.PRETTY_BALL_ORDER)
     #
     def _initialize_ball_collision(self):
         # load the images

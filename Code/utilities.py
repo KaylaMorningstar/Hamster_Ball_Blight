@@ -360,6 +360,7 @@ IMAGE_PATHS = {
     # 'map': [[LOADED_IN_EDITOR], 'C:\\Users\\Kayle\\Desktop\\OLD_HAMSTER\\HAMSTER_BALL_BLITZ\\data\\Images\\Forest\\Forest1.png']
     # player
     'player_ball_front': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\game\\player\\ball_front.png'],
+    'classic_spout': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\game\\player\\classic_spout.png'],
     # game cursors
     'classic_cursor1': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\cursors\\classic_cursor1.png'],
     'classic_cursor2': [[LOADED_IN_GAME], PATH + '\\Images\\not_always_loaded\\cursors\\classic_cursor2.png'],

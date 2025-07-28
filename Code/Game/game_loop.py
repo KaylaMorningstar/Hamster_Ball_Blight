@@ -29,9 +29,6 @@ def game_loop(Api, PATH, Screen, gl_context, Render, Time, Keys, Cursor):
     # get the singleton for the game
     Singleton = Api.api_initiated_singletons[Api.current_api]
 
-    # # update map
-    # Singleton.map.update_tile_loading(Singleton, Render, Screen, gl_context, Time, Keys, Cursor)
-
     # update objects (non-player)
 
     # update player
