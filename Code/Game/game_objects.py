@@ -175,7 +175,7 @@ class Player():
         self._initialize_ball_collision()
         #
         # tools (water jet, grapple, etc)
-        self.spout = Player.Spout = Player.Spout()
+        self.spout: Player.Spout = Player.Spout()
         self.tool1: Player.NoTool | Player.WaterJet | Player.Grapple = Player.WaterJet()
         self.tool2: Player.NoTool | Player.WaterJet | Player.Grapple = Player.Grapple()
     #
@@ -203,10 +203,23 @@ class Player():
             pass
     #
     class WaterJet(PlayerTool):
+        _MINIMUM_LENGTH = 0.0
+        _MAXIMUM_LENGTH = 160.0
+        _DEFAULT_EXTENSION_SPEED = 300.0
         def __init__(self):
             super().__init__()
+            self.extension_speed: int | float = Player.WaterJet._DEFAULT_EXTENSION_SPEED
+            self.length: int = Player.WaterJet._MINIMUM_LENGTH
+            self.rounded_length: int = round(Player.WaterJet._MINIMUM_LENGTH)
         def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
-            pass
+            extend = Keys.primary.pressed
+            if extend:
+                self.length += self.extension_speed * Time.delta_time
+            else:
+                self.length -= self.extension_speed * Time.delta_time
+            self.length = move_number_to_desired_range(Player.WaterJet._MINIMUM_LENGTH, self.length, Player.WaterJet._MAXIMUM_LENGTH)
+            self.rounded_length = round(self.length)
+            print(self.length, self.rounded_length)
     #
     class Grapple(PlayerTool):
         def __init__(self):
