@@ -209,17 +209,17 @@ class Player():
         def __init__(self):
             super().__init__()
             self.extension_speed: int | float = Player.WaterJet._DEFAULT_EXTENSION_SPEED
-            self.length: int = Player.WaterJet._MINIMUM_LENGTH
-            self.rounded_length: int = round(Player.WaterJet._MINIMUM_LENGTH)
+            self.length_float: int = Player.WaterJet._MINIMUM_LENGTH
+            self.length: int = round(Player.WaterJet._MINIMUM_LENGTH)
         def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
+            # update the water jet length
             extend = Keys.primary.pressed
             if extend:
-                self.length += self.extension_speed * Time.delta_time
+                self.length_float += self.extension_speed * Time.delta_time
             else:
-                self.length -= self.extension_speed * Time.delta_time
-            self.length = move_number_to_desired_range(Player.WaterJet._MINIMUM_LENGTH, self.length, Player.WaterJet._MAXIMUM_LENGTH)
-            self.rounded_length = round(self.length)
-            print(self.length, self.rounded_length)
+                self.length_float -= self.extension_speed * Time.delta_time
+            self.length_float = move_number_to_desired_range(Player.WaterJet._MINIMUM_LENGTH, self.length_float, Player.WaterJet._MAXIMUM_LENGTH)
+            self.length = round(self.length_float)
     #
     class Grapple(PlayerTool):
         def __init__(self):
