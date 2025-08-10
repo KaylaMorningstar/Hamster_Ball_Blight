@@ -42,7 +42,7 @@ def update_palette(Singleton, Api, PATH, Screen, gl_context, Render, Time, Keys,
             mouse_is_in_palette_scroll_area = point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, palette_scroll_background_ltwh)
             mouse_is_over_palette_scroll = point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.palette_scroll_ltwh)
             if mouse_is_in_palette_scroll_area:
-                palette_scroll_color = Singleton.palette_scroll_inside_hightlighted if (Cursor.last_cursor[0] == 'cursor_arrow') else Singleton.palette_scroll_inside_unhighlighted
+                palette_scroll_color = Singleton.palette_scroll_inside_hightlighted if (str(Cursor.last_cursor) == 'cursor_arrow') else Singleton.palette_scroll_inside_unhighlighted
                 if Keys.editor_primary.newly_pressed:
                     Singleton.palette_scroll_is_grabbed = True
                     if not mouse_is_over_palette_scroll:

@@ -1,5 +1,6 @@
 import pygame
 import pyperclip
+from copy import deepcopy
 from Code.utilities import move_number_to_desired_range, get_time
 from Code.Editor.editor_loop import editor_loop, EditorSingleton
 from Code.Game.game_loop import game_loop, GameSingleton
@@ -86,6 +87,9 @@ class Cursor():
         self.priority: int = priority
         self.images: Iterable[str] = images
         self.render_functions: Iterable[Callable] = render_functions
+    #
+    def __str__(self):
+        return self.name
 
 
 class CursorClass():
@@ -108,6 +112,7 @@ class CursorClass():
             'classic_cursor': Cursor(name='classic_cursor', offset_x=-8, offset_y=-8, priority=1, images=['classic_cursor1', 'classic_cursor2'], render_functions=[Render.basic_rect_ltwh_to_quad, Render.invert_white])
             }
         self.current_cursor: Cursor | None = None
+        self.last_cursor: Cursor | None = None
     #
     def update_cursor(self, Screen, gl_context, Render, Keys):
         # check that a cursor was added this frame
@@ -117,6 +122,7 @@ class CursorClass():
         for image, render_function in zip(self.current_cursor.images, self.current_cursor.render_functions):
             render_function(Screen, gl_context, image, [Keys.cursor_x_pos.value + self.current_cursor.offset_x, Keys.cursor_y_pos.value + self.current_cursor.offset_y, Render.renderable_objects[image].ORIGINAL_WIDTH, Render.renderable_objects[image].ORIGINAL_HEIGHT])
         # reset the cursor for next frame
+        self.last_cursor = self.current_cursor
         self.current_cursor = None
     #
     def add_cursor_this_frame(self, added_cursor: str):
