@@ -1,10 +1,10 @@
 from array import array
 import math
-from Code.utilities import atan2, get_text_height, get_text_width, rgba_to_bgra, angle_in_range
+from Code.utilities import atan2, get_text_height, get_text_width, rgba_to_bgra, angle_in_range, difference_between_angles
 import pygame
 import moderngl
 import numpy as np
-from typing import Callable
+from typing import Callable, Iterable
 from Code.Editor.editor_utilities import LineTool, get_perfect_circle_edge_angles_for_drawing_lines, get_perfect_square_edge_angles_for_drawing_lines
 
 
@@ -85,6 +85,7 @@ class RenderObjects():
         self.programs['draw_hollow_ellipse'] = DrawHollowEllipse(gl_context)
         self.programs['draw_line'] = DrawLine(gl_context)
         self.programs['draw_collision_tile'] = DrawCollisionTile(gl_context)
+        self.programs['draw_water_jet'] = DrawWaterJet(gl_context)
     #
     def write_pixels(self, name: str, ltwh: tuple[int, int, int, int], rgba: tuple[int, int, int, int]):
         self.renderable_objects[name].texture.write(np.array(rgba_to_bgra(rgba), dtype=np.uint8).tobytes(), viewport=ltwh)
@@ -620,6 +621,37 @@ class RenderObjects():
         topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
         bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
         program['aspect'] = Screen.aspect
+        quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
+        renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
+        renderable_object.texture.use(0)
+        renderer.render(mode=moderngl.TRIANGLE_STRIP)
+        quads.release()
+        renderer.release()
+    #
+    def draw_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, water_jet_thickness: float, wave_length: float, wave_variance: float):
+        # 'draw_water_jet', DrawWaterJet
+        ltwh = [ball_center[0] - current_length_from_center, ball_center[1] - current_length_from_center, 2 * current_length_from_center, 2 * current_length_from_center]
+        program = self.programs['draw_water_jet'].program
+        renderable_object = self.renderable_objects[object_name]
+        topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
+        topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
+        topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
+        bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
+        slope = -math.tan(math.radians(rotation))
+        inverse_slope = 1 / slope
+        program['aspect'] = Screen.aspect
+        program['width'] = ltwh[2]
+        program['height'] = ltwh[3]
+        program['slope'] = slope
+        program['inverse_slope'] = inverse_slope
+        program['water_jet_thickness'] = water_jet_thickness
+        program['current_length_from_center'] = current_length_from_center
+        program['quad1'] = (315.0 <= rotation <= 360.0) or (0.0 <= rotation <= 135.0)
+        program['wave_length'] = wave_length
+        program['wave_variance'] = wave_variance
+        program['quad2'] = (45.0 <= rotation <= 225.0)
+        program['quad3'] = (135 <= rotation <= 315.0)
+        program['quad4'] = (225.0 <= rotation <= 360.0) or (0.0 <= rotation <= 45.0)
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
         renderer = gl_context.vertex_array(program, [(quads, '2f 2f', 'vert', 'texcoord')])
         renderable_object.texture.use(0)
@@ -2509,6 +2541,111 @@ class DrawCollisionTile():
             if ((texture(tex, uvs).r > 0.01568) && (texture(tex, uvs).r < 0.016)) {
                 f_color.rgb = BLUE;
             }
+        }
+        '''
+        self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
+class DrawWaterJet():
+    def __init__(self, gl_context):
+        self.VERTICE_SHADER = '''
+        #version 330 core
+
+        uniform float aspect;
+
+        in vec2 vert;
+        in vec2 texcoord;
+        out vec2 uvs;
+
+        void main() {
+            uvs = texcoord;
+            gl_Position = vec4(
+            vert.x / aspect, 
+            vert.y, 0.0, 1.0
+            );
+        }
+        '''
+        self.FRAGMENT_SHADER = '''
+        #version 330 core
+        #extension GL_EXT_shader_framebuffer_fetch : require
+        #extension GL_ARB_gpu_shader_fp64 : require
+
+        const float PI = 3.1415926535;
+        const vec3 BLUE1 = vec3(0.0, 0.0, 1.0);
+        const vec3 BLUE2 = vec3(0.0, 0.5, 1.0);
+
+        uniform sampler2D tex;
+        uniform float width;
+        uniform float height;
+        uniform float slope;
+        uniform float inverse_slope;
+        uniform float intercept;
+        uniform float water_jet_thickness;
+        uniform float current_length_from_center;
+        uniform float rotation;
+        uniform float wave_length;
+        uniform float wave_variance;
+        uniform bool quad1;
+        uniform bool quad2;
+        uniform bool quad3;
+        uniform bool quad4;
+
+        in vec2 uvs;
+        out vec4 f_color;
+
+        float get_point_to_line_distance(highp float slope, highp float intercept, highp float x_pos, highp float y_pos) {
+            return abs((slope * x_pos) + (-1 * y_pos) + intercept) / sqrt(pow(slope, 2) + pow(-1, 2));
+        }
+
+        float get_closest_x(highp float slope, highp float intercept, highp float x_pos, highp float y_pos) {
+            return ((-1 * ((-1 * x_pos) - (slope * y_pos))) - (slope * intercept)) / (pow(slope, 2) + pow(-1, 2));
+        }
+
+        float get_closest_y(highp float slope, highp float intercept, highp float x_pos, highp float y_pos) {
+            return ((slope * ((1 * x_pos) + (slope * y_pos))) - (-1 * intercept)) / (pow(slope, 2) + pow(-1, 2));
+        }
+
+        void main() {
+            // set all pixels to the destination color
+            vec3 destination_color = gl_LastFragData[0].rgb;
+            f_color = vec4(texture(tex, uvs).rgba);
+            f_color.rgb = destination_color;
+
+            float wave_length2 = wave_length;
+            float wave_variance2 = wave_variance;
+            float inverse_slope2 = inverse_slope;
+
+            // get which pixel this is
+            float index_x = round(uvs.x * (width - 1));
+            float index_y = round(uvs.y * (height - 1));
+            float pixel_x = (index_x + 0.5);
+            float pixel_y = (index_y + 0.5);
+            float x_pos = (width / 2) - pixel_x;
+            float y_pos = (height / 2) - pixel_y;
+
+            float point_to_line_distance = get_point_to_line_distance(slope, 0.0, x_pos, y_pos);
+            float closest_x = get_closest_x(slope, 0.0, x_pos, y_pos);
+            float closest_y = get_closest_y(slope, 0.0, x_pos, y_pos);
+            float distance_along_jet = sqrt(pow(closest_x, 2) + pow(closest_y, 2));
+
+            // remove pixels outside of water jet thickness
+            if (point_to_line_distance < water_jet_thickness) {
+                // remove pixels in wrong quadrants
+                bool acceptable_quad = ((quad1) && (-x_pos >= 0.0) && (y_pos >= 0.0)) || ((quad2) && (x_pos >= 0.0) && (y_pos >= 0.0)) || ((quad3) && (x_pos >= 0.0) && (-y_pos >= 0.0)) || ((quad4) && (-x_pos >= 0.0) && (-y_pos >= 0.0));
+                if (acceptable_quad) {
+                    // remove pixels too far away
+                    float distance_from_ball_center = sqrt(pow(x_pos, 2) + pow(y_pos, 2));
+                    if (distance_from_ball_center < current_length_from_center) {
+
+                        // draw water
+                        if (distance_along_jet <= 100) {
+                            f_color.rgb = BLUE2;
+                        }
+
+                    }
+                }
+            }
+
         }
         '''
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)

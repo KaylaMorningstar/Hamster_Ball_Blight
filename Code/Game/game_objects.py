@@ -91,6 +91,7 @@ class Player():
         # image references
         self.ball_front_reference: str = 'player_ball_front'
         self.spout_reference: str = 'classic_spout'
+        self.water_jet_reference: str = 'water_jet_reference'
         #
         # state
         self.last_state: int = Player.BALLISTIC
@@ -192,13 +193,14 @@ class Player():
     #
     class PlayerTool():
         def __init__(self):
-            pass
+            self.being_used: bool = False
         def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
             raise NotImplementedError
     #
     class NoTool(PlayerTool):
         def __init__(self):
             super().__init__()
+
         def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
             pass
     #
@@ -206,12 +208,20 @@ class Player():
         _MINIMUM_LENGTH = 0.0
         _MAXIMUM_LENGTH = 160.0
         _DEFAULT_EXTENSION_SPEED = 300.0
+        WATER_JET_THICKNESS = 4.5
+        WAVE_LENGTH = 20.0
+        WAVE_VARIANCE = 2.0
         def __init__(self):
             super().__init__()
             self.extension_speed: int | float = Player.WaterJet._DEFAULT_EXTENSION_SPEED
             self.length_float: int = Player.WaterJet._MINIMUM_LENGTH
             self.length: int = round(Player.WaterJet._MINIMUM_LENGTH)
+
         def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
+            self._naive_update_length(Keys, Time)
+            self.being_used = self.length != Player.Grapple._MINIMUM_LENGTH
+
+        def _naive_update_length(self, Keys, Time):
             # update the water jet length
             extend = Keys.primary.pressed
             if extend:
@@ -222,10 +232,28 @@ class Player():
             self.length = round(self.length_float)
     #
     class Grapple(PlayerTool):
+        _MINIMUM_LENGTH = 0.0
+        _MAXIMUM_LENGTH = 160.0
+        _DEFAULT_EXTENSION_SPEED = 300.0
         def __init__(self):
             super().__init__()
+            self.extension_speed: int | float = Player.Grapple._DEFAULT_EXTENSION_SPEED
+            self.length_float: int = Player.Grapple._MINIMUM_LENGTH
+            self.length: int = round(Player.Grapple._MINIMUM_LENGTH)
+
         def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
-            pass
+            self._naive_update_length(Keys, Time)
+            self.being_used = self.length != Player.Grapple._MINIMUM_LENGTH
+
+        def _naive_update_length(self, Keys, Time):
+            # update the grapple length
+            extend = Keys.secondary.pressed
+            if extend:
+                self.length_float += self.extension_speed * Time.delta_time
+            else:
+                self.length_float -= self.extension_speed * Time.delta_time
+            self.length_float = move_number_to_desired_range(Player.Grapple._MINIMUM_LENGTH, self.length_float, Player.Grapple._MAXIMUM_LENGTH)
+            self.length = round(self.length_float)
     #
     def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
         self.last_state = self.state
@@ -608,9 +636,20 @@ class Player():
         self.force_water_y = Player.DEFAULT_FORCE_WATER_Y
     #
     def _draw(self, stored_draws, Render, Screen, gl_context):
+        # draw tool1
+        for tool in [self.tool1, self.tool2]:
+            if tool.being_used:
+                match type(self.tool1).__name__:
+                    case Player.WaterJet.__name__:
+                        Render.store_draw(self.water_jet_reference, Render.draw_water_jet, {'object_name': 'black_pixel', 'ball_center': [self.screen_position_x + self.ball_radius, self.screen_position_y + self.ball_radius], 'ball_radius': self.ball_radius, 'max_length_from_center': self.ball_radius + Player.WaterJet._MAXIMUM_LENGTH, 'current_length_from_center': self.ball_radius + self.tool1.length_float, 'rotation': self.spout.rotation, 'water_jet_thickness': Player.WaterJet.WATER_JET_THICKNESS, 'wave_length': Player.WaterJet.WAVE_LENGTH, 'wave_variance': Player.WaterJet.WAVE_VARIANCE})
+                        stored_draws.add_draw(self.water_jet_reference, Player.PRETTY_BALL_ORDER)
+                    case Player.Grapple.__name__:
+                        Render.store_draw(self.water_jet_reference, Render.draw_water_jet, {'object_name': 'black_pixel', 'ball_center': [self.screen_position_x + self.ball_radius, self.screen_position_y + self.ball_radius], 'ball_radius': self.ball_radius, 'max_length_from_center': self.ball_radius + Player.WaterJet._MAXIMUM_LENGTH, 'current_length_from_center': self.ball_radius + self.tool1.length_float, 'rotation': self.spout.rotation, 'water_jet_thickness': Player.WaterJet.WATER_JET_THICKNESS, 'wave_length': Player.WaterJet.WAVE_LENGTH, 'wave_variance': Player.WaterJet.WAVE_VARIANCE})
+                        stored_draws.add_draw(self.water_jet_reference, Player.PRETTY_BALL_ORDER)
         # draw the front of the ball
         Render.store_draw(self.ball_front_reference, Render.basic_rect_ltwh_to_quad, {'object_name': self.ball_front_reference, 'ltwh': [round(self.screen_position_x), round(self.screen_position_y), self.ball_width, self.ball_height]})
         stored_draws.add_draw(self.ball_front_reference, Player.PRETTY_BALL_ORDER)
+        # draw spout
         Render.store_draw(self.spout_reference, Render.rotation_rect_ltwhr_to_quad, {'object_name': self.spout_reference, 'ltwhr': [round(self.screen_position_x), round(self.screen_position_y), self.ball_width, self.ball_height, self.spout.rotation]})
         stored_draws.add_draw(self.spout_reference, Player.PRETTY_BALL_ORDER)
     #
