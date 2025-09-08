@@ -1,6 +1,6 @@
 from array import array
 import math
-from Code.utilities import atan2, get_text_height, get_text_width, rgba_to_bgra, angle_in_range, difference_between_angles
+from Code.utilities import atan2, get_text_height, get_text_width, rgba_to_bgra, angle_in_range, difference_between_angles, get_time
 import pygame
 import moderngl
 import numpy as np
@@ -628,7 +628,7 @@ class RenderObjects():
         quads.release()
         renderer.release()
     #
-    def draw_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, water_jet_thickness: float, wave_length: float, wave_variance: float):
+    def draw_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, water_jet_thickness: float, wave_length: float, wave_variance: float, moment_in_wave_period: float):
         # 'draw_water_jet', DrawWaterJet
         ltwh = [ball_center[0] - current_length_from_center, ball_center[1] - current_length_from_center, 2 * current_length_from_center, 2 * current_length_from_center]
         program = self.programs['draw_water_jet'].program
@@ -644,11 +644,13 @@ class RenderObjects():
         program['height'] = ltwh[3]
         program['slope'] = slope
         program['inverse_slope'] = inverse_slope
-        program['water_jet_thickness'] = water_jet_thickness
+        program['average_water_jet_thickness'] = water_jet_thickness
         program['current_length_from_center'] = current_length_from_center
-        program['quad1'] = (315.0 <= rotation <= 360.0) or (0.0 <= rotation <= 135.0)
         program['wave_length'] = wave_length
         program['wave_variance'] = wave_variance
+        program['ball_radius'] = ball_radius
+        program['moment_in_wave_period'] = moment_in_wave_period
+        program['quad1'] = (315.0 <= rotation <= 360.0) or (0.0 <= rotation <= 135.0)
         program['quad2'] = (45.0 <= rotation <= 225.0)
         program['quad3'] = (135 <= rotation <= 315.0)
         program['quad4'] = (225.0 <= rotation <= 360.0) or (0.0 <= rotation <= 45.0)
@@ -2571,8 +2573,8 @@ class DrawWaterJet():
         #extension GL_ARB_gpu_shader_fp64 : require
 
         const float PI = 3.1415926535;
-        const vec3 BLUE1 = vec3(0.0, 0.0, 1.0);
-        const vec3 BLUE2 = vec3(0.0, 0.5, 1.0);
+        const vec4 BLUE1 = vec4(0.0, 0.0, 1.0, 0.9);
+        const vec4 BLUE2 = vec4(0.0, 0.5, 1.0, 0.75);
 
         uniform sampler2D tex;
         uniform float width;
@@ -2580,11 +2582,13 @@ class DrawWaterJet():
         uniform float slope;
         uniform float inverse_slope;
         uniform float intercept;
-        uniform float water_jet_thickness;
+        uniform float average_water_jet_thickness;
         uniform float current_length_from_center;
         uniform float rotation;
         uniform float wave_length;
         uniform float wave_variance;
+        uniform float ball_radius;
+        uniform float moment_in_wave_period;
         uniform bool quad1;
         uniform bool quad2;
         uniform bool quad3;
@@ -2614,6 +2618,7 @@ class DrawWaterJet():
             float wave_length2 = wave_length;
             float wave_variance2 = wave_variance;
             float inverse_slope2 = inverse_slope;
+            float moment_in_wave_period2 = moment_in_wave_period;
 
             // get which pixel this is
             float index_x = round(uvs.x * (width - 1));
@@ -2626,7 +2631,10 @@ class DrawWaterJet():
             float point_to_line_distance = get_point_to_line_distance(slope, 0.0, x_pos, y_pos);
             float closest_x = get_closest_x(slope, 0.0, x_pos, y_pos);
             float closest_y = get_closest_y(slope, 0.0, x_pos, y_pos);
-            float distance_along_jet = sqrt(pow(closest_x, 2) + pow(closest_y, 2));
+            float distance_along_jet = sqrt(pow(closest_x, 2) + pow(closest_y, 2)) - ball_radius;
+
+            // calculate how thick the water jet should be at each point in length
+            float water_jet_thickness = average_water_jet_thickness + (wave_variance * ((mod(distance_along_jet - (wave_length * moment_in_wave_period), wave_length) - (wave_length / 2)) / (wave_length / 2)));
 
             // remove pixels outside of water jet thickness
             if (point_to_line_distance < water_jet_thickness) {
@@ -2638,8 +2646,9 @@ class DrawWaterJet():
                     if (distance_from_ball_center < current_length_from_center) {
 
                         // draw water
-                        if (distance_along_jet <= 100) {
-                            f_color.rgb = BLUE2;
+                        f_color.rgba = BLUE2;
+                        if (water_jet_thickness - average_water_jet_thickness > point_to_line_distance - 1) {
+                            f_color.rgba = BLUE1;
                         }
 
                     }
