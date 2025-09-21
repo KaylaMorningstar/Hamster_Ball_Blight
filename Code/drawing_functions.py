@@ -628,7 +628,7 @@ class RenderObjects():
         quads.release()
         renderer.release()
     #
-    def draw_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, water_jet_thickness: float, wave_length: float, wave_variance: float, moment_in_wave_period: float):
+    def draw_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, minimum_water_jet_thickness: float, moment_in_wave_period: float):
         # 'draw_water_jet', DrawWaterJet
         ltwh = [ball_center[0] - current_length_from_center, ball_center[1] - current_length_from_center, 2 * current_length_from_center, 2 * current_length_from_center]
         program = self.programs['draw_water_jet'].program
@@ -638,16 +638,14 @@ class RenderObjects():
         topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
         bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
         slope = -math.tan(math.radians(rotation))
-        inverse_slope = 1 / slope
         program['aspect'] = Screen.aspect
         program['width'] = ltwh[2]
         program['height'] = ltwh[3]
         program['slope'] = slope
-        program['inverse_slope'] = inverse_slope
-        program['average_water_jet_thickness'] = water_jet_thickness
+        program['minimum_water_jet_thickness'] = minimum_water_jet_thickness
         program['current_length_from_center'] = current_length_from_center
-        program['wave_length'] = wave_length
-        program['wave_variance'] = wave_variance
+        program['max_length_from_center'] = max_length_from_center
+        program['rotation'] = rotation
         program['ball_radius'] = ball_radius
         program['moment_in_wave_period'] = moment_in_wave_period
         program['quad1'] = (315.0 <= rotation <= 360.0) or (0.0 <= rotation <= 135.0)
@@ -2573,20 +2571,19 @@ class DrawWaterJet():
         #extension GL_ARB_gpu_shader_fp64 : require
 
         const float PI = 3.1415926535;
-        const vec4 BLUE1 = vec4(0.0, 0.0, 1.0, 0.9);
-        const vec4 BLUE2 = vec4(0.0, 0.5, 1.0, 0.75);
+        const vec4 DARK_BLUE = vec4(0.0, 0.0, 1.0, 0.90);
+        const vec4 LIGHT_BLUE = vec4(0.0, 0.5, 1.0, 0.35);
+        const vec4 WHITE = vec4(0.8, 0.8, 1.0, 0.9);
 
         uniform sampler2D tex;
         uniform float width;
         uniform float height;
         uniform float slope;
-        uniform float inverse_slope;
         uniform float intercept;
-        uniform float average_water_jet_thickness;
+        uniform float minimum_water_jet_thickness;
         uniform float current_length_from_center;
+        uniform float max_length_from_center;
         uniform float rotation;
-        uniform float wave_length;
-        uniform float wave_variance;
         uniform float ball_radius;
         uniform float moment_in_wave_period;
         uniform bool quad1;
@@ -2609,16 +2606,19 @@ class DrawWaterJet():
             return ((slope * ((1 * x_pos) + (slope * y_pos))) - (-1 * intercept)) / (pow(slope, 2) + pow(-1, 2));
         }
 
+        bool get_side_of_line(highp float rotation, highp float slope, highp float intercept, highp float x_pos, highp float y_pos) {
+            float multiplier1 = (slope >= 0.0) ? -1.0 : 1.0;
+            float multiplier2 = ((0.0 <= rotation) && (rotation <= 180.0)) ? -1.0 : 1.0;
+            float side_of_line = multiplier1 * multiplier2 * ((slope * x_pos) + (-1 * y_pos) + intercept);
+            bool top_side = side_of_line >= 0.0;
+            return top_side;
+        }
+
         void main() {
             // set all pixels to the destination color
             vec3 destination_color = gl_LastFragData[0].rgb;
             f_color = vec4(texture(tex, uvs).rgba);
             f_color.rgb = destination_color;
-
-            float wave_length2 = wave_length;
-            float wave_variance2 = wave_variance;
-            float inverse_slope2 = inverse_slope;
-            float moment_in_wave_period2 = moment_in_wave_period;
 
             // get which pixel this is
             float index_x = round(uvs.x * (width - 1));
@@ -2628,16 +2628,32 @@ class DrawWaterJet():
             float x_pos = (width / 2) - pixel_x;
             float y_pos = (height / 2) - pixel_y;
 
+            // get the closest xy pixel on center of the jet line
             float point_to_line_distance = get_point_to_line_distance(slope, 0.0, x_pos, y_pos);
             float closest_x = get_closest_x(slope, 0.0, x_pos, y_pos);
             float closest_y = get_closest_y(slope, 0.0, x_pos, y_pos);
+
+            // get how far along the jet the pixel is
             float distance_along_jet = sqrt(pow(closest_x, 2) + pow(closest_y, 2)) - ball_radius;
+            float max_jet_length = max_length_from_center - ball_radius;
+            float percentage_x = distance_along_jet / max_jet_length;
 
             // calculate how thick the water jet should be at each point in length
-            float water_jet_thickness = average_water_jet_thickness + (wave_variance * ((mod(distance_along_jet - (wave_length * moment_in_wave_period), wave_length) - (wave_length / 2)) / (wave_length / 2)));
+            bool top_side = get_side_of_line(rotation, slope, 0.0, x_pos, y_pos);
+            float water_jet_thickness_top;
+            float water_jet_thickness_bottom;
+            float how_trumpet_shaped = 3.5;
+            if (moment_in_wave_period <= 0.5) {
+                water_jet_thickness_top = minimum_water_jet_thickness + pow(percentage_x * how_trumpet_shaped * (moment_in_wave_period * 2), 2.2);
+                water_jet_thickness_bottom = minimum_water_jet_thickness + pow(percentage_x * how_trumpet_shaped * (1 - (moment_in_wave_period * 2)), 2.2);
+            }
+            if (moment_in_wave_period > 0.5) {
+                water_jet_thickness_top = minimum_water_jet_thickness + pow(percentage_x * how_trumpet_shaped * (1 - ((moment_in_wave_period - 0.5) * 2)), 2.2);
+                water_jet_thickness_bottom = minimum_water_jet_thickness + pow(percentage_x * how_trumpet_shaped * (((moment_in_wave_period - 0.5) * 2)), 2.2);
+            }
 
             // remove pixels outside of water jet thickness
-            if (point_to_line_distance < water_jet_thickness) {
+            if (((top_side) && (point_to_line_distance < water_jet_thickness_top)) || ((!top_side) && (point_to_line_distance < water_jet_thickness_bottom))) {
                 // remove pixels in wrong quadrants
                 bool acceptable_quad = ((quad1) && (-x_pos >= 0.0) && (y_pos >= 0.0)) || ((quad2) && (x_pos >= 0.0) && (y_pos >= 0.0)) || ((quad3) && (x_pos >= 0.0) && (-y_pos >= 0.0)) || ((quad4) && (-x_pos >= 0.0) && (-y_pos >= 0.0));
                 if (acceptable_quad) {
@@ -2645,16 +2661,22 @@ class DrawWaterJet():
                     float distance_from_ball_center = sqrt(pow(x_pos, 2) + pow(y_pos, 2));
                     if (distance_from_ball_center < current_length_from_center) {
 
-                        // draw water
-                        f_color.rgba = BLUE2;
-                        if (water_jet_thickness - average_water_jet_thickness > point_to_line_distance - 1) {
-                            f_color.rgba = BLUE1;
-                        }
+                        // adjust center of trumpet shape to deformation
+                        float distance_from_edge_to_middle_of_jet = (water_jet_thickness_top + water_jet_thickness_bottom) / 2;
+                        float adjusted_point_to_line_distance = (top_side) ? point_to_line_distance + ((water_jet_thickness_bottom - water_jet_thickness_top) / 2) : point_to_line_distance + ((water_jet_thickness_top - water_jet_thickness_bottom) / 2);
+                        float percentage_y = (distance_from_edge_to_middle_of_jet - abs(adjusted_point_to_line_distance)) / distance_from_edge_to_middle_of_jet;
+                        float percentage = ((1 - percentage_x) * 0.15) + (percentage_y * 0.85);
 
+                        // draw water
+                        f_color.rgba = vec4(
+                        (DARK_BLUE.r * percentage) + (LIGHT_BLUE.r * (1 - percentage)),
+                        (DARK_BLUE.g * percentage) + (LIGHT_BLUE.g * (1 - percentage)),
+                        (DARK_BLUE.b * percentage) + (LIGHT_BLUE.b * (1 - percentage)),
+                        (DARK_BLUE.a * percentage) + (LIGHT_BLUE.a * (1 - percentage))
+                        );
                     }
                 }
             }
-
         }
         '''
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
