@@ -1,7 +1,7 @@
 import math
 from copy import deepcopy
 from Code.utilities import CaseBreak, point_is_in_ltwh, move_number_to_desired_range, percent_to_rgba, base10_to_hex, add_characters_to_front_of_string, get_time, switch_to_base10, rgba_to_glsl, get_rect_minus_borders, round_scaled, get_text_height, get_text_width, COLORS
-from Code.Editor.editor_utilities import FooterInfo, EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleEllipseTool, BlurTool, JumbleTool, EyedropTool
+from Code.Editor.editor_utilities import FooterInfo, EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, EraserTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleEllipseTool, BlurTool, JumbleTool, EyedropTool
 from Code.Editor.editor_utilities import MapModes, EditorModes
 
 
@@ -841,6 +841,20 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                     footer_information.append(FooterInfo.CURSOR_POSITION)
                     footer_information.append(FooterInfo.SEPARATOR)
                 footer_information.append(FooterInfo.MAP_SIZE)
+            
+            case EraserTool.INDEX:
+                # eraser width
+                # text
+                Render.draw_string_of_characters(Screen, gl_context, string=EraserTool.ERASER_SIZE, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=EraserTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.ERASER_SIZE_WIDTH
+                # text input
+                current_tool.eraser_size_text_input.background_ltwh[0] = tool_attribute_lt[0] + EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                current_tool.eraser_size_text_input.background_ltwh[1] = tool_attribute_lt[1] + EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
+                current_tool.eraser_size_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
+                new_eraser_size = current_tool.eraser_size_text_input.current_string
+                if current_tool.eraser_size_is_valid(new_eraser_size):
+                    current_tool.update_eraser_size(new_eraser_size)
+                tool_attribute_lt[0] += current_tool.eraser_size_text_input.background_ltwh[2]
 
             case SprayTool.INDEX:
                 # spray width

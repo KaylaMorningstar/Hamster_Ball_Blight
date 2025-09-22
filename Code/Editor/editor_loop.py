@@ -5,7 +5,7 @@ from copy import deepcopy
 from Code.utilities import rgba_to_glsl, percent_to_rgba, COLORS, get_text_height, get_text_width, point_is_in_ltwh, IMAGE_PATHS, loading_and_unloading_images_manager, get_rect_minus_borders, round_scaled, ceil_scaled, floor_scaled, LOADED_IN_EDITOR, LOADED_IN_GAME, LOADED_IN_MENU, OFF_SCREEN, move_number_to_desired_range, get_time, switch_to_base10, base10_to_hex, add_characters_to_front_of_string
 from Code.Editor.editor_update import update_palette, update_header, update_footer, update_tools, update_add_color, update_tool_attributes, update_collision_selector
 from Code.Editor.editor_utilities import TextInput, CurrentlySelectedColor, HeaderManager, ScrollBar, EditorMap, get_tf_circle
-from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleEllipseTool, BlurTool, JumbleTool, EyedropTool
+from Code.Editor.editor_utilities import EditorTool, MarqueeRectangleTool, LassoTool, PencilTool, EraserTool, SprayTool, HandTool, BucketTool, LineTool, CurvyLineTool, RectangleEllipseTool, BlurTool, JumbleTool, EyedropTool
 from Code.Editor.editor_utilities import MapModes, EditorModes, CollisionSelector, CollisionMode
 import random
 
@@ -222,6 +222,7 @@ class EditorSingleton():
         tool_bar_tool_names_and_indexes = [(deepcopy(MarqueeRectangleTool.NAME), deepcopy(MarqueeRectangleTool.INDEX)),
                                            (deepcopy(LassoTool.NAME), deepcopy(LassoTool.INDEX)),
                                            (deepcopy(PencilTool.NAME), deepcopy(PencilTool.INDEX)),
+                                           (deepcopy(EraserTool.NAME), deepcopy(EraserTool.INDEX)),
                                            (deepcopy(SprayTool.NAME), deepcopy(SprayTool.INDEX)),
                                            (deepcopy(HandTool.NAME), deepcopy(HandTool.INDEX)),
                                            (deepcopy(BucketTool.NAME), deepcopy(BucketTool.INDEX)),

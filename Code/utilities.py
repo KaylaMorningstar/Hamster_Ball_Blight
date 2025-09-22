@@ -338,6 +338,7 @@ IMAGE_PATHS = {
     'Marquee rectangle': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Marquee rectangle.png'],
     'Lasso':             [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Lasso.png'],
     'Pencil':            [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Pencil.png'],
+    'Eraser':            [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Eraser.png'],
     'Spray':             [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Spray.png'],
     'Hand':              [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Hand.png'],
     'Bucket':            [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\tools\\Bucket.png'],

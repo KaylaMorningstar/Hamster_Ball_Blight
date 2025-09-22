@@ -1539,9 +1539,56 @@ class PencilTool(EditorTool):
         return True
 
 
+class EraserTool(EditorTool):
+    NAME = 'Eraser'
+    INDEX = 3
+
+    ERASER_SIZE = 'Size: '
+
+    _MIN_ERASER_SIZE = 1
+    _MAX_ERASER_SIZE = 64
+    ERASER_OUTLINE_REFERENCE = 'eraser_tool_outline'
+
+    NOT_ERASING = 0
+    ERASING = 1
+
+    def __init__(self, active: bool, render_instance, screen_instance, gl_context):
+        self.state = EraserTool.NOT_ERASING  # (NOT_ERASING = 0, ERASING = 1)
+        # surfaces used while erasing
+        self.eraser_circle_true_indexes: list[list[int, int]]
+        # attributes
+        self._eraser_size: int = EraserTool._MIN_ERASER_SIZE # width of the eraser tool
+        # tool attribute word width
+        self.ERASER_SIZE_WIDTH = get_text_width(render_instance, EraserTool.ERASER_SIZE, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        # text inputs for attributes
+        self.eraser_size_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(eraser_size) + 'px', EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for eraser_size in range(EraserTool._MIN_ERASER_SIZE, EraserTool._MAX_ERASER_SIZE + 1)]) + (2 * EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(EraserTool._MAX_ERASER_SIZE)) - 1) * EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], EraserTool._TEXT_BACKGROUND_COLOR, EraserTool._TEXT_COLOR, EraserTool._TEXT_HIGHLIGHT_COLOR, EraserTool._HIGHLIGHT_COLOR, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [EraserTool._MIN_ERASER_SIZE, EraserTool._MAX_ERASER_SIZE], True, False, False, True, len(str(EraserTool._MAX_ERASER_SIZE)), True, str(self.eraser_size), ending_characters='px')
+        # update tool attribute values
+        self.update_eraser_size(EraserTool._MIN_ERASER_SIZE)
+        super().__init__(active)
+
+    @property
+    def eraser_size(self):
+        return self._eraser_size
+
+    def eraser_size_is_valid(self, eraser_size: Any):
+        try:
+            int(eraser_size)
+        except:
+            return False
+        if not (EraserTool._MIN_ERASER_SIZE <= int(eraser_size) <= EraserTool._MAX_ERASER_SIZE):
+            return False
+        if int(eraser_size) == self._eraser_size:
+            return False
+        return True
+
+    def update_eraser_size(self, eraser_size):
+        self._eraser_size = int(eraser_size)
+        self.eraesr_circle_true_indexes = get_circle_tf_indexes(self._eraser_size)
+
+
 class SprayTool(EditorTool):
     NAME = 'Spray'
-    INDEX = 3
+    INDEX = 4
 
     SPRAY_SIZE = 'Size: '
     SPRAY_THICKNESS = 'Drop width: '
@@ -1728,21 +1775,21 @@ class SprayTool(EditorTool):
 
 class HandTool(EditorTool):
     NAME = 'Hand'
-    INDEX = 4
+    INDEX = 5
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class BucketTool(EditorTool):
     NAME = 'Bucket'
-    INDEX = 5
+    INDEX = 6
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class LineTool(EditorTool):
     NAME = 'Line'
-    INDEX = 6
+    INDEX = 7
 
     _MIN_BRUSH_THICKNESS = 1
     _MAX_BRUSH_THICKNESS = 64
@@ -1856,14 +1903,14 @@ class LineTool(EditorTool):
 
 class CurvyLineTool(EditorTool):
     NAME = 'Curvy line'
-    INDEX = 7
+    INDEX = 8
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class RectangleEllipseTool(EditorTool):
     NAME = 'Empty rectangle'
-    INDEX = 8
+    INDEX = 9
 
     RECTANGLE_ELLIPSE_REFERENCE = 'rectangle_ellipse'
     RECTANGLE_ELLIPSE_REFERENCE2 = 'rectangle_ellipse2'  # used for hollow ellipses
@@ -1921,14 +1968,14 @@ class RectangleEllipseTool(EditorTool):
 
 class BlurTool(EditorTool):
     NAME = 'Blur'
-    INDEX = 9
+    INDEX = 10
     def __init__(self, active: bool):
         super().__init__(active)
 
 
 class JumbleTool(EditorTool):
     NAME = 'Jumble'
-    INDEX = 10
+    INDEX = 11
 
     NOT_JUMBLING = 0
     JUMBLING = 1
@@ -1981,7 +2028,7 @@ class JumbleTool(EditorTool):
 
 class EyedropTool(EditorTool):
     NAME = 'Eyedropper'
-    INDEX = 11
+    INDEX = 12
     def __init__(self, active: bool):
         super().__init__(active)
 
@@ -2065,6 +2112,7 @@ class EditorMap():
             MarqueeRectangleTool(False),
             LassoTool(False),
             PencilTool(False, render_instance, screen_instance, gl_context),
+            EraserTool(False, render_instance, screen_instance, gl_context),
             SprayTool(False, render_instance, screen_instance, gl_context),
             HandTool(True),
             BucketTool(False),
@@ -2420,6 +2468,50 @@ class EditorMap():
                     # update values to use next loop
                     self.current_tool.last_xy[0] = leftest_brush_pixel
                     self.current_tool.last_xy[1] = topest_brush_pixel
+                
+                case EraserTool.INDEX:
+                    cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
+                    pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
+                    ltrb = self._get_ltrb_pixels_on_map()
+                    circle_outline_thickness = EditorMap.CIRCLE_OUTLINE_THICKNESS_ZOOMED_OUT if EditorMap._ZOOM[self.zoom_index][0] != 1 else EditorMap.CIRCLE_OUTLINE_THICKNESS_ZOOMED_IN
+
+                    if self.current_tool.eraser_size % 2 == 0:
+                        half_eraser_size = self.current_tool.eraser_size // 2
+                    else:
+                        half_eraser_size = (self.current_tool.eraser_size + 1) // 2
+                    # get the leftest pixel that needs to be drawn
+                    pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
+                    if pixel_offset_x == 1:
+                        pixel_offset_x = 0
+                    pixel_offset_x *= self.pixel_scale
+                    leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
+                    leftest_eraser_pixel = pos_x + 1
+                    pixel_x = leftest_pixel + ((leftest_eraser_pixel - ltrb[0] - half_eraser_size) * self.pixel_scale) - circle_outline_thickness
+
+                    # get the topest pixel that needs to be drawn
+                    pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
+                    if pixel_offset_y == 1:
+                        pixel_offset_y = 0
+                    pixel_offset_y *= self.pixel_scale
+                    topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
+                    topest_eraser_pixel = pos_y + 1
+                    pixel_y = topest_pixel + ((topest_eraser_pixel - ltrb[1] - half_eraser_size) * self.pixel_scale) - circle_outline_thickness
+
+                    ltwh = [pixel_x, pixel_y, int((self.current_tool.eraser_size * self.pixel_scale) + (2 * circle_outline_thickness)), int((self.current_tool.eraser_size * self.pixel_scale) + (2 * circle_outline_thickness))]
+
+                    # condition if cursor is on the map
+                    if cursor_on_map:
+                        cursors.add_cursor_this_frame('cursor_big_crosshair')
+                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.eraser_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale})
+                        self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
+                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
+
+                    # change eraser state
+                    if (self.current_tool.state == EraserTool.NOT_ERASING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
+                        self.current_tool.state = EraserTool.ERASING
+                        self.map_edits.append(self.PixelChange(new_rgba=current_color_rgba))
+                    elif (self.current_tool.state == EraserTool.ERASING) and keys_class_instance.editor_primary.released:
+                        self.current_tool.state = EraserTool.NOT_ERASING
 
                 case SprayTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
