@@ -1583,7 +1583,7 @@ class EraserTool(EditorTool):
 
     def update_eraser_size(self, eraser_size):
         self._eraser_size = int(eraser_size)
-        self.eraesr_circle_true_indexes = get_circle_tf_indexes(self._eraser_size)
+        self.eraser_circle_true_indexes = get_circle_tf_indexes(self._eraser_size)
 
 
 class SprayTool(EditorTool):
@@ -2512,6 +2512,34 @@ class EditorMap():
                         self.map_edits.append(self.PixelChange(new_rgba=current_color_rgba))
                     elif (self.current_tool.state == EraserTool.ERASING) and keys_class_instance.editor_primary.released:
                         self.current_tool.state = EraserTool.NOT_ERASING
+
+                    match self.current_tool.state:
+                        case EraserTool.NOT_ERASING:
+                            pass
+                        case EraserTool.ERASING:
+                            reload_tiles = {}
+                            map_edit = self.map_edits[-1].change_dict
+                            max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
+                            for (brush_offset_x, brush_offset_y) in self.current_tool.eraser_circle_true_indexes:
+                                if map_edit.get(tile_name := (edited_pixel_x := leftest_eraser_pixel+brush_offset_x, edited_pixel_y := topest_eraser_pixel+brush_offset_y)) is None:
+                                    # get the tile and pixel being edited
+                                    tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                    tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                    # don't try to draw outside of map bounds
+                                    if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                        tile = self.tile_array[tile_x][tile_y]
+                                        # load the tile if it isn't loaded
+                                        if tile.pg_image is None:
+                                            tile.load(render_instance, screen_instance, gl_context)
+                                        reload_tiles[tile.image_reference] = tile
+                                        # make the edit
+                                        original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                        tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                        # collision map edit
+                                        tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
+                                        # record what was edited for ctrl-Z
+                                        map_edit[tile_name] = original_pixel_color
 
                 case SprayTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
