@@ -1629,7 +1629,8 @@ class DrawCircle():
         '''
         self.FRAGMENT_SHADER = '''
         #version 330 core
-        #extension GL_EXT_shader_framebuffer_fetch : require
+
+        const vec4 BLANK = vec4(0.0, 0.0, 0.0, 0.0);
 
         uniform sampler2D tex;
         uniform int width;
@@ -1648,9 +1649,7 @@ class DrawCircle():
         out vec4 f_color;
 
         void main() {
-            vec3 destination_color = gl_LastFragData[0].rgb;
-            f_color = vec4(texture(tex, uvs).rgba);
-            f_color.rgb = destination_color;
+            f_color.rgba = BLANK;
 
             float pixel_center = width / 2;
             float pixel_x = round(uvs.x * (width - 1)) + 0.5;
@@ -1696,9 +1695,10 @@ class DrawEllipse():
         '''
         self.FRAGMENT_SHADER = '''
         #version 330 core
-        #extension GL_EXT_shader_framebuffer_fetch : require
 
         uniform sampler2D tex;
+
+        const vec4 BLANK = vec4(0.0, 0.0, 0.0, 0.0);
 
         // size of the image
         uniform int width;
@@ -1719,9 +1719,7 @@ class DrawEllipse():
         out vec4 f_color;
 
         void main() {
-            vec3 destination_color = gl_LastFragData[0].rgb;
-            f_color = vec4(texture(tex, uvs).rgba);
-            f_color.rgb = destination_color;
+            f_color.rgba = BLANK;
 
             float pixel_x = round(uvs.x * (width - 1)) + 0.5;
             float pixel_y = round(uvs.y * (height - 1)) + 0.5;
@@ -1767,9 +1765,10 @@ class DrawHollowEllipse():
         '''
         self.FRAGMENT_SHADER = '''
         #version 330 core
-        #extension GL_EXT_shader_framebuffer_fetch : require
 
         uniform sampler2D tex;
+
+        const vec4 BLANK = vec4(0.0, 0.0, 0.0, 0.0);
 
         // size of the image
         uniform int width;
@@ -1780,7 +1779,6 @@ class DrawHollowEllipse():
         uniform float ellipse_height;
 
         uniform float pixel_size;
-
         uniform float ellipse_thickness;
 
         uniform float red;
@@ -1792,9 +1790,7 @@ class DrawHollowEllipse():
         out vec4 f_color;
 
         void main() {
-            vec3 destination_color = gl_LastFragData[0].rgb;
-            f_color = vec4(texture(tex, uvs).rgba);
-            f_color.rgb = destination_color;
+            f_color.rgba = BLANK;
 
             float pixel_x = round(uvs.x * (width - 1)) + 0.5;
             float pixel_y = round(uvs.y * (height - 1)) + 0.5;
@@ -1844,12 +1840,11 @@ class DrawLine():
         '''
         self.FRAGMENT_SHADER = '''
         #version 330 core
-        #extension GL_EXT_shader_framebuffer_fetch : require
-        #extension GL_ARB_gpu_shader_fp64 : require
 
         const vec3 RED = vec3(1.0, 0.0, 0.0);
         const vec3 GREEN = vec3(0.0, 1.0, 0.0);
         const vec3 WHITE = vec3(1.0, 1.0, 1.0);
+        const vec4 BLANK = vec4(0.0, 0.0, 0.0, 0.0);
 
         uniform sampler2D tex;
         uniform float red;
@@ -1901,10 +1896,8 @@ class DrawLine():
                 texture(tex, uvs).a * alpha
             );
         
-            // set all pixels to the destination color
-            vec3 destination_color = gl_LastFragData[0].rgb;
-            f_color = vec4(texture(tex, uvs).rgba);
-            f_color.rgb = destination_color;
+            // set all pixels to be blank
+            f_color.rgba = BLANK;
 
             // move xy-coordinates to top-left
             float x1 = (px1 - left) / pixel_size;
@@ -2567,13 +2560,12 @@ class DrawWaterJet():
         '''
         self.FRAGMENT_SHADER = '''
         #version 330 core
-        #extension GL_EXT_shader_framebuffer_fetch : require
-        #extension GL_ARB_gpu_shader_fp64 : require
 
         const float PI = 3.1415926535;
         const vec4 DARK_BLUE = vec4(0.0, 0.0, 1.0, 0.90);
         const vec4 LIGHT_BLUE = vec4(0.0, 0.5, 1.0, 0.35);
         const vec4 WHITE = vec4(0.8, 0.8, 1.0, 0.9);
+        const vec4 BLANK = vec4(0.0, 0.0, 0.0, 0.0);
 
         uniform sampler2D tex;
         uniform float width;
@@ -2615,10 +2607,8 @@ class DrawWaterJet():
         }
 
         void main() {
-            // set all pixels to the destination color
-            vec3 destination_color = gl_LastFragData[0].rgb;
-            f_color = vec4(texture(tex, uvs).rgba);
-            f_color.rgb = destination_color;
+            // set all pixels to be blank
+            f_color.rgba = BLANK;
 
             // get which pixel this is
             float index_x = round(uvs.x * (width - 1));
