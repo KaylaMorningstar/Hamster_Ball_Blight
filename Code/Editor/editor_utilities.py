@@ -1543,6 +1543,12 @@ class EraserTool(EditorTool):
     NAME = 'Eraser'
     INDEX = 3
 
+    ERASER_STYLE = 'Style: '
+    CIRCLE_ERASER = 1
+    SQUARE_ERASER = 2
+    _MIN_ERASER_STYLE = 1
+    _MAX_ERASER_STYLE = 2
+
     ERASER_SIZE = 'Size: '
 
     _MIN_ERASER_SIZE = 1
@@ -1554,17 +1560,25 @@ class EraserTool(EditorTool):
 
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = EraserTool.NOT_ERASING  # (NOT_ERASING = 0, ERASING = 1)
+        self.ERASER_STYLE_WIDTH = get_text_width(render_instance, EraserTool.ERASER_STYLE, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         # surfaces used while erasing
         self.eraser_circle_true_indexes: list[list[int, int]]
         # attributes
+        self.eraser_style = PencilTool.CIRCLE_BRUSH  # (CIRCLE_BRUSH = 1, SQUARE_BRUSH = 2)
         self._eraser_size: int = EraserTool._MIN_ERASER_SIZE # width of the eraser tool
         # tool attribute word width
         self.ERASER_SIZE_WIDTH = get_text_width(render_instance, EraserTool.ERASER_SIZE, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         # text inputs for attributes
         self.eraser_size_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(eraser_size) + 'px', EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for eraser_size in range(EraserTool._MIN_ERASER_SIZE, EraserTool._MAX_ERASER_SIZE + 1)]) + (2 * EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(EraserTool._MAX_ERASER_SIZE)) - 1) * EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], EraserTool._TEXT_BACKGROUND_COLOR, EraserTool._TEXT_COLOR, EraserTool._TEXT_HIGHLIGHT_COLOR, EraserTool._HIGHLIGHT_COLOR, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [EraserTool._MIN_ERASER_SIZE, EraserTool._MAX_ERASER_SIZE], True, False, False, True, len(str(EraserTool._MAX_ERASER_SIZE)), True, str(self.eraser_size), ending_characters='px')
         # update tool attribute values
-        self.update_eraser_size(EraserTool._MIN_ERASER_SIZE)
+        self.update_eraser_size(render_instance, screen_instance, gl_context, EraserTool._MIN_ERASER_SIZE)
         super().__init__(active)
+
+    def update_eraser_style(self, render_instance, screen_instance, gl_context):
+        self.eraser_style += 1
+        if self.eraser_style > EraserTool._MAX_ERASER_STYLE:
+            self.eraser_style = EraserTool._MIN_ERASER_STYLE
+        self.update_eraser_size(render_instance, screen_instance, gl_context, self._eraser_size)
 
     @property
     def eraser_size(self):
@@ -1581,9 +1595,13 @@ class EraserTool(EditorTool):
             return False
         return True
 
-    def update_eraser_size(self, eraser_size):
+    def update_eraser_size(self, render_instance, screen_instance, gl_context, eraser_size):
         self._eraser_size = int(eraser_size)
-        self.eraser_circle_true_indexes = get_circle_tf_indexes(self._eraser_size)
+        match self.eraser_style:
+            case EraserTool.CIRCLE_ERASER:
+                self.eraser_circle_true_indexes = get_circle_tf_indexes(self._eraser_size)
+            case EraserTool.SQUARE_ERASER:
+                self.eraser_circle_true_indexes = get_circle_tf_indexes(self._eraser_size)
 
 
 class SprayTool(EditorTool):
@@ -2520,9 +2538,8 @@ class EditorMap():
                             reload_tiles = {}
                             map_edit = self.map_edits[-1].change_dict
                             max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
-                            print(leftest_eraser_pixel, topest_eraser_pixel)
-                            for (brush_offset_x, brush_offset_y) in self.current_tool.eraser_circle_true_indexes:
-                                if map_edit.get(tile_name := (edited_pixel_x := leftest_eraser_pixel+brush_offset_x, edited_pixel_y := topest_eraser_pixel+brush_offset_y)) is None:
+                            for (eraser_offset_x, eraser_offset_y) in self.current_tool.eraser_circle_true_indexes:
+                                if map_edit.get(tile_name := (edited_pixel_x := leftest_eraser_pixel+eraser_offset_x, edited_pixel_y := topest_eraser_pixel+eraser_offset_y)) is None:
                                     # get the tile and pixel being edited
                                     tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
                                     tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])

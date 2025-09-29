@@ -844,6 +844,35 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
             
             case EraserTool.INDEX:
                 # eraser width
+                # text style
+                Render.draw_string_of_characters(Screen, gl_context, string=EraserTool.ERASER_STYLE, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=EraserTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.ERASER_STYLE_WIDTH
+                eraser_style_ltwh = [tool_attribute_lt[0], tool_attribute_lt[1] + ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH, Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT]
+                # style symbol (circle or square)
+                GREY_AREA_LTWH = [eraser_style_ltwh[0] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), eraser_style_ltwh[1] - ((Singleton.tool_attribute_ltwh[3] - Render.renderable_objects['tool_attribute_outline'].ORIGINAL_HEIGHT) // 2), Singleton.tool_attribute_ltwh[3], Singleton.tool_attribute_ltwh[3]]
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, GREY_AREA_LTWH):
+                    Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=GREY_AREA_LTWH, rgba=COLORS['GREY'])
+                Render.basic_rect_ltwh_to_quad(Screen, gl_context, object_name='tool_attribute_outline', ltwh=eraser_style_ltwh)
+                if Keys.editor_primary.newly_pressed and point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, GREY_AREA_LTWH):
+                    current_tool.update_eraser_style(Render, Screen, gl_context)
+                match current_tool.eraser_style:
+                    case EraserTool.CIRCLE_ERASER:
+                        CIRCLE_PADDING = 4
+                        circle_size = Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH - (2 * CIRCLE_PADDING)
+                        circle_eraser_style_ltwh = [eraser_style_ltwh[0] + CIRCLE_PADDING, eraser_style_ltwh[1] + CIRCLE_PADDING, circle_size, circle_size]
+                        Render.draw_circle(Screen, gl_context, ltwh=circle_eraser_style_ltwh, circle_size=circle_size, circle_pixel_size=1, rgba=COLORS['BLACK'])
+                    case EraserTool.SQUARE_ERASER:
+                        SQUARE_PADDING = 4
+                        square_size = Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH - (2 * SQUARE_PADDING)
+                        square_eraser_style_ltwh = [eraser_style_ltwh[0] + SQUARE_PADDING, eraser_style_ltwh[1] + SQUARE_PADDING, square_size, square_size]
+                        Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=square_eraser_style_ltwh, rgba=COLORS['BLACK'])
+                tool_attribute_lt[0] += Render.renderable_objects['tool_attribute_outline'].ORIGINAL_WIDTH
+                # separate sections
+                SEPARATION_PIXELS = 6  # 2x on each side of a line
+                LINE_SEPARATOR_THICKNESS = 4
+                SEPARATOR_LINE_LTWH = [tool_attribute_lt[0] + SEPARATION_PIXELS, tool_attribute_lt[1], LINE_SEPARATOR_THICKNESS, Singleton.tool_attribute_ltwh[3]]
+                Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SEPARATOR_LINE_LTWH, rgba=COLORS['BLACK'])
+                tool_attribute_lt[0] += (2 * SEPARATION_PIXELS) + LINE_SEPARATOR_THICKNESS
                 # text
                 Render.draw_string_of_characters(Screen, gl_context, string=EraserTool.ERASER_SIZE, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=EraserTool.ATTRIBUTE_TEXT_COLOR)
                 tool_attribute_lt[0] += current_tool.ERASER_SIZE_WIDTH
@@ -853,8 +882,13 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 current_tool.eraser_size_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
                 new_eraser_size = current_tool.eraser_size_text_input.current_string
                 if current_tool.eraser_size_is_valid(new_eraser_size):
-                    current_tool.update_eraser_size(new_eraser_size)
+                    current_tool.update_eraser_size(Render, Screen, gl_context, new_eraser_size)
                 tool_attribute_lt[0] += current_tool.eraser_size_text_input.background_ltwh[2]
+                # information stuff in footer
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
+                    footer_information.append(FooterInfo.CURSOR_POSITION)
+                    footer_information.append(FooterInfo.SEPARATOR)
+                footer_information.append(FooterInfo.MAP_SIZE)
 
             case SprayTool.INDEX:
                 # spray width
