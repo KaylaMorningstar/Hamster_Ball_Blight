@@ -390,6 +390,12 @@ class RenderObjects():
         NOTE: rgba is the color being inverted. For example, rgba should be black if black pixels are to be inverted.
         """
         # 'invert_white', DrawInvertWhite
+        # result = (source * source_factor) + (destination * destination_factor)
+        #gl_context.blend_func = (moderngl.ONE_MINUS_DST_COLOR, moderngl.ZERO, moderngl.ONE, moderngl.ONE_MINUS_SRC_ALPHA)
+        #gl_context.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA, moderngl.ONE, moderngl.ZERO)
+        #gl_context.blend_func = moderngl.ONE_MINUS_DST_COLOR, moderngl.ZERO
+        #gl_context.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
+        #gl_context.blend_func = (moderngl.ONE_MINUS_DST_COLOR, moderngl.ZERO, moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
         program = self.programs['invert_white'].program
         renderable_object = self.renderable_objects[object_name]
         topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
@@ -403,9 +409,12 @@ class RenderObjects():
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
+        #gl_context.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA, moderngl.ONE, moderngl.ZERO)
+        #gl_context.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
     #
     def editor_circle_outline(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], circle_size: int, circle_outline_thickness: int, circle_pixel_size: int = 1):
         # 'circle_outline', DrawCircleOutline
+        #gl_context.blend_func = (moderngl.ONE_MINUS_DST_COLOR, moderngl.ZERO, moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
         program = self.programs['circle_outline'].program
         renderable_object = self.renderable_objects['white_pixel']
         topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
@@ -424,6 +433,7 @@ class RenderObjects():
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
+        #gl_context.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA, moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
     #
     def draw_circle(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh: list[int, int, int, int], circle_size: int, circle_pixel_size: float, rgba):
         # 'draw_circle', DrawCircle
@@ -1489,6 +1499,59 @@ class DrawInvertWhite():
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
 
 
+# class DrawInvertWhite():
+#     def __init__(self, gl_context):
+#         self.VERTICE_SHADER = '''
+#         #version 330 core
+
+#         uniform float aspect;
+
+#         in vec2 vert;
+#         in vec2 texcoord;
+#         out vec2 uvs;
+
+#         void main() {
+#             uvs = texcoord;
+#             gl_Position = vec4(
+#             vert.x / aspect, 
+#             vert.y, 0.0, 1.0
+#             );
+#         }
+#         '''
+#         self.FRAGMENT_SHADER = '''
+#         #version 330 core
+
+#         const vec4 WHITE = vec4(1.0, 1.0, 1.0, 1.0);
+#         const vec4 RED = vec4(1.0, 0.0, 0.0, 0.0);
+#         const vec4 BLANK = vec4(0.0, 0.0, 0.0, 0.0);
+
+#         uniform sampler2D tex;
+
+#         in vec2 uvs;
+#         out vec4 f_color;
+
+#         void main() {
+#             // assign pixel the textcoord color
+#             f_color = vec4(texture(tex, uvs).rgba);
+
+#             // if the pixel is filled, then invert it
+#             if (f_color == WHITE) {
+#                 f_color = WHITE;
+#             // if the pixel is not filled, then leave it blank
+#             } else {
+#                 f_color = BLANK;
+#             }
+
+#             //if (luminosity < 0.5) {
+#             //    f_color.rgb = vec3(1.0, 1.0, 1.0);
+#             //} else {
+#             //    f_color.rgb = vec3(0.0, 0.0, 0.0);
+#             //}
+#         }
+#         '''
+#         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
 class DrawCircleOutline():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
@@ -1606,6 +1669,107 @@ class DrawCircleOutline():
         }
         '''
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
+# class DrawCircleOutline():
+#     def __init__(self, gl_context):
+#         self.VERTICE_SHADER = '''
+#         #version 330 core
+
+#         uniform float aspect;
+
+#         in vec2 vert;
+#         in vec2 texcoord;
+#         out vec2 uvs;
+
+#         void main() {
+#             uvs = texcoord;
+#             gl_Position = vec4(
+#             vert.x / aspect, 
+#             vert.y, 0.0, 1.0
+#             );
+#         }
+#         '''
+#         self.FRAGMENT_SHADER = '''
+#         #version 330 core
+#         #extension GL_EXT_shader_framebuffer_fetch : require
+
+#         const vec4 BLACK = vec4(0.0, 0.0, 0.0, 1.0);
+#         const vec4 WHITE = vec4(1.0, 1.0, 1.0, 1.0);
+#         const vec4 BLANK = vec4(0.0, 0.0, 0.0, 1.0);
+
+#         uniform sampler2D tex;
+#         uniform int width;
+#         uniform int height;
+
+#         uniform float circle_size;
+#         uniform float circle_pixel_size;
+#         uniform int circle_outline_thickness;
+
+#         in vec2 uvs;
+#         out vec4 f_color;
+
+#         void main() {
+#             f_color.rgba = BLANK;
+
+#             float pixel_center = width / 2;
+#             float pixel_x = round(uvs.x * (width - 1)) + 0.5;
+#             float pixel_y = round(uvs.y * (height - 1)) + 0.5;
+
+#             float editor_center = circle_size / 2;
+#             float editor_pixel_x = floor((pixel_x - circle_outline_thickness) / circle_pixel_size) + 0.5;
+#             float editor_pixel_y = floor((pixel_y - circle_outline_thickness) / circle_pixel_size) + 0.5;
+#             float editor_radial_distance = pow(abs(editor_pixel_x - editor_center), 2) + pow(abs(editor_pixel_y - editor_center), 2);
+#             float editor_circle_radius = pow(((circle_size - 0.5) / 2), 2);
+
+#             // condition if the current point is outside of the circle
+#             if (editor_radial_distance >= editor_circle_radius) {
+#                 float one_pixel_uv_size = 1 / width;
+#                 for (int i = 1; i <= circle_outline_thickness; i++) {
+#                     // check if the right side is inside the circle
+#                     float pixel_x_i = pixel_x + i;
+#                     float pixel_y_i = pixel_y;
+#                     float editor_pixel_x_i = floor((pixel_x_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+#                     float editor_pixel_y_i = floor((pixel_y_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+#                     float editor_radial_distance_i = pow(abs(editor_pixel_x_i - editor_center), 2) + pow(abs(editor_pixel_y_i - editor_center), 2);
+#                     if (editor_radial_distance_i < editor_circle_radius) {
+#                         f_color.rgba = WHITE;
+#                     }
+
+#                     // check if the left side is inside the circle
+#                     pixel_x_i = pixel_x - i;
+#                     pixel_y_i = pixel_y;
+#                     editor_pixel_x_i = floor((pixel_x_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+#                     editor_pixel_y_i = floor((pixel_y_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+#                     editor_radial_distance_i = pow(abs(editor_pixel_x_i - editor_center), 2) + pow(abs(editor_pixel_y_i - editor_center), 2);
+#                     if (editor_radial_distance_i < editor_circle_radius) {
+#                         f_color.rgba = WHITE;
+#                     }
+                    
+#                     // check if the top side is inside the circle
+#                     pixel_x_i = pixel_x;
+#                     pixel_y_i = pixel_y - 1;
+#                     editor_pixel_x_i = floor((pixel_x_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+#                     editor_pixel_y_i = floor((pixel_y_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+#                     editor_radial_distance_i = pow(abs(editor_pixel_x_i - editor_center), 2) + pow(abs(editor_pixel_y_i - editor_center), 2);
+#                     if (editor_radial_distance_i < editor_circle_radius) {
+#                         f_color.rgba = WHITE;
+#                     }
+
+#                     // check if the bottom side is inside the circle
+#                     pixel_x_i = pixel_x;
+#                     pixel_y_i = pixel_y + 1;
+#                     editor_pixel_x_i = floor((pixel_x_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+#                     editor_pixel_y_i = floor((pixel_y_i - circle_outline_thickness) / circle_pixel_size) + 0.5;
+#                     editor_radial_distance_i = pow(abs(editor_pixel_x_i - editor_center), 2) + pow(abs(editor_pixel_y_i - editor_center), 2);
+#                     if (editor_radial_distance_i < editor_circle_radius) {
+#                         f_color.rgba = WHITE;
+#                     }
+#                 }
+#             }
+#         }
+#         '''
+#         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
 
 
 class DrawCircle():
