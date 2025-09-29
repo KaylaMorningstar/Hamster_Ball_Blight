@@ -2485,8 +2485,8 @@ class EditorMap():
                         pixel_offset_x = 0
                     pixel_offset_x *= self.pixel_scale
                     leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
-                    leftest_eraser_pixel = pos_x + 1
-                    pixel_x = leftest_pixel + ((leftest_eraser_pixel - ltrb[0] - half_eraser_size) * self.pixel_scale) - circle_outline_thickness
+                    leftest_eraser_pixel = pos_x - ((self.current_tool.eraser_size - 1) // 2)
+                    pixel_x = leftest_pixel + ((pos_x + 1 - ltrb[0] - half_eraser_size) * self.pixel_scale) - circle_outline_thickness
 
                     # get the topest pixel that needs to be drawn
                     pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
@@ -2494,8 +2494,8 @@ class EditorMap():
                         pixel_offset_y = 0
                     pixel_offset_y *= self.pixel_scale
                     topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
-                    topest_eraser_pixel = pos_y + 1
-                    pixel_y = topest_pixel + ((topest_eraser_pixel - ltrb[1] - half_eraser_size) * self.pixel_scale) - circle_outline_thickness
+                    topest_eraser_pixel = pos_y - ((self.current_tool.eraser_size - 1) // 2)
+                    pixel_y = topest_pixel + ((pos_y + 1 - ltrb[1] - half_eraser_size) * self.pixel_scale) - circle_outline_thickness
 
                     ltwh = [pixel_x, pixel_y, int((self.current_tool.eraser_size * self.pixel_scale) + (2 * circle_outline_thickness)), int((self.current_tool.eraser_size * self.pixel_scale) + (2 * circle_outline_thickness))]
 
@@ -2520,6 +2520,7 @@ class EditorMap():
                             reload_tiles = {}
                             map_edit = self.map_edits[-1].change_dict
                             max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
+                            print(leftest_eraser_pixel, topest_eraser_pixel)
                             for (brush_offset_x, brush_offset_y) in self.current_tool.eraser_circle_true_indexes:
                                 if map_edit.get(tile_name := (edited_pixel_x := leftest_eraser_pixel+brush_offset_x, edited_pixel_y := topest_eraser_pixel+brush_offset_y)) is None:
                                     # get the tile and pixel being edited
@@ -2534,12 +2535,18 @@ class EditorMap():
                                         reload_tiles[tile.image_reference] = tile
                                         # make the edit
                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                        # tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := (0.0, 0.0, 0.0, 0.0))
                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
                                         # collision map edit
-                                        tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
+                                        tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = CollisionMode.NO_COLLISION
                                         # record what was edited for ctrl-Z
                                         map_edit[tile_name] = original_pixel_color
+
+                            for tile in reload_tiles.values():
+                                render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
+                                render_instance.write_pixels_from_bytearray(tile.collision_image_reference, tile.collision_bytearray)
+                                tile.save()
 
                 case SprayTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
