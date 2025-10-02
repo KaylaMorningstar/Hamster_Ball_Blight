@@ -1558,11 +1558,15 @@ class EraserTool(EditorTool):
     NOT_ERASING = 0
     ERASING = 1
 
+    NOT_ERASE_PIXEL = 0
+    ERASE_PIXEL = 1
+
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = EraserTool.NOT_ERASING  # (NOT_ERASING = 0, ERASING = 1)
         self.ERASER_STYLE_WIDTH = get_text_width(render_instance, EraserTool.ERASER_STYLE, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         # surfaces used while erasing
-        self.eraser_circle_true_indexes: list[list[int, int]]
+        # self.eraser_circle_true_indexes: list[list[int, int]]
+        self.circle: list[list[int | list[float, float]]]
         # attributes
         self.eraser_style = PencilTool.CIRCLE_BRUSH  # (CIRCLE_BRUSH = 1, SQUARE_BRUSH = 2)
         self._eraser_size: int = EraserTool._MIN_ERASER_SIZE # width of the eraser tool
@@ -1572,6 +1576,7 @@ class EraserTool(EditorTool):
         self.eraser_size_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(eraser_size) + 'px', EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for eraser_size in range(EraserTool._MIN_ERASER_SIZE, EraserTool._MAX_ERASER_SIZE + 1)]) + (2 * EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(EraserTool._MAX_ERASER_SIZE)) - 1) * EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], EraserTool._TEXT_BACKGROUND_COLOR, EraserTool._TEXT_COLOR, EraserTool._TEXT_HIGHLIGHT_COLOR, EraserTool._HIGHLIGHT_COLOR, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [EraserTool._MIN_ERASER_SIZE, EraserTool._MAX_ERASER_SIZE], True, False, False, True, len(str(EraserTool._MAX_ERASER_SIZE)), True, str(self.eraser_size), ending_characters='px')
         # update tool attribute values
         self.update_eraser_size(render_instance, screen_instance, gl_context, EraserTool._MIN_ERASER_SIZE)
+        self.last_xy: array = array('i', [0, 0])
         super().__init__(active)
 
     def update_eraser_style(self, render_instance, screen_instance, gl_context):
@@ -1599,9 +1604,9 @@ class EraserTool(EditorTool):
         self._eraser_size = int(eraser_size)
         match self.eraser_style:
             case EraserTool.CIRCLE_ERASER:
-                self.eraser_circle_true_indexes = get_circle_tf_indexes(self._eraser_size)
+                self.circle = get_perfect_circle_with_edge_angles(self._eraser_size)
             case EraserTool.SQUARE_ERASER:
-                self.eraser_circle_true_indexes = get_circle_tf_indexes(self._eraser_size)
+                self.circle = get_square_with_edge_angles(self._eraser_size)
 
 
 class SprayTool(EditorTool):
@@ -2497,7 +2502,7 @@ class EditorMap():
                         half_eraser_size = self.current_tool.eraser_size // 2
                     else:
                         half_eraser_size = (self.current_tool.eraser_size + 1) // 2
-                    # get the leftest pixel that needs to be drawn
+                    # get the leftest pixel that needs to be erased
                     pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
                     if pixel_offset_x == 1:
                         pixel_offset_x = 0
@@ -2506,7 +2511,7 @@ class EditorMap():
                     leftest_eraser_pixel = pos_x - ((self.current_tool.eraser_size - 1) // 2)
                     pixel_x = leftest_pixel + ((pos_x + 1 - ltrb[0] - half_eraser_size) * self.pixel_scale) - circle_outline_thickness
 
-                    # get the topest pixel that needs to be drawn
+                    # get the topest pixel that needs to be erased
                     pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
                     if pixel_offset_y == 1:
                         pixel_offset_y = 0
@@ -2536,34 +2541,89 @@ class EditorMap():
                             pass
                         case EraserTool.ERASING:
                             reload_tiles = {}
+                            erase_angle = math.degrees(math.atan2(self.current_tool.last_xy[1] - topest_eraser_pixel, leftest_eraser_pixel - self.current_tool.last_xy[0])) % 360
                             map_edit = self.map_edits[-1].change_dict
                             max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
-                            for (eraser_offset_x, eraser_offset_y) in self.current_tool.eraser_circle_true_indexes:
-                                if map_edit.get(tile_name := (edited_pixel_x := leftest_eraser_pixel+eraser_offset_x, edited_pixel_y := topest_eraser_pixel+eraser_offset_y)) is None:
-                                    # get the tile and pixel being edited
-                                    tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
-                                    tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
-                                    # don't try to draw outside of map bounds
-                                    if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
-                                        tile = self.tile_array[tile_x][tile_y]
-                                        # load the tile if it isn't loaded
-                                        if tile.pg_image is None:
-                                            tile.load(render_instance, screen_instance, gl_context)
-                                        reload_tiles[tile.image_reference] = tile
-                                        # make the edit
-                                        original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                        # tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
-                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := (0.0, 0.0, 0.0, 0.0))
-                                        tile.edits[(pixel_x, pixel_y)] = resulting_color
-                                        # collision map edit
-                                        tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = CollisionMode.NO_COLLISION
-                                        # record what was edited for ctrl-Z
-                                        map_edit[tile_name] = original_pixel_color
+                            for eraser_offset_x, column in enumerate(self.current_tool.circle):
+                                for eraser_offset_y, erase in enumerate(column):
+                                    if erase == EraserTool.NOT_ERASE_PIXEL:
+                                        continue
+                                    else:
+                                        # erase pixels
+                                        if (erase == EraserTool.ERASE_PIXEL):
+                                            if map_edit.get(tile_name := (edited_pixel_x := leftest_eraser_pixel+eraser_offset_x, edited_pixel_y := topest_eraser_pixel+eraser_offset_y)) is None:
+                                                # get the tile and pixel being edited
+                                                tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                                tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                                # don't try to erase outside of map bounds
+                                                if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                                    tile = self.tile_array[tile_x][tile_y]
+                                                    # load the tile if it isn't loaded
+                                                    if tile.pg_image is None:
+                                                        tile.load(render_instance, screen_instance, gl_context)
+                                                    reload_tiles[tile.image_reference] = tile
+                                                    # make the edit
+                                                    original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := (0.0, 0.0, 0.0, 0.0))
+                                                    tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                    # collision map edit
+                                                    tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = CollisionMode.NO_COLLISION
+                                                    # record what was edited for ctrl-Z
+                                                    map_edit[tile_name] = original_pixel_color
+                                        # erase bresenham pixels
+                                        else:
+                                            # stamp the point if bresenham isn't needed
+                                            if angle_in_range(erase[0], erase_angle, erase[1]):
+                                                if map_edit.get(tile_name := (edited_pixel_x := leftest_eraser_pixel+eraser_offset_x, edited_pixel_y := topest_eraser_pixel+eraser_offset_y)) is None:
+                                                    # get the tile and pixel being edited
+                                                    tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                                    tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                                    # don't try to erase outside of map bounds
+                                                    if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                                        tile = self.tile_array[tile_x][tile_y]
+                                                        # load the tile if it isn't loaded
+                                                        if tile.pg_image is None:
+                                                            tile.load(render_instance, screen_instance, gl_context)
+                                                        reload_tiles[tile.image_reference] = tile
+                                                        # make the edit
+                                                        original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := (0.0, 0.0, 0.0, 0.0))
+                                                        tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                        # collision map edit
+                                                        tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = CollisionMode.NO_COLLISION
+                                                        # record what was edited for ctrl-Z
+                                                        map_edit[tile_name] = original_pixel_color
+                                                continue
+                                            # erase bresenham points if necessary
+                                            for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.last_xy[0]+eraser_offset_x, self.current_tool.last_xy[1]+eraser_offset_y, leftest_eraser_pixel+eraser_offset_x, topest_eraser_pixel+eraser_offset_y):
+                                                if map_edit.get(tile_name := (edited_pixel_x, edited_pixel_y)) is None:
+                                                    # get the tile and pixel being edited
+                                                    tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                                    tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                                    # don't try to erase outside of map bounds
+                                                    if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                                        tile = self.tile_array[tile_x][tile_y]
+                                                        # load the tile if it isn't loaded
+                                                        if tile.pg_image is None:
+                                                            tile.load(render_instance, screen_instance, gl_context)
+                                                        reload_tiles[tile.image_reference] = tile
+                                                        # make the edit
+                                                        original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := (0.0, 0.0, 0.0, 0.0))
+                                                        tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                                        # collision map edit
+                                                        tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = CollisionMode.NO_COLLISION
+                                                        # record what was edited for ctrl-Z
+                                                        map_edit[tile_name] = original_pixel_color
 
                             for tile in reload_tiles.values():
                                 render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
                                 render_instance.write_pixels_from_bytearray(tile.collision_image_reference, tile.collision_bytearray)
                                 tile.save()
+
+                    # update values to use next loop
+                    self.current_tool.last_xy[0] = leftest_eraser_pixel
+                    self.current_tool.last_xy[1] = topest_eraser_pixel
 
                 case SprayTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
