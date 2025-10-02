@@ -703,7 +703,7 @@ class RenderObjects():
 class DrawBasicRect():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -720,7 +720,7 @@ class DrawBasicRect():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
 
@@ -737,7 +737,7 @@ class DrawBasicRect():
 class DrawRotationRect():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float rotation;
         uniform float offset_x;
@@ -759,7 +759,7 @@ class DrawRotationRect():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
 
@@ -776,7 +776,7 @@ class DrawRotationRect():
 class DrawBasicRectWithVariableColor():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -793,7 +793,7 @@ class DrawBasicRectWithVariableColor():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -819,7 +819,7 @@ class DrawBasicRectWithVariableColor():
 class DrawImageWithColor():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -836,7 +836,7 @@ class DrawImageWithColor():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -862,7 +862,7 @@ class DrawImageWithColor():
 class DrawText():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -879,7 +879,7 @@ class DrawText():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -905,7 +905,7 @@ class DrawText():
 class DrawBasicRectGlow():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -922,7 +922,7 @@ class DrawBasicRectGlow():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -948,7 +948,7 @@ class DrawBasicRectGlow():
 class DrawBasicRectCircleGlow():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -965,7 +965,7 @@ class DrawBasicRectCircleGlow():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -991,7 +991,7 @@ class DrawBasicRectCircleGlow():
 class DrawBasicOutline():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -1008,7 +1008,7 @@ class DrawBasicOutline():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -1033,7 +1033,7 @@ class DrawBasicOutline():
 class DrawRGBAPicker():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -1052,7 +1052,7 @@ class DrawRGBAPicker():
         self.FRAGMENT_SHADERS = {
         '0_0': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1077,7 +1077,7 @@ class DrawRGBAPicker():
 
         '1_0': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1102,7 +1102,7 @@ class DrawRGBAPicker():
 
         '2_0': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1127,7 +1127,7 @@ class DrawRGBAPicker():
 
         '3_0': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1152,7 +1152,7 @@ class DrawRGBAPicker():
 
         '4_0': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1177,7 +1177,7 @@ class DrawRGBAPicker():
 
         '5_0': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1202,7 +1202,7 @@ class DrawRGBAPicker():
 
         '0_1': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1227,7 +1227,7 @@ class DrawRGBAPicker():
 
         '1_1': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1252,7 +1252,7 @@ class DrawRGBAPicker():
 
         '2_1': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1277,7 +1277,7 @@ class DrawRGBAPicker():
 
         '3_1': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1302,7 +1302,7 @@ class DrawRGBAPicker():
 
         '4_1': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1327,7 +1327,7 @@ class DrawRGBAPicker():
 
         '5_1': 
         '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1369,7 +1369,7 @@ class DrawRGBAPicker():
 class DrawSpectrumX():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -1386,7 +1386,7 @@ class DrawSpectrumX():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float red1;
@@ -1416,7 +1416,7 @@ class DrawSpectrumX():
 class DrawCheckerboard():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -1433,7 +1433,7 @@ class DrawCheckerboard():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
         uniform float red1;
@@ -1467,7 +1467,7 @@ class DrawCheckerboard():
 class DrawInvertWhite():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -1484,7 +1484,7 @@ class DrawInvertWhite():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
         #extension GL_EXT_shader_framebuffer_fetch : require
 
         uniform sampler2D tex;
@@ -1509,7 +1509,7 @@ class DrawInvertWhite():
 class DrawCircleOutline():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -1526,7 +1526,7 @@ class DrawCircleOutline():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
         #extension GL_EXT_shader_framebuffer_fetch : require
 
         const vec3 BLACK = vec3(0.0, 0.0, 0.0);
@@ -1648,7 +1648,7 @@ class DrawCircleOutline():
 class DrawCircle():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -1665,7 +1665,7 @@ class DrawCircle():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         const vec4 BLANK = vec4(0.0, 0.0, 0.0, 0.0);
 
@@ -1714,7 +1714,7 @@ class DrawCircle():
 class DrawEllipse():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -1731,7 +1731,7 @@ class DrawEllipse():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
 
@@ -1784,7 +1784,7 @@ class DrawEllipse():
 class DrawHollowEllipse():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -1801,7 +1801,7 @@ class DrawHollowEllipse():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform sampler2D tex;
 
@@ -1859,7 +1859,7 @@ class DrawHollowEllipse():
 class DrawLine():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -1876,7 +1876,7 @@ class DrawLine():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         const vec3 RED = vec3(1.0, 0.0, 0.0);
         const vec3 GREEN = vec3(0.0, 1.0, 0.0);
@@ -2507,7 +2507,7 @@ class DrawLine():
 class DrawCollisionTile():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -2524,7 +2524,7 @@ class DrawCollisionTile():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         // NO COLLISION
         const vec3 WHITE = vec3(1.0, 1.0, 1.0);
@@ -2579,7 +2579,7 @@ class DrawCollisionTile():
 class DrawWaterJet():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         uniform float aspect;
 
@@ -2596,7 +2596,7 @@ class DrawWaterJet():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 330 core
+        #version 430 core
 
         const float PI = 3.1415926535;
         const vec4 DARK_BLUE = vec4(0.0, 0.0, 1.0, 0.90);
