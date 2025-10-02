@@ -1,4 +1,4 @@
-from Code.utilities import CaseBreak, ONE_FRAME_AT_60_FPS, angle_in_range, atan2, rgba_to_glsl, get_blended_color_float, get_blended_color_int, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
+from Code.utilities import CaseBreak, ONE_FRAME_AT_60_FPS, angle_in_range, atan2, rgba_to_glsl, get_blended_color, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
 import pygame
 import math
 from copy import deepcopy
@@ -2362,6 +2362,10 @@ class EditorMap():
             case CollisionMode.WATER:
                 current_collision_color = CollisionMode.WATER_COLOR
 
+        # get current color here because many tools require it
+        current_color_glsl = editor_singleton.currently_selected_color.color
+        current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
+
         try:
             match int(self.current_tool):
                 case MarqueeRectangleTool.INDEX:
@@ -2400,7 +2404,6 @@ class EditorMap():
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
                         render_instance.store_draw(PencilTool.CIRCLE_REFERENCE, render_instance.basic_rect_ltwh_image_with_color, {'object_name': PencilTool.CIRCLE_REFERENCE, 'ltwh': ltwh, 'rgba': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color})
                         self.stored_draw_keys.append(PencilTool.CIRCLE_REFERENCE)
-                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                     # change drawing state
                     if (self.current_tool.state == PencilTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
@@ -2437,7 +2440,7 @@ class EditorMap():
                                                     reload_tiles[tile.image_reference] = tile
                                                     # make the edit
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # collision map edit
                                                     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
@@ -2460,7 +2463,7 @@ class EditorMap():
                                                         reload_tiles[tile.image_reference] = tile
                                                         # make the edit
                                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                         # collision map edit
                                                         tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
@@ -2482,7 +2485,7 @@ class EditorMap():
                                                         reload_tiles[tile.image_reference] = tile
                                                         # make the edit
                                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                         # collision map edit
                                                         tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
@@ -2533,7 +2536,6 @@ class EditorMap():
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
                         render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.eraser_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale, 'is_a_square': True if self.current_tool.eraser_style == EraserTool.SQUARE_ERASER else False})
                         self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
-                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                     # change eraser state
                     if (self.current_tool.state == EraserTool.NOT_ERASING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
@@ -2666,7 +2668,6 @@ class EditorMap():
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
                         render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.spray_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale})
                         self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
-                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                     # change drawing state
                     if (self.current_tool.state == SprayTool.NOT_SPRAYING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
@@ -2725,7 +2726,7 @@ class EditorMap():
                                                 reload_tiles[tile.image_reference] = tile
                                                 # make the edit
                                                 original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                 tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                 # collision map edit
                                                 tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
@@ -2777,7 +2778,6 @@ class EditorMap():
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
-                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                     # change drawing state
                     if (self.current_tool.state == LineTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
@@ -2808,7 +2808,6 @@ class EditorMap():
                         #     delta_y = stamp1_above_line_y - stamp1_below_line_y
                         #     delta_x = stamp1_above_line_x - stamp1_below_line_x
                         #     stamp_slope = delta_y / delta_x if delta_x != 0 else 99999999
-                        #     print(stamp_slope)
                         for brush_offset_x, column in enumerate(self.current_tool.circle):
                             for brush_offset_y, draw in enumerate(column):
                                 if draw == LineTool.NOT_DRAW_PIXEL:
@@ -2830,7 +2829,7 @@ class EditorMap():
                                                     reload_tiles[tile.image_reference] = tile
                                                     # make the edit
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # collision map edit
                                                     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
@@ -2855,7 +2854,7 @@ class EditorMap():
                                                         reload_tiles[tile.image_reference] = tile
                                                         # make the edit
                                                         original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                        tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                         # collision map edit
                                                         tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
@@ -2877,7 +2876,7 @@ class EditorMap():
                                                     reload_tiles[tile.image_reference] = tile
                                                     # make the edit
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # collision map edit
                                                     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
@@ -2933,7 +2932,6 @@ class EditorMap():
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
-                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                     # change drawing state
                     if (self.current_tool.state == RectangleEllipseTool.NOT_DRAWING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
@@ -2971,7 +2969,7 @@ class EditorMap():
                                                 reload_tiles[tile.image_reference] = tile
                                                 # make the edit
                                                 original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                 tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                 # collision map edit
                                                 tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
@@ -2995,7 +2993,7 @@ class EditorMap():
                                                 reload_tiles[tile.image_reference] = tile
                                                 # make the edit
                                                 original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                 tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                 # collision map edit
                                                 tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
@@ -3024,7 +3022,7 @@ class EditorMap():
                                                     reload_tiles[tile.image_reference] = tile
                                                     # make the edit
                                                     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := get_blended_color_int(original_pixel_color, current_color_rgba))
+                                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # collision map edit
                                                     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
@@ -3125,7 +3123,6 @@ class EditorMap():
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
                         render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.jumble_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale})
                         self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
-                    current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
                     # change drawing state
                     if (self.current_tool.state == JumbleTool.NOT_JUMBLING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:

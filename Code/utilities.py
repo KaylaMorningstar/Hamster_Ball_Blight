@@ -6,6 +6,7 @@ import time
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 import pygame
+from typing import Iterable
 
 ONE_FRAME_AT_60_FPS = 1/ 60
 OFF_SCREEN = -99999
@@ -139,24 +140,14 @@ def rgba_to_glsl(rgba: list[int, int, int, int] | tuple[int, int, int, int]):
         )
 
 
-def get_blended_color_float(background_rgba: list[float, float, float, float], foreground_rgba: list[float, float, float, float]):
-    return [
-        (foreground_rgba[0] * foreground_rgba[3]) + (background_rgba[0] * (1.0 - foreground_rgba[3])),
-        (foreground_rgba[1] * foreground_rgba[3]) + (background_rgba[1] * (1.0 - foreground_rgba[3])),
-        (foreground_rgba[2] * foreground_rgba[3]) + (background_rgba[2] * (1.0 - foreground_rgba[3])),
-        1
-    ]
-
-
-def get_blended_color_int(background_rgba: list[int, int, int, int] | pygame.Color, foreground_rgba: list[int, int, int, int] | pygame.Color):
-    percent_alpha = (foreground_rgba[3] / 255)
-    inverse_percent_alpha = ((255 - foreground_rgba[3]) / 255)
+def get_blended_color(background_rgba: Iterable[float], foreground_rgba: Iterable[float]):
+    alpha_output = foreground_rgba[3] + background_rgba[3] * (1 - foreground_rgba[3])
     return (
-        int((foreground_rgba[0] * percent_alpha) + (background_rgba[0] * inverse_percent_alpha)),
-        int((foreground_rgba[1] * percent_alpha) + (background_rgba[1] * inverse_percent_alpha)),
-        int((foreground_rgba[2] * percent_alpha) + (background_rgba[2] * inverse_percent_alpha)),
-        int((foreground_rgba[3] * percent_alpha) + (background_rgba[3] * inverse_percent_alpha))
-    )
+        ((foreground_rgba[0] * foreground_rgba[3]) + ((background_rgba[0] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
+        ((foreground_rgba[1] * foreground_rgba[3]) + ((background_rgba[1] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
+        ((foreground_rgba[2] * foreground_rgba[3]) + ((background_rgba[2] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
+        alpha_output
+        )
 
 
 def percent_to_rgba(rgba: list[float, float, float, float] | tuple[float, float, float, float]):
