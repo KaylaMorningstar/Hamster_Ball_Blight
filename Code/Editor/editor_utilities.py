@@ -1564,8 +1564,7 @@ class EraserTool(EditorTool):
     def __init__(self, active: bool, render_instance, screen_instance, gl_context):
         self.state = EraserTool.NOT_ERASING  # (NOT_ERASING = 0, ERASING = 1)
         self.ERASER_STYLE_WIDTH = get_text_width(render_instance, EraserTool.ERASER_STYLE, EraserTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
-        # surfaces used while erasing
-        # self.eraser_circle_true_indexes: list[list[int, int]]
+        # data used to determine which pixels should be erased when erasing
         self.circle: list[list[int | list[float, float]]]
         # attributes
         self.eraser_style = PencilTool.CIRCLE_BRUSH  # (CIRCLE_BRUSH = 1, SQUARE_BRUSH = 2)
