@@ -2531,7 +2531,7 @@ class EditorMap():
                     # condition if cursor is on the map
                     if cursor_on_map:
                         cursors.add_cursor_this_frame('cursor_big_crosshair')
-                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.eraser_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale})
+                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.eraser_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale, 'is_a_square': True if self.current_tool.eraser_style == EraserTool.SQUARE_ERASER else False})
                         self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
                     current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
