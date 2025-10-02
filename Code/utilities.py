@@ -5,6 +5,7 @@ import pathlib
 import time
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
+import pygame
 
 ONE_FRAME_AT_60_FPS = 1/ 60
 OFF_SCREEN = -99999
@@ -147,7 +148,7 @@ def get_blended_color_float(background_rgba: list[float, float, float, float], f
     ]
 
 
-def get_blended_color_int(background_rgba: list[int, int, int, int], foreground_rgba: list[int, int, int, int]):
+def get_blended_color_int(background_rgba: list[int, int, int, int] | pygame.Color, foreground_rgba: list[int, int, int, int] | pygame.Color):
     percent_alpha = (foreground_rgba[3] / 255)
     inverse_percent_alpha = ((255 - foreground_rgba[3]) / 255)
     return (
