@@ -335,7 +335,7 @@ class RenderObjects():
         quads.release()
         renderer.release()
     #
-    def checkerboard(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ltwh, rgba1, rgba2, repeat_x, repeat_y):
+    def checkerboard(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ltwh, rgba1, rgba2, repeat_x, repeat_y, offset_x: int = 0, offset_y: int = 0):
         # 'checkerboard', DrawCheckerboard
         program = self.programs['checkerboard'].program
         renderable_object = self.renderable_objects[object_name]
@@ -352,6 +352,10 @@ class RenderObjects():
         program['green2'] = rgba2[1]
         program['blue2'] = rgba2[2]
         program['alpha2'] = rgba2[3]
+        
+        program['offset_x'] = float(offset_x) / ltwh[2]
+        program['offset_y'] = float(offset_y) / ltwh[3]
+
         program['two_tiles_x'] = 2 / (ltwh[2] / repeat_x)
         program['two_tiles_y'] = 2 / (ltwh[3] / repeat_y)
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
@@ -1439,6 +1443,8 @@ class DrawCheckerboard():
         uniform float green2;
         uniform float blue2;
         uniform float alpha2;
+        uniform float offset_x;
+        uniform float offset_y;
         uniform float two_tiles_x;
         uniform float two_tiles_y;
 
@@ -1449,7 +1455,7 @@ class DrawCheckerboard():
             float one_tile_x = two_tiles_x / 2;
             float one_tile_y = two_tiles_y / 2;
             f_color = vec4(red1, green1, blue1, alpha1);
-            if ((mod(uvs.x, two_tiles_x) < one_tile_x) ^^ (mod(uvs.y, two_tiles_y) < one_tile_y)) {
+            if ((mod(uvs.x + offset_x, two_tiles_x) < one_tile_x) ^^ (mod(uvs.y + offset_y, two_tiles_y) < one_tile_y)) {
                 f_color = vec4(red2, green2, blue2, alpha2);
             }
         }

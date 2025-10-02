@@ -2099,6 +2099,10 @@ class EditorMap():
     MAX_CTRL_Z = 100
     _SAVE_PERIOD = 10  # s
 
+    _CHECKERBOARD_PIXEL_SIZE = 32
+    _CHECKERBOARD_COLOR1 = COLORS['GREY']
+    _CHECKERBOARD_COLOR2 = COLORS['WHITE']
+
     def __init__(self,
                  PATH: str,
                  screen_instance,
@@ -2193,7 +2197,10 @@ class EditorMap():
 
         # perform edits to the map
         self._tool(screen_instance, gl_context, keys_class_instance, render_instance, cursors, editor_singleton)
-        
+
+        # draw the checkerboard background for erased pixels
+        self._draw_checkerboard_background(render_instance, screen_instance, gl_context)
+
         # iterate through tiles that should be loaded; load them; draw them
         self._iterate_through_tiles(render_instance, screen_instance, gl_context, True, True, editor_singleton)
 
@@ -3331,6 +3338,10 @@ class EditorMap():
 
     def _update_current_tool(self, current_tool: tuple[str, int]):
         self.current_tool = self.tools[current_tool[1]]
+
+    def _draw_checkerboard_background(self, render_instance, screen_instance, gl_context):
+        adjusted_checkerboard_pixel_size = EditorMap._CHECKERBOARD_PIXEL_SIZE * self.pixel_scale
+        render_instance.checkerboard(screen_instance, gl_context, 'black_pixel', self.image_space_ltwh, EditorMap._CHECKERBOARD_COLOR1, EditorMap._CHECKERBOARD_COLOR2, adjusted_checkerboard_pixel_size, adjusted_checkerboard_pixel_size, offset_x = -self.map_offset_xy[0], offset_y = -self.map_offset_xy[1])
 
     def _execute_stored_draws(self, render_instance, screen_instance, gl_context):
         for key in self.stored_draw_keys:

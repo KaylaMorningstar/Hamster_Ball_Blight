@@ -154,7 +154,7 @@ def get_blended_color_int(background_rgba: list[int, int, int, int], foreground_
         int((foreground_rgba[0] * percent_alpha) + (background_rgba[0] * inverse_percent_alpha)),
         int((foreground_rgba[1] * percent_alpha) + (background_rgba[1] * inverse_percent_alpha)),
         int((foreground_rgba[2] * percent_alpha) + (background_rgba[2] * inverse_percent_alpha)),
-        255
+        int((foreground_rgba[3] * percent_alpha) + (background_rgba[3] * inverse_percent_alpha))
     )
 
 
