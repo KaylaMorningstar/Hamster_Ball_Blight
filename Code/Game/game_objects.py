@@ -646,10 +646,11 @@ class Player():
     #
     def _draw(self, stored_draws, Render, Screen, gl_context):
         # draw tool1
-        for tool in [self.tool1, self.tool2]:
+        for tool in [self.tool1]:
             if tool.being_used:
-                match type(self.tool1).__name__:
+                match type(tool).__name__:
                     case Player.WaterJet.__name__:
+                        
                         Render.store_draw(self.water_jet_reference, Render.draw_water_jet, {'object_name': 'black_pixel', 'ball_center': [self.screen_position_x + self.ball_radius, self.screen_position_y + self.ball_radius], 'ball_radius': self.ball_radius, 'max_length_from_center': self.ball_radius + Player.WaterJet._MAXIMUM_LENGTH, 'current_length_from_center': self.ball_radius + self.tool1.length_float, 'rotation': self.spout.rotation, 'minimum_water_jet_thickness': Player.WaterJet.MINIMUM_WATER_JET_THICKNESS, 'moment_in_wave_period': ((get_time() - self.tool1.started_being_used_time) % Player.WaterJet.WAVE_PERIOD_DURATION) / Player.WaterJet.WAVE_PERIOD_DURATION})
                         stored_draws.add_draw(self.water_jet_reference, Player.PRETTY_BALL_ORDER)
                     case Player.Grapple.__name__:

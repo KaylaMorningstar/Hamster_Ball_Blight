@@ -6,6 +6,7 @@ import moderngl
 import numpy as np
 from typing import Callable, Iterable
 from Code.Editor.editor_utilities import LineTool, get_perfect_circle_edge_angles_for_drawing_lines, get_perfect_square_edge_angles_for_drawing_lines
+import struct
 
 
 def initialize_display():
@@ -67,6 +68,7 @@ class RenderObjects():
         self.stored_draws = {}  # 'draw_name': [render_function_reference, {kwargs: value}]
     #
     def get_programs(self, gl_context):
+        # rendering
         self.programs['basic_rect'] = DrawBasicRect(gl_context)
         self.programs['rotation_rect'] = DrawRotationRect(gl_context)
         self.programs['basic_image_with_color'] = DrawImageWithColor(gl_context)
@@ -86,6 +88,8 @@ class RenderObjects():
         self.programs['draw_line'] = DrawLine(gl_context)
         self.programs['draw_collision_tile'] = DrawCollisionTile(gl_context)
         self.programs['draw_water_jet'] = DrawWaterJet(gl_context)
+        # compute shaders
+        self.programs['compute_water_jet'] = ComputeWaterJet(gl_context)
     #
     def write_pixels(self, name: str, ltwh: tuple[int, int, int, int], rgba: tuple[int, int, int, int]):
         self.renderable_objects[name].texture.write(np.array(rgba_to_bgra(rgba), dtype=np.uint8).tobytes(), viewport=ltwh)
@@ -643,6 +647,27 @@ class RenderObjects():
         quads.release()
         renderer.release()
     #
+    def draw_rectangle(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh, border_thickness, border_color, coloring_border, inner_color, coloring_inside): # rectangle with border
+        if coloring_border:
+            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0], ltwh[1], ltwh[2], border_thickness), border_color)
+            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0], ltwh[1] + border_thickness, border_thickness, ltwh[3] - border_thickness), border_color)
+            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0] + ltwh[2] - border_thickness, ltwh[1] + border_thickness, border_thickness, ltwh[3] - border_thickness), border_color)
+            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0] + border_thickness, ltwh[1] + ltwh[3] - border_thickness, ltwh[2] - (2 * border_thickness), border_thickness), border_color)
+        if coloring_inside:
+            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0] + border_thickness, ltwh[1] + border_thickness, ltwh[2] - (2 * border_thickness), ltwh[3] - (2 * border_thickness)), inner_color)
+    #
+    def draw_part_of_rectangle(self, Screen: ScreenObject, gl_context, ltwh, border_thickness, border_color, coloring_up, coloring_left, coloring_down, coloring_right, inner_color, coloring_inside): # rectangle with border
+        if coloring_up:
+            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0], ltwh[1], ltwh[2], border_thickness), border_color)
+        if coloring_left:
+            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0], ltwh[1], border_thickness, ltwh[3]), border_color)
+        if coloring_down:
+            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0], ltwh[1]+ltwh[3]-border_thickness, ltwh[2], border_thickness), border_color)
+        if coloring_right:
+            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0]+ltwh[2]-border_thickness, ltwh[1], border_thickness, ltwh[3]), border_color)
+        if coloring_inside:
+            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0] + border_thickness, ltwh[1] + border_thickness, ltwh[2] - (2 * border_thickness), ltwh[3] - (2 * border_thickness)), inner_color)
+    #
     def draw_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, minimum_water_jet_thickness: float, moment_in_wave_period: float):
         # 'draw_water_jet', DrawWaterJet
         ltwh = [ball_center[0] - current_length_from_center, ball_center[1] - current_length_from_center, 2 * current_length_from_center, 2 * current_length_from_center]
@@ -674,26 +699,16 @@ class RenderObjects():
         quads.release()
         renderer.release()
     #
-    def draw_rectangle(self, Screen: ScreenObject, gl_context: moderngl.Context, ltwh, border_thickness, border_color, coloring_border, inner_color, coloring_inside): # rectangle with border
-        if coloring_border:
-            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0], ltwh[1], ltwh[2], border_thickness), border_color)
-            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0], ltwh[1] + border_thickness, border_thickness, ltwh[3] - border_thickness), border_color)
-            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0] + ltwh[2] - border_thickness, ltwh[1] + border_thickness, border_thickness, ltwh[3] - border_thickness), border_color)
-            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0] + border_thickness, ltwh[1] + ltwh[3] - border_thickness, ltwh[2] - (2 * border_thickness), border_thickness), border_color)
-        if coloring_inside:
-            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0] + border_thickness, ltwh[1] + border_thickness, ltwh[2] - (2 * border_thickness), ltwh[3] - (2 * border_thickness)), inner_color)
-    #
-    def draw_part_of_rectangle(self, Screen: ScreenObject, gl_context, ltwh, border_thickness, border_color, coloring_up, coloring_left, coloring_down, coloring_right, inner_color, coloring_inside): # rectangle with border
-        if coloring_up:
-            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0], ltwh[1], ltwh[2], border_thickness), border_color)
-        if coloring_left:
-            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0], ltwh[1], border_thickness, ltwh[3]), border_color)
-        if coloring_down:
-            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0], ltwh[1]+ltwh[3]-border_thickness, ltwh[2], border_thickness), border_color)
-        if coloring_right:
-            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0]+ltwh[2]-border_thickness, ltwh[1], border_thickness, ltwh[3]), border_color)
-        if coloring_inside:
-            self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0] + border_thickness, ltwh[1] + border_thickness, ltwh[2] - (2 * border_thickness), ltwh[3] - (2 * border_thickness)), inner_color)
+    def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, minimum_water_jet_thickness: float, moment_in_wave_period: float):
+        # 'compute_water_jet', ComputeWaterJet
+        ltwh = [ball_center[0] - current_length_from_center, ball_center[1] - current_length_from_center, 2 * current_length_from_center, 2 * current_length_from_center]
+        program = self.programs['compute_water_jet'].program
+        renderable_object = self.renderable_objects[object_name]
+        topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
+        topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
+        topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
+        bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
+        slope = -math.tan(math.radians(rotation))
     #
     @staticmethod
     def clear_buffer(gl_context: moderngl.Context):
@@ -2707,3 +2722,24 @@ class DrawWaterJet():
         }
         '''
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
+
+
+
+
+
+class ComputeWaterJet():
+    def __init__(self, gl_context: moderngl.Context):
+        self.compute_shader = gl_context.compute_shader(
+        '''
+        #version 430
+
+        layout(local_size_x=4, local_size_y=4, local_size_z=4) in;
+
+        layout(rgba32f, binding=0) uniform image2DArray img_in;
+        layout(rgba32f, binding=1) uniform image2DArray img_out;
+
+        void main() {
+            bool water_jet_touched = true;
+        }
+        '''
+        )
