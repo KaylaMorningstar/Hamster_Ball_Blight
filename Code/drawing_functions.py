@@ -702,13 +702,43 @@ class RenderObjects():
     def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, minimum_water_jet_thickness: float, moment_in_wave_period: float):
         # 'compute_water_jet', ComputeWaterJet
         ltwh = [ball_center[0] - current_length_from_center, ball_center[1] - current_length_from_center, 2 * current_length_from_center, 2 * current_length_from_center]
-        program = self.programs['compute_water_jet'].program
+        program = self.programs['compute_water_jet'].compute_shader
         renderable_object = self.renderable_objects[object_name]
         topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
         topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
         topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
         bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
         slope = -math.tan(math.radians(rotation))
+
+        # program['width'] = ltwh[2]
+        # program['height'] = ltwh[3]
+        # program['slope'] = slope
+        # program['minimum_water_jet_thickness'] = minimum_water_jet_thickness
+        # program['current_length_from_center'] = current_length_from_center
+        # program['max_length_from_center'] = max_length_from_center
+        # program['rotation'] = rotation
+        # program['ball_radius'] = ball_radius
+        # program['moment_in_wave_period'] = moment_in_wave_period
+        # program['quad1'] = (315.0 <= rotation <= 360.0) or (0.0 <= rotation <= 135.0)
+        # program['quad2'] = (45.0 <= rotation <= 225.0)
+        # program['quad3'] = (135 <= rotation <= 315.0)
+        # program['quad4'] = (225.0 <= rotation <= 360.0) or (0.0 <= rotation <= 45.0)
+
+        # water_jet_texture = gl_context.texture_array((4, 4, 4), 4, data=array('f', [v for v in range(4 * 4 * 4 * 4)]), dtype="f4")
+        # water_jet_texture.bind_to_image(0, read=True, write=False)
+
+        water_jet_collision_positions = gl_context.buffer(struct.pack('2f', 0, 0))
+        water_jet_collision_positions.bind_to_storage_buffer(1)
+        
+        # counter_buffer = gl_context.buffer(reserve=4)
+        # counter_buffer.write((0).to_bytes(4, byteorder="little"))
+        # counter_buffer.bind_to_storage_buffer(binding=2)
+
+        program.run(group_x=10, group_y=1, group_z=1)
+        gl_context.memory_barrier(moderngl.ATOMIC_COUNTER_BARRIER_BIT)
+
+        water_jet_length, water_jet_girth = struct.unpack('2i', water_jet_collision_positions.read())
+        print(water_jet_length, water_jet_girth)
     #
     @staticmethod
     def clear_buffer(gl_context: moderngl.Context):
@@ -718,7 +748,7 @@ class RenderObjects():
 class DrawBasicRect():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -735,7 +765,7 @@ class DrawBasicRect():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
 
@@ -752,7 +782,7 @@ class DrawBasicRect():
 class DrawRotationRect():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float rotation;
         uniform float offset_x;
@@ -774,7 +804,7 @@ class DrawRotationRect():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
 
@@ -791,7 +821,7 @@ class DrawRotationRect():
 class DrawBasicRectWithVariableColor():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -808,7 +838,7 @@ class DrawBasicRectWithVariableColor():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -834,7 +864,7 @@ class DrawBasicRectWithVariableColor():
 class DrawImageWithColor():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -851,7 +881,7 @@ class DrawImageWithColor():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -877,7 +907,7 @@ class DrawImageWithColor():
 class DrawText():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -894,7 +924,7 @@ class DrawText():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -920,7 +950,7 @@ class DrawText():
 class DrawBasicRectGlow():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -937,7 +967,7 @@ class DrawBasicRectGlow():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -963,7 +993,7 @@ class DrawBasicRectGlow():
 class DrawBasicRectCircleGlow():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -980,7 +1010,7 @@ class DrawBasicRectCircleGlow():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -1006,7 +1036,7 @@ class DrawBasicRectCircleGlow():
 class DrawBasicOutline():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -1023,7 +1053,7 @@ class DrawBasicOutline():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float red;
@@ -1048,7 +1078,7 @@ class DrawBasicOutline():
 class DrawRGBAPicker():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -1067,7 +1097,7 @@ class DrawRGBAPicker():
         self.FRAGMENT_SHADERS = {
         '0_0': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1092,7 +1122,7 @@ class DrawRGBAPicker():
 
         '1_0': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1117,7 +1147,7 @@ class DrawRGBAPicker():
 
         '2_0': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1142,7 +1172,7 @@ class DrawRGBAPicker():
 
         '3_0': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1167,7 +1197,7 @@ class DrawRGBAPicker():
 
         '4_0': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1192,7 +1222,7 @@ class DrawRGBAPicker():
 
         '5_0': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1217,7 +1247,7 @@ class DrawRGBAPicker():
 
         '0_1': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1242,7 +1272,7 @@ class DrawRGBAPicker():
 
         '1_1': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1267,7 +1297,7 @@ class DrawRGBAPicker():
 
         '2_1': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1292,7 +1322,7 @@ class DrawRGBAPicker():
 
         '3_1': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1317,7 +1347,7 @@ class DrawRGBAPicker():
 
         '4_1': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1342,7 +1372,7 @@ class DrawRGBAPicker():
 
         '5_1': 
         '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float saturation;
@@ -1384,7 +1414,7 @@ class DrawRGBAPicker():
 class DrawSpectrumX():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -1401,7 +1431,7 @@ class DrawSpectrumX():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float red1;
@@ -1431,7 +1461,7 @@ class DrawSpectrumX():
 class DrawCheckerboard():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -1448,7 +1478,7 @@ class DrawCheckerboard():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
         uniform float red1;
@@ -1482,7 +1512,7 @@ class DrawCheckerboard():
 class DrawInvertWhite():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -1499,7 +1529,7 @@ class DrawInvertWhite():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
         #extension GL_EXT_shader_framebuffer_fetch : require
 
         uniform sampler2D tex;
@@ -1524,7 +1554,7 @@ class DrawInvertWhite():
 class DrawCircleOutline():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -1541,7 +1571,7 @@ class DrawCircleOutline():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
         #extension GL_EXT_shader_framebuffer_fetch : require
 
         const vec3 BLACK = vec3(0.0, 0.0, 0.0);
@@ -1663,7 +1693,7 @@ class DrawCircleOutline():
 class DrawCircle():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -1680,7 +1710,7 @@ class DrawCircle():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         const vec4 BLANK = vec4(0.0, 0.0, 0.0, 0.0);
 
@@ -1729,7 +1759,7 @@ class DrawCircle():
 class DrawEllipse():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -1746,7 +1776,7 @@ class DrawEllipse():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
 
@@ -1799,7 +1829,7 @@ class DrawEllipse():
 class DrawHollowEllipse():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -1816,7 +1846,7 @@ class DrawHollowEllipse():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform sampler2D tex;
 
@@ -1874,7 +1904,7 @@ class DrawHollowEllipse():
 class DrawLine():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -1891,7 +1921,7 @@ class DrawLine():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         const vec3 RED = vec3(1.0, 0.0, 0.0);
         const vec3 GREEN = vec3(0.0, 1.0, 0.0);
@@ -2522,7 +2552,7 @@ class DrawLine():
 class DrawCollisionTile():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -2539,7 +2569,7 @@ class DrawCollisionTile():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         // NO COLLISION
         const vec3 WHITE = vec3(1.0, 1.0, 1.0);
@@ -2594,7 +2624,7 @@ class DrawCollisionTile():
 class DrawWaterJet():
     def __init__(self, gl_context):
         self.VERTICE_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         uniform float aspect;
 
@@ -2611,7 +2641,7 @@ class DrawWaterJet():
         }
         '''
         self.FRAGMENT_SHADER = '''
-        #version 430 core
+        #version 460 core
 
         const float PI = 3.1415926535;
         const vec4 DARK_BLUE = vec4(0.0, 0.0, 1.0, 0.90);
@@ -2724,6 +2754,163 @@ class DrawWaterJet():
         self.program = gl_context.program(vertex_shader = self.VERTICE_SHADER, fragment_shader = self.FRAGMENT_SHADER)
 
 
+# class ComputeWaterJet():
+#     def __init__(self, gl_context: moderngl.Context):
+#         self.compute_shader = gl_context.compute_shader(
+#         '''
+#         #version 460
+
+#         layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
+
+#         layout(rgba32f, binding=0) uniform image2DArray img_in;
+#         layout (std430, binding = 1) buffer Output {
+#             float water_jet_collision_position[2];
+#         };
+
+#         void main() {
+#             water_jet_collision_position[0] = 2.0;
+#             water_jet_collision_position[1] = 2.0;
+#         }
+#         '''
+#         )
+
+
+# class ComputeWaterJet():
+#     def __init__(self, gl_context: moderngl.Context):
+#         self.compute_shader = gl_context.compute_shader(
+#         '''
+#         #version 460
+
+#         layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
+
+#         layout(rgba32f, binding=0) uniform image2DArray image_in;
+#         layout (std430, binding = 1) buffer Output {
+#             uint water_jet_collision_position[2];
+#         };
+#         layout(binding = 2) uniform atomic_uint counter;
+
+#         shared float water_jet_length;
+
+#         const float PI = 3.1415926535;
+#         const vec4 DARK_BLUE = vec4(0.0, 0.0, 1.0, 0.90);
+#         const vec4 LIGHT_BLUE = vec4(0.0, 0.5, 1.0, 0.35);
+#         const vec4 WHITE = vec4(0.8, 0.8, 1.0, 0.9);
+#         const vec4 BLANK = vec4(0.0, 0.0, 0.0, 0.0);
+
+#         uniform sampler2D tex;
+#         uniform float width;
+#         uniform float height;
+#         uniform float slope;
+#         uniform float intercept;
+#         uniform float minimum_water_jet_thickness;
+#         uniform float current_length_from_center;
+#         uniform float max_length_from_center;
+#         uniform float rotation;
+#         uniform float ball_radius;
+#         uniform float moment_in_wave_period;
+#         uniform bool quad1;
+#         uniform bool quad2;
+#         uniform bool quad3;
+#         uniform bool quad4;
+
+#         float get_point_to_line_distance(highp float slope, highp float intercept, highp float x_pos, highp float y_pos) {
+#             return abs((slope * x_pos) + (-1 * y_pos) + intercept) / sqrt(pow(slope, 2) + pow(-1, 2));
+#         }
+
+#         float get_closest_x(highp float slope, highp float intercept, highp float x_pos, highp float y_pos) {
+#             return ((-1 * ((-1 * x_pos) - (slope * y_pos))) - (slope * intercept)) / (pow(slope, 2) + pow(-1, 2));
+#         }
+
+#         float get_closest_y(highp float slope, highp float intercept, highp float x_pos, highp float y_pos) {
+#             return ((slope * ((1 * x_pos) + (slope * y_pos))) - (-1 * intercept)) / (pow(slope, 2) + pow(-1, 2));
+#         }
+
+#         bool get_side_of_line(highp float rotation, highp float slope, highp float intercept, highp float x_pos, highp float y_pos) {
+#             float multiplier1 = (slope >= 0.0) ? -1.0 : 1.0;
+#             float multiplier2 = ((0.0 <= rotation) && (rotation <= 180.0)) ? -1.0 : 1.0;
+#             float side_of_line = multiplier1 * multiplier2 * ((slope * x_pos) + (-1 * y_pos) + intercept);
+#             bool top_side = side_of_line >= 0.0;
+#             return top_side;
+#         }
+
+#         void main() {
+#             water_jet_length = 0.0;
+#             water_jet_collision_position[0] = 2;
+#             water_jet_collision_position[1] = 2;
+
+#             uvec3 localID = gl_LocalInvocationID;
+#             vec2 uvs = vec2(gl_LocalInvocationID.xy) / vec2(width, height);
+
+#             // get which pixel this is
+#             float index_x = round(uvs.x * (width - 1));
+#             float index_y = round(uvs.y * (height - 1));
+#             float pixel_x = (index_x + 0.5);
+#             float pixel_y = (index_y + 0.5);
+#             float x_pos = (width / 2) - pixel_x;
+#             float y_pos = (height / 2) - pixel_y;
+
+#             // get the closest xy pixel on center of the jet line
+#             float point_to_line_distance = get_point_to_line_distance(slope, 0.0, x_pos, y_pos);
+#             float closest_x = get_closest_x(slope, 0.0, x_pos, y_pos);
+#             float closest_y = get_closest_y(slope, 0.0, x_pos, y_pos);
+
+#             // get how far along the jet the pixel is
+#             float distance_along_jet = sqrt(pow(closest_x, 2) + pow(closest_y, 2)) - ball_radius;
+#             float max_jet_length = max_length_from_center - ball_radius;
+#             float percentage_x = distance_along_jet / max_jet_length;
+
+#             // calculate how thick the water jet should be at each point in length
+#             bool top_side = get_side_of_line(rotation, slope, 0.0, x_pos, y_pos);
+#             float water_jet_thickness_top;
+#             float water_jet_thickness_bottom;
+#             float how_trumpet_shaped = 3.5;
+#             if (moment_in_wave_period <= 0.5) {
+#                 water_jet_thickness_top = minimum_water_jet_thickness + pow(percentage_x * how_trumpet_shaped * (moment_in_wave_period * 2), 2.2);
+#                 water_jet_thickness_bottom = minimum_water_jet_thickness + pow(percentage_x * how_trumpet_shaped * (1 - (moment_in_wave_period * 2)), 2.2);
+#             }
+#             if (moment_in_wave_period > 0.5) {
+#                 water_jet_thickness_top = minimum_water_jet_thickness + pow(percentage_x * how_trumpet_shaped * (1 - ((moment_in_wave_period - 0.5) * 2)), 2.2);
+#                 water_jet_thickness_bottom = minimum_water_jet_thickness + pow(percentage_x * how_trumpet_shaped * (((moment_in_wave_period - 0.5) * 2)), 2.2);
+#             }
+
+#             // remove pixels outside of water jet thickness
+#             if (((top_side) && (point_to_line_distance < water_jet_thickness_top)) || ((!top_side) && (point_to_line_distance < water_jet_thickness_bottom))) {
+#                 // remove pixels in wrong quadrants
+#                 bool acceptable_quad = ((quad1) && (-x_pos >= 0.0) && (y_pos >= 0.0)) || ((quad2) && (x_pos >= 0.0) && (y_pos >= 0.0)) || ((quad3) && (x_pos >= 0.0) && (-y_pos >= 0.0)) || ((quad4) && (-x_pos >= 0.0) && (-y_pos >= 0.0));
+#                 if (acceptable_quad) {
+#                     // remove pixels too far away
+#                     float distance_from_ball_center = sqrt(pow(x_pos, 2) + pow(y_pos, 2));
+#                     if (distance_from_ball_center < current_length_from_center) {
+
+#                         water_jet_length = distance_from_ball_center;
+
+#                         // adjust center of trumpet shape to deformation
+#                         float distance_from_edge_to_middle_of_jet = (water_jet_thickness_top + water_jet_thickness_bottom) / 2;
+#                         float adjusted_point_to_line_distance = (top_side) ? point_to_line_distance + ((water_jet_thickness_bottom - water_jet_thickness_top) / 2) : point_to_line_distance + ((water_jet_thickness_top - water_jet_thickness_bottom) / 2);
+#                         float percentage_y = (distance_from_edge_to_middle_of_jet - abs(adjusted_point_to_line_distance)) / distance_from_edge_to_middle_of_jet;
+#                         float percentage = ((1 - percentage_x) * 0.15) + (percentage_y * 0.85);
+
+#                         // draw water
+#                         //f_color.rgba = vec4(
+#                         //(DARK_BLUE.r * percentage) + (LIGHT_BLUE.r * (1 - percentage)),
+#                         //(DARK_BLUE.g * percentage) + (LIGHT_BLUE.g * (1 - percentage)),
+#                         //(DARK_BLUE.b * percentage) + (LIGHT_BLUE.b * (1 - percentage)),
+#                         //(DARK_BLUE.a * percentage) + (LIGHT_BLUE.a * (1 - percentage))
+#                         //);
+#                     }
+#                 }
+#             }
+
+#             memoryBarrierShared();
+#             memoryBarrierAtomicCounter();
+#             barrier();
+
+#             uint previous_value = atomicCounterIncrement(counter);
+#             water_jet_collision_position[0] = previous_value + 1;
+#         }
+#         '''
+#         )
+
 
 
 
@@ -2731,15 +2918,56 @@ class ComputeWaterJet():
     def __init__(self, gl_context: moderngl.Context):
         self.compute_shader = gl_context.compute_shader(
         '''
-        #version 430
+        #version 460
 
-        layout(local_size_x=4, local_size_y=4, local_size_z=4) in;
+        layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
 
-        layout(rgba32f, binding=0) uniform image2DArray img_in;
-        layout(rgba32f, binding=1) uniform image2DArray img_out;
+        layout(binding = 0) uniform atomic_uint counter;
+        layout (std430, binding = 1) buffer Output {
+            uint water_jet_collision_position[2];
+        };
 
         void main() {
-            bool water_jet_touched = true;
+            uint previous_value = atomicCounterIncrement(counter);
+
+            memoryBarrierShared();
+            memoryBarrierAtomicCounter();
+            barrier();
+
+            previous_value = atomicCounterIncrement(counter);
+
+            memoryBarrierShared();
+            memoryBarrierAtomicCounter();
+            barrier();
+
+            water_jet_collision_position[0] = previous_value + 1;
         }
         '''
         )
+
+
+
+
+# class ComputeWaterJet():
+#     def __init__(self, gl_context: moderngl.Context):
+#         self.compute_shader = gl_context.compute_shader(
+#         '''
+#         #version 430 core
+
+#         layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
+
+#         layout (std430, binding = 1) writeonly buffer Output {
+#             uint water_jet_collision_position[2];
+#         };
+
+#         layout(std430, binding=2) buffer counter {
+#             uint counter[];
+#         };
+
+#         void main() {
+#             const uint index = gl_GlobalInvocationID.x;
+
+#             water_jet_collision_position[0] = atomicAdd(counter);
+#         }
+#         '''
+#         )

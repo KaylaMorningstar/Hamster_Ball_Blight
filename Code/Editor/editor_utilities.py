@@ -8,11 +8,9 @@ from bresenham import bresenham
 from typing import Any
 from random import choice, shuffle, randint
 from enum import unique, Enum
-from dataclasses import dataclass
 
 
 @unique
-@dataclass
 class FooterInfo(Enum):
     SEPARATOR = 0
     MAP_SIZE = 1
@@ -20,19 +18,16 @@ class FooterInfo(Enum):
     ACTIVE_COLOR = 3
 
 @unique
-@dataclass
 class MapModes(Enum):
     PRETTY = 1
     COLLISION = 2
 
 @unique
-@dataclass
 class EditorModes(Enum):
     DRAW = 1
     BLOCK = 2
     OBJECT = 3
 
-@dataclass
 class CollisionMode:
     UTF_8 = 'utf-8'
     NEW_LINE = '\n'
