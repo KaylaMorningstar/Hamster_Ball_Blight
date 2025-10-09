@@ -206,8 +206,8 @@ class Player():
             pass
     #
     class WaterJet(PlayerTool):
-        _MINIMUM_LENGTH = 0.0
-        _MAXIMUM_LENGTH = 170.0
+        MINIMUM_LENGTH = 0.0
+        MAXIMUM_LENGTH = 170.0
         _DEFAULT_EXTENSION_SPEED = 300.0    
 
         MINIMUM_WATER_JET_THICKNESS = 3.5
@@ -216,8 +216,8 @@ class Player():
         def __init__(self):
             super().__init__()
             self.extension_speed: int | float = Player.WaterJet._DEFAULT_EXTENSION_SPEED
-            self.length_float: int = Player.WaterJet._MINIMUM_LENGTH
-            self.length: int = round(Player.WaterJet._MINIMUM_LENGTH)
+            self.length_float: int = Player.WaterJet.MINIMUM_LENGTH
+            self.length: int = round(Player.WaterJet.MINIMUM_LENGTH)
             self.started_being_used_time: float = get_time()
 
         def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
@@ -231,28 +231,28 @@ class Player():
                 self.length_float += self.extension_speed * Time.delta_time
             else:
                 self.length_float -= self.extension_speed * Time.delta_time
-            self.length_float = move_number_to_desired_range(Player.WaterJet._MINIMUM_LENGTH, self.length_float, Player.WaterJet._MAXIMUM_LENGTH)
+            self.length_float = move_number_to_desired_range(Player.WaterJet.MINIMUM_LENGTH, self.length_float, Player.WaterJet.MAXIMUM_LENGTH)
             self.length = round(self.length_float)
         
         def _update_being_used(self):
             self.being_used_last = self.being_used
-            self.being_used = self.length != Player.Grapple._MINIMUM_LENGTH
+            self.being_used = self.length != Player.Grapple.MINIMUM_LENGTH
             if self.being_used and not self.being_used_last:
                 self.started_being_used_time = get_time()
     #
     class Grapple(PlayerTool):
-        _MINIMUM_LENGTH = 0.0
-        _MAXIMUM_LENGTH = 160.0
+        MINIMUM_LENGTH = 0.0
+        MAXIMUM_LENGTH = 170.0
         _DEFAULT_EXTENSION_SPEED = 300.0
         def __init__(self):
             super().__init__()
             self.extension_speed: int | float = Player.Grapple._DEFAULT_EXTENSION_SPEED
-            self.length_float: int = Player.Grapple._MINIMUM_LENGTH
-            self.length: int = round(Player.Grapple._MINIMUM_LENGTH)
+            self.length_float: int = Player.Grapple.MINIMUM_LENGTH
+            self.length: int = round(Player.Grapple.MINIMUM_LENGTH)
 
         def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
             self._naive_update_length(Keys, Time)
-            self.being_used = self.length != Player.Grapple._MINIMUM_LENGTH
+            self.being_used = self.length != Player.Grapple.MINIMUM_LENGTH
 
         def _naive_update_length(self, Keys, Time):
             # update the grapple length
@@ -261,7 +261,7 @@ class Player():
                 self.length_float += self.extension_speed * Time.delta_time
             else:
                 self.length_float -= self.extension_speed * Time.delta_time
-            self.length_float = move_number_to_desired_range(Player.Grapple._MINIMUM_LENGTH, self.length_float, Player.Grapple._MAXIMUM_LENGTH)
+            self.length_float = move_number_to_desired_range(Player.Grapple.MINIMUM_LENGTH, self.length_float, Player.Grapple.MAXIMUM_LENGTH)
             self.length = round(self.length_float)
     #
     def update(self, Singleton, Render, Screen, gl_context, Keys, Cursor, Time):
@@ -277,7 +277,7 @@ class Player():
         self._calculate_position(Singleton, Render, Screen, gl_context, Keys, Cursor, Time)
         self._update_screen_position(Singleton.map, Screen, Time)
         self._reset_forces()
-        self._draw(Singleton.stored_draws, Render, Screen, gl_context)
+        self._draw(Singleton.map, Singleton.stored_draws, Render, Screen, gl_context)
     #
     def _update_player_controls(self, Keys):
         # movement controls
@@ -644,18 +644,18 @@ class Player():
         self.force_water_x = Player.DEFAULT_FORCE_WATER_X
         self.force_water_y = Player.DEFAULT_FORCE_WATER_Y
     #
-    def _draw(self, stored_draws, Render, Screen, gl_context):
+    def _draw(self, map_object, stored_draws, Render, Screen, gl_context):
         # draw tools
         for tool in [self.tool1]:
             if tool.being_used:
                 match type(tool).__name__:
                     case Player.WaterJet.__name__:
-                        Render.compute_water_jet(Screen, gl_context, 'c0_1', [self.screen_position_x + self.ball_radius, self.screen_position_y + self.ball_radius], self.ball_radius, self.ball_radius + Player.WaterJet._MAXIMUM_LENGTH, self.ball_radius + tool.length_float, self.spout.rotation, Player.WaterJet.MINIMUM_WATER_JET_THICKNESS, ((get_time() - tool.started_being_used_time) % Player.WaterJet.WAVE_PERIOD_DURATION) / Player.WaterJet.WAVE_PERIOD_DURATION)
+                        Render.compute_water_jet(Screen, gl_context, map_object, self)
 
-                        Render.store_draw(self.water_jet_reference, Render.draw_water_jet, {'object_name': 'black_pixel', 'ball_center': [self.screen_position_x + self.ball_radius, self.screen_position_y + self.ball_radius], 'ball_radius': self.ball_radius, 'max_length_from_center': self.ball_radius + Player.WaterJet._MAXIMUM_LENGTH, 'current_length_from_center': self.ball_radius + tool.length_float, 'rotation': self.spout.rotation, 'minimum_water_jet_thickness': Player.WaterJet.MINIMUM_WATER_JET_THICKNESS, 'moment_in_wave_period': ((get_time() - tool.started_being_used_time) % Player.WaterJet.WAVE_PERIOD_DURATION) / Player.WaterJet.WAVE_PERIOD_DURATION})
+                        Render.store_draw(self.water_jet_reference, Render.draw_water_jet, {'object_name': 'black_pixel', 'ball_center': [self.screen_position_x + self.ball_radius, self.screen_position_y + self.ball_radius], 'ball_radius': self.ball_radius, 'max_length_from_center': self.ball_radius + Player.WaterJet.MAXIMUM_LENGTH, 'current_length_from_center': self.ball_radius + tool.length_float, 'rotation': self.spout.rotation, 'minimum_water_jet_thickness': Player.WaterJet.MINIMUM_WATER_JET_THICKNESS, 'moment_in_wave_period': ((get_time() - tool.started_being_used_time) % Player.WaterJet.WAVE_PERIOD_DURATION) / Player.WaterJet.WAVE_PERIOD_DURATION})
                         stored_draws.add_draw(self.water_jet_reference, Player.PRETTY_BALL_ORDER)
                     case Player.Grapple.__name__:
-                        Render.store_draw(self.water_jet_reference, Render.draw_water_jet, {'object_name': 'black_pixel', 'ball_center': [self.screen_position_x + self.ball_radius, self.screen_position_y + self.ball_radius], 'ball_radius': self.ball_radius, 'max_length_from_center': self.ball_radius + Player.WaterJet._MAXIMUM_LENGTH, 'current_length_from_center': self.ball_radius + tool.length_float, 'rotation': self.spout.rotation, 'minimum_water_jet_thickness': Player.WaterJet.MINIMUM_WATER_JET_THICKNESS, 'moment_in_wave_period': ((get_time() - tool.started_being_used_time) % Player.WaterJet.WAVE_PERIOD_DURATION) / Player.WaterJet.WAVE_PERIOD_DURATION})
+                        Render.store_draw(self.water_jet_reference, Render.draw_water_jet, {'object_name': 'black_pixel', 'ball_center': [self.screen_position_x + self.ball_radius, self.screen_position_y + self.ball_radius], 'ball_radius': self.ball_radius, 'max_length_from_center': self.ball_radius + Player.WaterJet.MAXIMUM_LENGTH, 'current_length_from_center': self.ball_radius + tool.length_float, 'rotation': self.spout.rotation, 'minimum_water_jet_thickness': Player.WaterJet.MINIMUM_WATER_JET_THICKNESS, 'moment_in_wave_period': ((get_time() - tool.started_being_used_time) % Player.WaterJet.WAVE_PERIOD_DURATION) / Player.WaterJet.WAVE_PERIOD_DURATION})
         # draw the front of the ball
         Render.store_draw(self.ball_front_reference, Render.basic_rect_ltwh_to_quad, {'object_name': self.ball_front_reference, 'ltwh': [round(self.screen_position_x), round(self.screen_position_y), self.ball_width, self.ball_height]})
         stored_draws.add_draw(self.ball_front_reference, Player.PRETTY_BALL_ORDER)

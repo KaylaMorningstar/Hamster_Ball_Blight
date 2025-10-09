@@ -14,11 +14,13 @@ class Map():
     GRAPPLEABLE = 2
     PLATFORM = 3
     WATER = 4
+
     NO_COLLISION_BINARY = b'\x00'
     COLLISION_BINARY = b'\x01'
     GRAPPLEABLE_BINARY = b'\x02'
     PLATFORM_BINARY = b'\x03'
     WATER_BINARY = b'\x04'
+
     NO_COLLISION_BYTEARRAY = bytearray(b'\x00')
     COLLISION_BYTEARRAY = bytearray(b'\x01')
     GRAPPLEABLE_BYTEARRAY = bytearray(b'\x02')

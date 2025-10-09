@@ -6,6 +6,8 @@ import moderngl
 import numpy as np
 from typing import Callable, Iterable
 from Code.Editor.editor_utilities import LineTool, get_perfect_circle_edge_angles_for_drawing_lines, get_perfect_square_edge_angles_for_drawing_lines
+from Code.Game.game_utilities import Map
+from Code.Game.game_objects import Player
 import struct
 
 
@@ -699,22 +701,148 @@ class RenderObjects():
         quads.release()
         renderer.release()
     #
-    def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, minimum_water_jet_thickness: float, moment_in_wave_period: float):
+    def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, map_object: Map, player_object: Player):
         # 'compute_water_jet', ComputeWaterJet
-        ltwh = [ball_center[0] - current_length_from_center, ball_center[1] - current_length_from_center, 2 * current_length_from_center, 2 * current_length_from_center]
-        program: moderngl.ComputeShader = self.programs['compute_water_jet'].compute_shader
+        # get the current tile and pixel
+        origin_tile_x, pixel_x = divmod(round(player_object.ball_center_x), Map.TILE_WH)
+        origin_tile_y, pixel_y = divmod(round(player_object.ball_center_y), Map.TILE_WH)
+        # get the spout rotation
+        rotation = player_object.spout.rotation
+        # get distance to the edges of the tile
+        distance_to_top = pixel_y
+        distance_to_bottom = Map.TILE_WH - pixel_y
+        distance_to_right = Map.TILE_WH - pixel_x
+        distance_to_left = pixel_x
+        # calculate which of these spaces the ball is in within the tile
+        #  _________
+        # |111|2|333|
+        # |1|‾‾‾‾‾|3|
+        # |-|55555|-|
+        # |4|55555|6|
+        # |-|55555|-|
+        # |7|_____|9|
+        # |777|8|999|
+        #  ‾‾‾‾‾‾‾‾‾
+        maximum_water_jet_length_from_ball_center = math.ceil(player_object.ball_radius + Player.WaterJet.MAXIMUM_LENGTH)
+        space123 = (distance_to_bottom > maximum_water_jet_length_from_ball_center)
+        space147 = (distance_to_right > maximum_water_jet_length_from_ball_center)
+        space369 = (distance_to_left > maximum_water_jet_length_from_ball_center)
+        space789 = (distance_to_top > maximum_water_jet_length_from_ball_center)
+        space = (
+            1 if space123 and space147 else
+            2 if space123 and not space147 and not space369 else
+            3 if space123 and space369 else
+            4 if space147 and not space123 and not space789 else
+            6 if space369 and not space123 and not space789 else
+            7 if space147 and space789 else
+            8 if space789 and not space147 and not space369 else
+            9 if space369 and space789 else
+            5
+            )
+        # calculate the loading direction
+        # 1 = upleft
+        # 2 = upright
+        # 3 = downleft
+        # 4 = downright
+        match space:
+            case 1:
+                loading_direction = 1
+            case 2:
+                if (90.0 <= rotation <= 270.0):
+                    loading_direction = 1
+                else:
+                    loading_direction = 2
+            case 3:
+                loading_direction = 2
+            case 4:
+                if (0.0 <= rotation <= 180.0):
+                    loading_direction = 1
+                else:
+                    loading_direction = 3
+            case 5:
+                if (0.0 <= rotation <= 90.0):
+                    loading_direction = 2
+                elif (90.0 < rotation <= 180.0):
+                    loading_direction = 1
+                elif (180.0 < rotation <= 270.0):
+                    loading_direction = 3
+                else:
+                    loading_direction = 4
+            case 6:
+                if (0.0 <= rotation <= 180.0):
+                    loading_direction = 2
+                else:
+                    loading_direction = 4
+            case 7:
+                loading_direction = 3
+            case 8:
+                if (90.0 <= rotation <= 270.0):
+                    loading_direction = 3
+                else:
+                    loading_direction = 4
+            case 9:
+                loading_direction = 4
+        # bind four tiles to buffers in the order shown below
+        # get ball position relative to the top-left pixel of tiles 1, 2, 3, 4
+        #  ___
+        # |1|2|
+        # |3|4|
+        #  ‾‾‾
+        match loading_direction:
+            # tiles loading upleft; origin tile is 4
+            case 1:
+                tile_references = [
+                    f"{origin_tile_x-1}_{origin_tile_y-1}",
+                    f"{origin_tile_x}_{origin_tile_y-1}",
+                    f"{origin_tile_x-1}_{origin_tile_y}",
+                    f"{origin_tile_x}_{origin_tile_y}"
+                ]
+                ball_center_x = Map.TILE_WH + pixel_x
+                ball_center_y = Map.TILE_WH + pixel_y
+            # tiles loading upright; origin tile is 3
+            case 2:
+                tile_references = [
+                    f"{origin_tile_x}_{origin_tile_y-1}",
+                    f"{origin_tile_x+1}_{origin_tile_y-1}",
+                    f"{origin_tile_x}_{origin_tile_y}",
+                    f"{origin_tile_x+1}_{origin_tile_y}"
+                ]
+                ball_center_x = pixel_x
+                ball_center_y = Map.TILE_WH + pixel_y
+            # tiles loading downleft; origin tile is 2
+            case 3:
+                tile_references = [
+                    f"{origin_tile_x-1}_{origin_tile_y}",
+                    f"{origin_tile_x}_{origin_tile_y}",
+                    f"{origin_tile_x-1}_{origin_tile_y+1}",
+                    f"{origin_tile_x}_{origin_tile_y+1}"
+                ]
+                ball_center_x = Map.TILE_WH + pixel_x
+                ball_center_y = pixel_y
+            # tiles loading downright; origin tile is 1
+            case 4:
+                tile_references = [
+                    f"{origin_tile_x}_{origin_tile_y}",
+                    f"{origin_tile_x+1}_{origin_tile_y}",
+                    f"{origin_tile_x}_{origin_tile_y+1}",
+                    f"{origin_tile_x+1}_{origin_tile_y+1}"
+                ]
+                ball_center_x = pixel_x
+                ball_center_y = pixel_y
 
+        # get the compute shader program
+        program: moderngl.ComputeShader = self.programs['compute_water_jet'].compute_shader
         # water_jet_texture = gl_context.texture_array((4, 4, 4), 4, data=array('f', [v for v in range(4 * 4 * 4 * 4)]), dtype="f4")
         # water_jet_texture.bind_to_image(0, read=True, write=False)
-        
+        # create buffer for water jet collision positions
         counter_buffer = gl_context.buffer(struct.pack('2i', 0, 0))
         counter_buffer.bind_to_storage_buffer(binding=1)
-
+        # run the compute shader
         program.run(group_x=512, group_y=512, group_z=1)
+        # wait from all warps/threads to complete compute shader execution
         gl_context.memory_barrier(moderngl.ATOMIC_COUNTER_BARRIER_BIT)
-
+        # get the collision values from the buffer
         distance_from_ball, distance_from_center_of_stream = struct.unpack('2i', counter_buffer.read())
-        print(distance_from_ball, distance_from_center_of_stream)
 
     #
     @staticmethod
