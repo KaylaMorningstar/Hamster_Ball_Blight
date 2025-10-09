@@ -702,43 +702,20 @@ class RenderObjects():
     def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, minimum_water_jet_thickness: float, moment_in_wave_period: float):
         # 'compute_water_jet', ComputeWaterJet
         ltwh = [ball_center[0] - current_length_from_center, ball_center[1] - current_length_from_center, 2 * current_length_from_center, 2 * current_length_from_center]
-        program = self.programs['compute_water_jet'].compute_shader
-        renderable_object = self.renderable_objects[object_name]
-        topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
-        topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
-        topright_x = topleft_x + ((2 * ltwh[2] * Screen.aspect) / Screen.width)
-        bottomleft_y = topleft_y - ((2 * ltwh[3]) / Screen.height)
-        slope = -math.tan(math.radians(rotation))
-
-        # program['width'] = ltwh[2]
-        # program['height'] = ltwh[3]
-        # program['slope'] = slope
-        # program['minimum_water_jet_thickness'] = minimum_water_jet_thickness
-        # program['current_length_from_center'] = current_length_from_center
-        # program['max_length_from_center'] = max_length_from_center
-        # program['rotation'] = rotation
-        # program['ball_radius'] = ball_radius
-        # program['moment_in_wave_period'] = moment_in_wave_period
-        # program['quad1'] = (315.0 <= rotation <= 360.0) or (0.0 <= rotation <= 135.0)
-        # program['quad2'] = (45.0 <= rotation <= 225.0)
-        # program['quad3'] = (135 <= rotation <= 315.0)
-        # program['quad4'] = (225.0 <= rotation <= 360.0) or (0.0 <= rotation <= 45.0)
+        program: moderngl.ComputeShader = self.programs['compute_water_jet'].compute_shader
 
         # water_jet_texture = gl_context.texture_array((4, 4, 4), 4, data=array('f', [v for v in range(4 * 4 * 4 * 4)]), dtype="f4")
         # water_jet_texture.bind_to_image(0, read=True, write=False)
-
-        water_jet_collision_positions = gl_context.buffer(struct.pack('2f', 0, 0))
-        water_jet_collision_positions.bind_to_storage_buffer(1)
         
-        # counter_buffer = gl_context.buffer(reserve=4)
-        # counter_buffer.write((0).to_bytes(4, byteorder="little"))
-        # counter_buffer.bind_to_storage_buffer(binding=2)
+        counter_buffer = gl_context.buffer(struct.pack('2i', 0, 0))
+        counter_buffer.bind_to_storage_buffer(binding=1)
 
-        program.run(group_x=10, group_y=1, group_z=1)
+        program.run(group_x=512, group_y=512, group_z=1)
         gl_context.memory_barrier(moderngl.ATOMIC_COUNTER_BARRIER_BIT)
 
-        water_jet_length, water_jet_girth = struct.unpack('2i', water_jet_collision_positions.read())
-        print(water_jet_length, water_jet_girth)
+        distance_from_ball, distance_from_center_of_stream = struct.unpack('2i', counter_buffer.read())
+        print(distance_from_ball, distance_from_center_of_stream)
+
     #
     @staticmethod
     def clear_buffer(gl_context: moderngl.Context):
@@ -2912,62 +2889,29 @@ class DrawWaterJet():
 #         )
 
 
-
-
 class ComputeWaterJet():
     def __init__(self, gl_context: moderngl.Context):
         self.compute_shader = gl_context.compute_shader(
         '''
-        #version 460
+        #version 430 core
 
-        layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
+        #define WORK_GROUP_SIZE 1
 
-        layout(binding = 0) uniform atomic_uint counter;
-        layout (std430, binding = 1) buffer Output {
-            uint water_jet_collision_position[2];
-        };
+        layout(local_size_x=WORK_GROUP_SIZE, local_size_y=WORK_GROUP_SIZE) in;
+
+        layout(std430, binding=1) buffer WaterJetCollisionPosition {
+            uint distance_from_ball;
+            uint distance_from_center_of_stream;
+        } CollisionPosition;
+
+        uint added_amount = 1;
+
 
         void main() {
-            uint previous_value = atomicCounterIncrement(counter);
+            const uint index = gl_GlobalInvocationID.x;
 
-            memoryBarrierShared();
-            memoryBarrierAtomicCounter();
+            atomicAdd(CollisionPosition.distance_from_ball, added_amount);
             barrier();
-
-            previous_value = atomicCounterIncrement(counter);
-
-            memoryBarrierShared();
-            memoryBarrierAtomicCounter();
-            barrier();
-
-            water_jet_collision_position[0] = previous_value + 1;
         }
         '''
         )
-
-
-
-
-# class ComputeWaterJet():
-#     def __init__(self, gl_context: moderngl.Context):
-#         self.compute_shader = gl_context.compute_shader(
-#         '''
-#         #version 430 core
-
-#         layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
-
-#         layout (std430, binding = 1) writeonly buffer Output {
-#             uint water_jet_collision_position[2];
-#         };
-
-#         layout(std430, binding=2) buffer counter {
-#             uint counter[];
-#         };
-
-#         void main() {
-#             const uint index = gl_GlobalInvocationID.x;
-
-#             water_jet_collision_position[0] = atomicAdd(counter);
-#         }
-#         '''
-#         )
