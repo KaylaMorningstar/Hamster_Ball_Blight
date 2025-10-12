@@ -9,6 +9,7 @@ from Code.Editor.editor_utilities import LineTool, get_perfect_circle_edge_angle
 from Code.Game.game_utilities import Map
 from Code.Game.game_objects import Player
 import struct
+from time import sleep
 
 
 def initialize_display():
@@ -743,6 +744,7 @@ class RenderObjects():
 
     #
     def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, map_object: Map, player_object: Player):
+        start = get_time()
         # 'compute_water_jet', ComputeWaterJet
         # get the compute shader program
         program: moderngl.ComputeShader = self.programs['compute_water_jet'].compute_shader
@@ -771,8 +773,6 @@ class RenderObjects():
 
         # run the compute shader
         program.run(group_x=(2 * Map.TILE_WH), group_y=(2 * Map.TILE_WH), group_z=1)
-        # wait from all warps/threads to complete compute shader execution
-        gl_context.memory_barrier(moderngl.ALL_BARRIER_BITS)
         # get the collision values from the buffer
         distance_from_ball, distance_from_center_of_stream = struct.unpack('2i', counter_buffer.read())
         print(distance_from_ball, distance_from_center_of_stream)
@@ -3125,8 +3125,6 @@ class ComputeWaterJet():
 
         void main() {
             // get the collision texture value
-            vec2 uvs = gl_WorkGroupID.xy / vec2(int(round(gl_NumWorkGroups.x - 1.0)), int(round(gl_NumWorkGroups.y - 1.0)));
-
             vec4 texel_color = get_texel_collision(topleft_collision, topright_collision, bottomleft_collision, bottomright_collision, tile_size);
             
             if (texel_color.r != 0.0) {
