@@ -731,7 +731,7 @@ class RenderObjects():
         program.run(group_x=(2 * Map.TILE_WH), group_y=(2 * Map.TILE_WH), group_z=1)
         # get the collision values from the buffer
         distance_from_ball, distance_from_center_of_stream = struct.unpack('2i', counter_buffer.read())
-        print(distance_from_ball, distance_from_center_of_stream)
+        # print(distance_from_ball, distance_from_center_of_stream)
     #
     @staticmethod
     def clear_buffer(gl_context: moderngl.Context):
