@@ -6,6 +6,7 @@ from copy import deepcopy
 from glob import glob
 from Code.utilities import move_number_to_desired_range, get_all_paths_in_directory, difference_between_angles, COLORS
 
+
 class Map():
     TILE_EXTENSION = ''
 
@@ -116,6 +117,124 @@ class Map():
                 tile = self.tiles[index_x][index_y]
                 priority_load = rectangles_overlap(ltwh, [0, 0, Screen.width, Screen.height])
                 load = tile.draw(Render, Screen, gl_context, ltwh, load or priority_load)
+    #
+    def get_collision_tile_references_for_ball(self, player_object):
+        # get the current tile and pixel
+        origin_tile_x, pixel_x = divmod(round(player_object.ball_center_x), Map.TILE_WH)
+        origin_tile_y, pixel_y = divmod(round(player_object.ball_center_y), Map.TILE_WH)
+        # get the spout rotation
+        rotation = player_object.spout.rotation
+        # get distance to the edges of the tile
+        distance_to_top = pixel_y
+        distance_to_bottom = Map.TILE_WH - pixel_y
+        distance_to_right = Map.TILE_WH - pixel_x
+        distance_to_left = pixel_x
+        # calculate which of these spaces the ball is in within the tile
+        #  _________
+        # |111|2|333|
+        # |1|‾‾‾‾‾|3|
+        # |-|55555|-|
+        # |4|55555|6|
+        # |-|55555|-|
+        # |7|_____|9|
+        # |777|8|999|
+        #  ‾‾‾‾‾‾‾‾‾
+        maximum_water_jet_length_from_ball_center = math.ceil(player_object.ball_radius + player_object.maximum_length_of_longest_tool)
+        space123 = (distance_to_bottom > maximum_water_jet_length_from_ball_center)
+        space147 = (distance_to_right > maximum_water_jet_length_from_ball_center)
+        space369 = (distance_to_left > maximum_water_jet_length_from_ball_center)
+        space789 = (distance_to_top > maximum_water_jet_length_from_ball_center)
+        space = (
+            1 if space123 and space147 else
+            2 if space123 and not space147 and not space369 else
+            3 if space123 and space369 else
+            4 if space147 and not space123 and not space789 else
+            6 if space369 and not space123 and not space789 else
+            7 if space147 and space789 else
+            8 if space789 and not space147 and not space369 else
+            9 if space369 and space789 else
+            5
+            )
+        # calculate the loading direction
+        # 1 = upleft
+        # 2 = upright
+        # 3 = downleft
+        # 4 = downright
+        match space:
+            case 1:
+                loading_direction = 1
+            case 2:
+                loading_direction = 1 if (90.0 <= rotation <= 270.0) else 2
+            case 3:
+                loading_direction = 2
+            case 4:
+                loading_direction = 1 if (0.0 <= rotation <= 180.0) else 3
+            case 5:
+                loading_direction = (
+                    2 if (0.0 <= rotation <= 90.0) else
+                    1 if (90.0 < rotation <= 180.0) else
+                    3 if (180.0 < rotation <= 270.0) else
+                    4
+                )
+            case 6:
+                loading_direction = 2 if (0.0 <= rotation <= 180.0) else 4
+            case 7:
+                loading_direction = 3
+            case 8:
+                loading_direction = 3 if (90.0 <= rotation <= 270.0) else 4
+            case 9:
+                loading_direction = 4
+        # bind four tiles to buffers in the order shown below
+        # get ball position relative to the top-left pixel of tiles 1, 2, 3, 4
+        #  ___
+        # |1|2|
+        # |3|4|
+        #  ‾‾‾
+        match loading_direction:
+            # tiles loading upleft; origin tile is 4
+            case 1:
+                tile_references = [
+                    f"{origin_tile_x-1}_{origin_tile_y-1}",
+                    f"{origin_tile_x}_{origin_tile_y-1}",
+                    f"{origin_tile_x-1}_{origin_tile_y}",
+                    f"{origin_tile_x}_{origin_tile_y}"
+                ]
+                player_position_x = Map.TILE_WH + pixel_x
+                player_position_y = Map.TILE_WH + pixel_y
+            # tiles loading upright; origin tile is 3
+            case 2:
+                tile_references = [
+                    f"{origin_tile_x}_{origin_tile_y-1}",
+                    f"{origin_tile_x+1}_{origin_tile_y-1}",
+                    f"{origin_tile_x}_{origin_tile_y}",
+                    f"{origin_tile_x+1}_{origin_tile_y}"
+                ]
+                player_position_x = pixel_x
+                player_position_y = Map.TILE_WH + pixel_y
+            # tiles loading downleft; origin tile is 2
+            case 3:
+                tile_references = [
+                    f"{origin_tile_x-1}_{origin_tile_y}",
+                    f"{origin_tile_x}_{origin_tile_y}",
+                    f"{origin_tile_x-1}_{origin_tile_y+1}",
+                    f"{origin_tile_x}_{origin_tile_y+1}"
+                ]
+                player_position_x = Map.TILE_WH + pixel_x
+                player_position_y = pixel_y
+            # tiles loading downright; origin tile is 1
+            case 4:
+                tile_references = [
+                    f"{origin_tile_x}_{origin_tile_y}",
+                    f"{origin_tile_x+1}_{origin_tile_y}",
+                    f"{origin_tile_x}_{origin_tile_y+1}",
+                    f"{origin_tile_x+1}_{origin_tile_y+1}"
+                ]
+                player_position_x = pixel_x
+                player_position_y = pixel_y
+        # player_position x and y are between 0-511 when tiles are 256x256
+        player_position_x -= player_object.ball_radius
+        player_position_y -= player_object.ball_radius
+        return tile_references, player_position_x, player_position_y
 
 
 class Tile():

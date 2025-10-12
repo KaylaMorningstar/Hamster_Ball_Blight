@@ -179,6 +179,7 @@ class Player():
         self.spout: Player.Spout = Player.Spout()
         self.tool1: Player.NoTool | Player.WaterJet | Player.Grapple = Player.WaterJet()
         self.tool2: Player.NoTool | Player.WaterJet | Player.Grapple = Player.Grapple()
+        self.maximum_length_of_longest_tool = max(Player.WaterJet.MAXIMUM_LENGTH, Player.Grapple.MAXIMUM_LENGTH)
     #
     class Spout:
         _ROTATION_FACTOR = 10

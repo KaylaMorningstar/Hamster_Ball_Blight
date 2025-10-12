@@ -8,7 +8,7 @@ from tkinter.filedialog import askopenfilename
 import pygame
 from typing import Iterable
 
-ONE_FRAME_AT_60_FPS = 1/ 60
+ONE_FRAME_AT_60_FPS = 1 / 60
 OFF_SCREEN = -99999
 FILE_TYPES = {
     (FILE_ANY := '*'): '*',
