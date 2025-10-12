@@ -699,78 +699,34 @@ class RenderObjects():
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
-    # #
-    # def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, map_object: Map, player_object: Player):
-    #     # 'compute_water_jet', ComputeWaterJet
-    #     # get the compute shader program
-    #     program: moderngl.ComputeShader = self.programs['compute_water_jet'].compute_shader
-    #     # create buffer for water jet collision positions for the output
-    #     counter_buffer = gl_context.buffer(struct.pack('2i', 0, 0))
-    #     counter_buffer.bind_to_storage_buffer(binding=0)
-
-    #     # get collision tiles and bind them to storage buffers
-    #     tile_references, player_position_x, player_position_y = map_object.get_collision_tile_references_for_ball(player_object)
-    #     topleft_collision = self.renderable_objects[tile_references[0]].texture
-
-    #     topleft_collision: moderngl.Texture
-
-    #     topleft_collision.bind_to_image(1, read=True, write=True)
-    #     topright_collision = self.renderable_objects[tile_references[1]].texture
-    #     topright_collision.bind_to_image(2, read=True, write=True)
-    #     bottomleft_collision = self.renderable_objects[tile_references[2]].texture
-    #     bottomleft_collision.bind_to_image(3, read=True, write=True)
-    #     bottomright_collision = self.renderable_objects[tile_references[3]].texture
-    #     bottomright_collision.bind_to_image(4, read=True, write=True)
-
-    #     tex_out = gl_context.texture_array((256, 256, 1), 1, dtype="f4")
-    #     tex_out.bind_to_image(5, read=False, write=True)
-
-    #     # create buffer for collision tiles
-    #     # water_jet_texture = gl_context.texture_array((4, 4, 4), 4, data=array('f', [v for v in range(4 * 4 * 4 * 4)]), dtype="f4")
-    #     # water_jet_texture.bind_to_image(0, read=True, write=False)
-
-    #     # run the compute shader
-    #     program.run(group_x=512, group_y=512, group_z=1)
-    #     # wait from all warps/threads to complete compute shader execution
-    #     gl_context.memory_barrier(moderngl.ALL_BARRIER_BITS)
-    #     # get the collision values from the buffer
-    #     distance_from_ball, distance_from_center_of_stream = struct.unpack('2i', counter_buffer.read())
-    #     print(distance_from_ball, distance_from_center_of_stream)
-
-        
-    #     data_out = struct.unpack("65536f", tex_out.read())
-
-
-
     #
     def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, map_object: Map, player_object: Player):
-        start = get_time()
         # 'compute_water_jet', ComputeWaterJet
         # get the compute shader program
         program: moderngl.ComputeShader = self.programs['compute_water_jet'].compute_shader
         # create buffer for water jet collision positions for the output
         counter_buffer = gl_context.buffer(struct.pack('2i', 0, 0))
         counter_buffer.bind_to_storage_buffer(binding=0)
-
         # get collision tiles and bind them to storage buffers
         tile_references, player_position_x, player_position_y = map_object.get_collision_tile_references_for_ball(player_object)
+        # topleft tile
         topleft_collision = self.renderable_objects[tile_references[0]]
         topleft_collision.texture.use(0)
         program["topleft_collision"] = 0
+        # topright tile
         topright_collision = self.renderable_objects[tile_references[1]]
         topright_collision.texture.use(1)
         program["topright_collision"] = 1
+        # bottomleft tile
         bottomleft_collision = self.renderable_objects[tile_references[2]]
         bottomleft_collision.texture.use(2)
         program["bottomleft_collision"] = 2
+        # bottomright tile
         bottomright_collision = self.renderable_objects[tile_references[3]]
         bottomright_collision.texture.use(3)
         program["bottomright_collision"] = 3
-
         # define other uniforms
         program["tile_size"] = Map.TILE_WH
-
-
         # run the compute shader
         program.run(group_x=(2 * Map.TILE_WH), group_y=(2 * Map.TILE_WH), group_z=1)
         # get the collision values from the buffer
