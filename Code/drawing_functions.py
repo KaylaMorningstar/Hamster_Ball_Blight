@@ -703,22 +703,30 @@ class RenderObjects():
     #
     def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, map_object: Map, player_object: Player):
         # 'compute_water_jet', ComputeWaterJet
-        tile_references, player_position_x, player_position_y = map_object.get_collision_tile_references_for_ball(player_object)
-        print(tile_references)
-
         # get the compute shader program
         program: moderngl.ComputeShader = self.programs['compute_water_jet'].compute_shader
+        # create buffer for water jet collision positions for the output
+        counter_buffer = gl_context.buffer(struct.pack('2i', 0, 0))
+        counter_buffer.bind_to_storage_buffer(binding=0)
+
+        # get collision tiles and bind them to storage buffers
+        tile_references, player_position_x, player_position_y = map_object.get_collision_tile_references_for_ball(player_object)
+        for index, tile_reference in enumerate(tile_references):
+            renderable_object = self.renderable_objects[tile_reference].texture
+            renderable_object.bind_to_image(index+1, read=True, write=False)
+
+
+        # create buffer for collision tiles
         # water_jet_texture = gl_context.texture_array((4, 4, 4), 4, data=array('f', [v for v in range(4 * 4 * 4 * 4)]), dtype="f4")
         # water_jet_texture.bind_to_image(0, read=True, write=False)
-        # create buffer for water jet collision positions
-        counter_buffer = gl_context.buffer(struct.pack('2i', 0, 0))
-        counter_buffer.bind_to_storage_buffer(binding=1)
+
         # run the compute shader
         program.run(group_x=512, group_y=512, group_z=1)
         # wait from all warps/threads to complete compute shader execution
         gl_context.memory_barrier(moderngl.ATOMIC_COUNTER_BARRIER_BIT)
         # get the collision values from the buffer
         distance_from_ball, distance_from_center_of_stream = struct.unpack('2i', counter_buffer.read())
+        print(distance_from_ball, distance_from_center_of_stream)
 
     #
     @staticmethod
@@ -2743,27 +2751,6 @@ class DrawWaterJet():
 
 #         layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
 
-#         layout(rgba32f, binding=0) uniform image2DArray img_in;
-#         layout (std430, binding = 1) buffer Output {
-#             float water_jet_collision_position[2];
-#         };
-
-#         void main() {
-#             water_jet_collision_position[0] = 2.0;
-#             water_jet_collision_position[1] = 2.0;
-#         }
-#         '''
-#         )
-
-
-# class ComputeWaterJet():
-#     def __init__(self, gl_context: moderngl.Context):
-#         self.compute_shader = gl_context.compute_shader(
-#         '''
-#         #version 460
-
-#         layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
-
 #         layout(rgba32f, binding=0) uniform image2DArray image_in;
 #         layout (std430, binding = 1) buffer Output {
 #             uint water_jet_collision_position[2];
@@ -2893,6 +2880,34 @@ class DrawWaterJet():
 #         )
 
 
+# class ComputeWaterJet():
+#     def __init__(self, gl_context: moderngl.Context):
+#         self.compute_shader = gl_context.compute_shader(
+#         '''
+#         #version 430 core
+
+#         #define WORK_GROUP_SIZE 1
+
+#         layout(local_size_x=WORK_GROUP_SIZE, local_size_y=WORK_GROUP_SIZE) in;
+
+#         layout(std430, binding=1) buffer WaterJetCollisionPosition {
+#             uint distance_from_ball;
+#             uint distance_from_center_of_stream;
+#         } CollisionPosition;
+
+#         uint added_amount = 1;
+
+
+#         void main() {
+#             const uint index = gl_GlobalInvocationID.x;
+
+#             atomicAdd(CollisionPosition.distance_from_ball, added_amount);
+#             barrier();
+#         }
+#         '''
+#         )
+
+
 class ComputeWaterJet():
     def __init__(self, gl_context: moderngl.Context):
         self.compute_shader = gl_context.compute_shader(
@@ -2903,19 +2918,25 @@ class ComputeWaterJet():
 
         layout(local_size_x=WORK_GROUP_SIZE, local_size_y=WORK_GROUP_SIZE) in;
 
-        layout(std430, binding=1) buffer WaterJetCollisionPosition {
+        // water jet output values
+        layout(std430, binding=0) buffer WaterJetCollisionPosition {
             uint distance_from_ball;
             uint distance_from_center_of_stream;
         } CollisionPosition;
+
+        // collision tiles
+        layout(rgba32f, binding=1) uniform image2DArray topleft_collision;
+        layout(rgba32f, binding=2) uniform image2DArray topright_collision;
+        layout(rgba32f, binding=3) uniform image2DArray bottomleft_collision;
+        layout(rgba32f, binding=4) uniform image2DArray bottomright_collision;
 
         uint added_amount = 1;
 
 
         void main() {
-            const uint index = gl_GlobalInvocationID.x;
+            // gl_WorkGroupID.xy is x, y pixel index on collision map
 
-            atomicAdd(CollisionPosition.distance_from_ball, added_amount);
-            barrier();
+            atomicExchange(CollisionPosition.distance_from_ball, topleft_collision.x);
         }
         '''
         )

@@ -194,40 +194,40 @@ class Map():
             # tiles loading upleft; origin tile is 4
             case 1:
                 tile_references = [
-                    f"{origin_tile_x-1}_{origin_tile_y-1}",
-                    f"{origin_tile_x}_{origin_tile_y-1}",
-                    f"{origin_tile_x-1}_{origin_tile_y}",
-                    f"{origin_tile_x}_{origin_tile_y}"
+                    f"c{origin_tile_x-1}_{origin_tile_y-1}",
+                    f"c{origin_tile_x}_{origin_tile_y-1}",
+                    f"c{origin_tile_x-1}_{origin_tile_y}",
+                    f"c{origin_tile_x}_{origin_tile_y}"
                 ]
                 player_position_x = Map.TILE_WH + pixel_x
                 player_position_y = Map.TILE_WH + pixel_y
             # tiles loading upright; origin tile is 3
             case 2:
                 tile_references = [
-                    f"{origin_tile_x}_{origin_tile_y-1}",
-                    f"{origin_tile_x+1}_{origin_tile_y-1}",
-                    f"{origin_tile_x}_{origin_tile_y}",
-                    f"{origin_tile_x+1}_{origin_tile_y}"
+                    f"c{origin_tile_x}_{origin_tile_y-1}",
+                    f"c{origin_tile_x+1}_{origin_tile_y-1}",
+                    f"c{origin_tile_x}_{origin_tile_y}",
+                    f"c{origin_tile_x+1}_{origin_tile_y}"
                 ]
                 player_position_x = pixel_x
                 player_position_y = Map.TILE_WH + pixel_y
             # tiles loading downleft; origin tile is 2
             case 3:
                 tile_references = [
-                    f"{origin_tile_x-1}_{origin_tile_y}",
-                    f"{origin_tile_x}_{origin_tile_y}",
-                    f"{origin_tile_x-1}_{origin_tile_y+1}",
-                    f"{origin_tile_x}_{origin_tile_y+1}"
+                    f"c{origin_tile_x-1}_{origin_tile_y}",
+                    f"c{origin_tile_x}_{origin_tile_y}",
+                    f"c{origin_tile_x-1}_{origin_tile_y+1}",
+                    f"c{origin_tile_x}_{origin_tile_y+1}"
                 ]
                 player_position_x = Map.TILE_WH + pixel_x
                 player_position_y = pixel_y
             # tiles loading downright; origin tile is 1
             case 4:
                 tile_references = [
-                    f"{origin_tile_x}_{origin_tile_y}",
-                    f"{origin_tile_x+1}_{origin_tile_y}",
-                    f"{origin_tile_x}_{origin_tile_y+1}",
-                    f"{origin_tile_x+1}_{origin_tile_y+1}"
+                    f"c{origin_tile_x}_{origin_tile_y}",
+                    f"c{origin_tile_x+1}_{origin_tile_y}",
+                    f"c{origin_tile_x}_{origin_tile_y+1}",
+                    f"c{origin_tile_x+1}_{origin_tile_y+1}"
                 ]
                 player_position_x = pixel_x
                 player_position_y = pixel_y
@@ -251,6 +251,7 @@ class Tile():
         self.index_y: int = index_y
         self.tile_path: str = f"{level_path}t{index_x}_{index_y}"
         self.image_reference: str = f"{index_x}_{index_y}"
+        self.collision_image_reference: str = f"c{self.image_reference}"
         self.pretty_bytearray: bytearray = None
         self.collision_bytearray: bytearray = None
         self.file_reference: io.BufferedReader = open(self.tile_path, mode='rb')
@@ -266,6 +267,8 @@ class Tile():
         self.file_reference.read(Tile.BYTES_PER_NEWLINE)
         # separate the collision map byte array
         self.collision_bytearray = self.file_reference.read(Tile.COLLISION_MAP_BYTES_PER_TILE)
+        # add the collision map as a moderngl texture
+        Render.add_moderngl_texture_using_bytearray(Screen, gl_context, self.collision_bytearray, Tile.COLLISION_MAP_BYTES_PER_PIXEL, Map.TILE_WH, Map.TILE_WH, self.collision_image_reference)
         # report that the tile has been loaded
         self.loaded = True
     #
@@ -274,6 +277,7 @@ class Tile():
             self.pretty_bytearray = None
             self.collision_bytearray = None
             Render.remove_moderngl_texture_from_renderable_objects_dict(self.image_reference)
+            Render.remove_moderngl_texture_from_renderable_objects_dict(self.collision_image_reference)
         self.loaded = False
     #
     def draw(self, Render, Screen, gl_context, ltwh, load):
