@@ -700,6 +700,49 @@ class RenderObjects():
         renderer.render(mode=moderngl.TRIANGLE_STRIP)
         quads.release()
         renderer.release()
+    # #
+    # def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, map_object: Map, player_object: Player):
+    #     # 'compute_water_jet', ComputeWaterJet
+    #     # get the compute shader program
+    #     program: moderngl.ComputeShader = self.programs['compute_water_jet'].compute_shader
+    #     # create buffer for water jet collision positions for the output
+    #     counter_buffer = gl_context.buffer(struct.pack('2i', 0, 0))
+    #     counter_buffer.bind_to_storage_buffer(binding=0)
+
+    #     # get collision tiles and bind them to storage buffers
+    #     tile_references, player_position_x, player_position_y = map_object.get_collision_tile_references_for_ball(player_object)
+    #     topleft_collision = self.renderable_objects[tile_references[0]].texture
+
+    #     topleft_collision: moderngl.Texture
+
+    #     topleft_collision.bind_to_image(1, read=True, write=True)
+    #     topright_collision = self.renderable_objects[tile_references[1]].texture
+    #     topright_collision.bind_to_image(2, read=True, write=True)
+    #     bottomleft_collision = self.renderable_objects[tile_references[2]].texture
+    #     bottomleft_collision.bind_to_image(3, read=True, write=True)
+    #     bottomright_collision = self.renderable_objects[tile_references[3]].texture
+    #     bottomright_collision.bind_to_image(4, read=True, write=True)
+
+    #     tex_out = gl_context.texture_array((256, 256, 1), 1, dtype="f4")
+    #     tex_out.bind_to_image(5, read=False, write=True)
+
+    #     # create buffer for collision tiles
+    #     # water_jet_texture = gl_context.texture_array((4, 4, 4), 4, data=array('f', [v for v in range(4 * 4 * 4 * 4)]), dtype="f4")
+    #     # water_jet_texture.bind_to_image(0, read=True, write=False)
+
+    #     # run the compute shader
+    #     program.run(group_x=512, group_y=512, group_z=1)
+    #     # wait from all warps/threads to complete compute shader execution
+    #     gl_context.memory_barrier(moderngl.ALL_BARRIER_BITS)
+    #     # get the collision values from the buffer
+    #     distance_from_ball, distance_from_center_of_stream = struct.unpack('2i', counter_buffer.read())
+    #     print(distance_from_ball, distance_from_center_of_stream)
+
+        
+    #     data_out = struct.unpack("65536f", tex_out.read())
+
+
+
     #
     def compute_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, map_object: Map, player_object: Player):
         # 'compute_water_jet', ComputeWaterJet
@@ -711,23 +754,25 @@ class RenderObjects():
 
         # get collision tiles and bind them to storage buffers
         tile_references, player_position_x, player_position_y = map_object.get_collision_tile_references_for_ball(player_object)
-        for index, tile_reference in enumerate(tile_references):
-            renderable_object = self.renderable_objects[tile_reference].texture
-            renderable_object.bind_to_image(index+1, read=True, write=False)
+
+        topleft_collision = self.renderable_objects[tile_references[0]]
+        topleft_collision.texture.use(0)
+        topright_collision = self.renderable_objects[tile_references[1]]
+        topright_collision.texture.use(1)
+        bottomleft_collision = self.renderable_objects[tile_references[2]]
+        bottomleft_collision.texture.use(2)
+        bottomright_collision = self.renderable_objects[tile_references[3]]
+        bottomright_collision.texture.use(3)
 
 
-        # create buffer for collision tiles
-        # water_jet_texture = gl_context.texture_array((4, 4, 4), 4, data=array('f', [v for v in range(4 * 4 * 4 * 4)]), dtype="f4")
-        # water_jet_texture.bind_to_image(0, read=True, write=False)
 
         # run the compute shader
-        program.run(group_x=512, group_y=512, group_z=1)
+        program.run(group_x=256, group_y=256, group_z=1)
         # wait from all warps/threads to complete compute shader execution
-        gl_context.memory_barrier(moderngl.ATOMIC_COUNTER_BARRIER_BIT)
+        gl_context.memory_barrier(moderngl.ALL_BARRIER_BITS)
         # get the collision values from the buffer
         distance_from_ball, distance_from_center_of_stream = struct.unpack('2i', counter_buffer.read())
         print(distance_from_ball, distance_from_center_of_stream)
-
     #
     @staticmethod
     def clear_buffer(gl_context: moderngl.Context):
@@ -2908,6 +2953,120 @@ class DrawWaterJet():
 #         )
 
 
+# class ComputeWaterJet():
+#     def __init__(self, gl_context: moderngl.Context):
+#         self.compute_shader = gl_context.compute_shader(
+#         '''
+#         #version 430 core
+
+#         #define WORK_GROUP_SIZE 1
+
+#         layout(local_size_x=WORK_GROUP_SIZE, local_size_y=WORK_GROUP_SIZE) in;
+
+#         // water jet output values
+#         layout(std430, binding=0) buffer WaterJetCollisionPosition {
+#             uint distance_from_ball;
+#             uint distance_from_center_of_stream;
+#         } CollisionPosition;
+
+#         // collision tiles
+#         layout(rgba8, binding=1) uniform image2DArray topleft_collision;
+#         layout(rgba8, binding=2) uniform image2DArray topright_collision;
+#         layout(rgba8, binding=3) uniform image2DArray bottomleft_collision;
+#         layout(rgba8, binding=4) uniform image2DArray bottomright_collision;
+
+#         uint added_amount = 1;
+
+#         //vec4 get_fragment(vec4 topleft_collision, vec4 topright_collision, vec4 bottomleft_collision, vec4 bottomright_collision, vec3 global_ID) {
+#         //    // topleft
+#         //    if ((gl_GlobalInvocationID.x < 256) && (gl_GlobalInvocationID.y < 256)) {
+#         //        vec4 fragment = imageLoad(topleft_collision, ivec3(global_ID));
+#         //        return fragment;
+#         //    }
+#         //
+#         //    // topright
+#         //    if ((gl_GlobalInvocationID.x >= 256) && (gl_GlobalInvocationID.y < 256)) {
+#         //        vec4 fragment = imageLoad(topright_collision, ivec3(global_ID));
+#         //        return fragment;
+#         //    }
+#         //
+#         //    // bottomleft
+#         //    if ((gl_GlobalInvocationID.x < 256) && (gl_GlobalInvocationID.y >= 256)) {
+#         //        vec4 fragment = imageLoad(bottomleft_collision, ivec3(global_ID));
+#         //        return fragment;
+#         //    }
+#         //
+#         //    // bottomright
+#         //    if ((gl_GlobalInvocationID.x >= 256) && (gl_GlobalInvocationID.y >= 256)) {
+#         //        vec4 fragment = imageLoad(bottomright_collision, ivec3(global_ID));
+#         //        return fragment;
+#         //    }
+#         //}
+
+#         void main() {
+#             // gl_WorkGroupID.xy is x, y pixel index on collision map
+#             // vec4 fragment = get_fragment(topleft_collision, topright_collision, bottomleft_collision, bottomright_collision, gl_GlobalInvocationID);
+
+#             if ((gl_GlobalInvocationID.x < 256) && (gl_GlobalInvocationID.y < 256)) {
+#                 vec4 fragment = imageLoad(topleft_collision, ivec3(gl_GlobalInvocationID.xyz));
+
+#                 if ((fragment.r != 0.0) || (fragment.g != 0.0) || (fragment.b != 0.0) || (fragment.a != 0.0)) {
+#                     //atomicExchange(CollisionPosition.distance_from_ball, 5);
+#                     atomicAdd(CollisionPosition.distance_from_ball, added_amount);
+#                 }
+#             }
+#         }
+#         '''
+#         )
+
+
+# class ComputeWaterJet():
+#     def __init__(self, gl_context: moderngl.Context):
+#         self.compute_shader = gl_context.compute_shader(
+#         '''
+#         #version 430 core
+
+#         #define WORK_GROUP_SIZE 1
+
+#         layout(local_size_x=WORK_GROUP_SIZE, local_size_y=WORK_GROUP_SIZE) in;
+
+#         // water jet output values
+#         layout(std430, binding=0) buffer WaterJetCollisionPosition {
+#             uint distance_from_ball;
+#             uint distance_from_center_of_stream;
+#         } CollisionPosition;
+
+#         // collision tiles
+#         layout(rgba8, binding=1) uniform image2D topleft_collision;
+#         layout(rgba8, binding=2) uniform image2D topright_collision;
+#         layout(rgba8, binding=3) uniform image2D bottomleft_collision;
+#         layout(rgba8, binding=4) uniform image2D bottomright_collision;
+
+#         layout(rgba8, binding=5) uniform image2D image_out;
+
+#         uint added_amount = 1;
+
+#         void main() {
+#             // gl_WorkGroupID.xy is x, y pixel index on collision map
+#             // vec4 fragment = get_fragment(topleft_collision, topright_collision, bottomleft_collision, bottomright_collision, gl_GlobalInvocationID);
+
+#             if ((gl_GlobalInvocationID.x < 256) && (gl_GlobalInvocationID.y < 256)) {
+#                 vec4 fragment = imageLoad(topleft_collision, ivec2(gl_GlobalInvocationID.xy));
+#                 imageStore(image_out, ivec2(gl_LocalInvocationID.xy), fragment);
+
+#                 if ((fragment.r != 0.0) || (fragment.g != 0.0) || (fragment.b != 0.0) || (fragment.a != 0.0)) {
+#                     //atomicExchange(CollisionPosition.distance_from_ball, 5);
+#                     atomicAdd(CollisionPosition.distance_from_ball, added_amount);
+#                 }
+#             }
+#         }
+#         '''
+#         )
+
+
+
+
+
 class ComputeWaterJet():
     def __init__(self, gl_context: moderngl.Context):
         self.compute_shader = gl_context.compute_shader(
@@ -2925,18 +3084,20 @@ class ComputeWaterJet():
         } CollisionPosition;
 
         // collision tiles
-        layout(rgba32f, binding=1) uniform image2DArray topleft_collision;
-        layout(rgba32f, binding=2) uniform image2DArray topright_collision;
-        layout(rgba32f, binding=3) uniform image2DArray bottomleft_collision;
-        layout(rgba32f, binding=4) uniform image2DArray bottomright_collision;
-
-        uint added_amount = 1;
-
+        uniform sampler2D topleft_collision;
+        uniform sampler2D topright_collision;
+        uniform sampler2D bottomleft_collision;
+        uniform sampler2D bottomright_collision;
+        vec4 f_color;
 
         void main() {
-            // gl_WorkGroupID.xy is x, y pixel index on collision map
-
-            atomicExchange(CollisionPosition.distance_from_ball, topleft_collision.x);
+            // get the collision texture value
+            vec2 uvs = gl_WorkGroupID.xy / vec2(int(round(gl_NumWorkGroups.x - 1.0)), int(round(gl_NumWorkGroups.y - 1.0)));
+            f_color = texture(topright_collision, uvs);
+            
+            if (f_color.r != 0.0) {
+                atomicAdd(CollisionPosition.distance_from_ball, 1);
+            }
         }
         '''
         )
