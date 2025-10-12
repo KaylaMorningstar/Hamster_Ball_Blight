@@ -358,10 +358,8 @@ class RenderObjects():
         program['green2'] = rgba2[1]
         program['blue2'] = rgba2[2]
         program['alpha2'] = rgba2[3]
-        
         program['offset_x'] = float(offset_x) / ltwh[2]
         program['offset_y'] = float(offset_y) / ltwh[3]
-
         program['two_tiles_x'] = 2 / (ltwh[2] / repeat_x)
         program['two_tiles_y'] = 2 / (ltwh[3] / repeat_y)
         quads = gl_context.buffer(data=array('f', [topleft_x, topleft_y, 0.0, 0.0, topright_x, topleft_y, 1.0, 0.0, topleft_x, bottomleft_y, 0.0, 1.0, topright_x, bottomleft_y, 1.0, 1.0,]))
@@ -754,20 +752,25 @@ class RenderObjects():
 
         # get collision tiles and bind them to storage buffers
         tile_references, player_position_x, player_position_y = map_object.get_collision_tile_references_for_ball(player_object)
-
         topleft_collision = self.renderable_objects[tile_references[0]]
         topleft_collision.texture.use(0)
+        program["topleft_collision"] = 0
         topright_collision = self.renderable_objects[tile_references[1]]
         topright_collision.texture.use(1)
+        program["topright_collision"] = 1
         bottomleft_collision = self.renderable_objects[tile_references[2]]
         bottomleft_collision.texture.use(2)
+        program["bottomleft_collision"] = 2
         bottomright_collision = self.renderable_objects[tile_references[3]]
         bottomright_collision.texture.use(3)
+        program["bottomright_collision"] = 3
 
+        # define other uniforms
+        program["tile_size"] = Map.TILE_WH
 
 
         # run the compute shader
-        program.run(group_x=256, group_y=256, group_z=1)
+        program.run(group_x=(2 * Map.TILE_WH), group_y=(2 * Map.TILE_WH), group_z=1)
         # wait from all warps/threads to complete compute shader execution
         gl_context.memory_barrier(moderngl.ALL_BARRIER_BITS)
         # get the collision values from the buffer
@@ -3088,14 +3091,50 @@ class ComputeWaterJet():
         uniform sampler2D topright_collision;
         uniform sampler2D bottomleft_collision;
         uniform sampler2D bottomright_collision;
-        vec4 f_color;
+
+        uniform float tile_size;
+
+        vec4 get_texel_collision(sampler2D topleft_collision, sampler2D topright_collision, sampler2D bottomleft_collision, sampler2D bottomright_collision, float tile_size) {
+            vec2 uvs;
+            vec2 denominator = vec2(int(round(tile_size - 1.0)), int(round(tile_size - 1.0)));
+
+            // topleft tile
+            if ((gl_WorkGroupID.x < tile_size) && (gl_WorkGroupID.y < tile_size)) {
+                uvs = gl_WorkGroupID.xy / denominator;
+                return texture(topleft_collision, uvs);
+            }
+
+            // topright tile
+            if ((gl_WorkGroupID.x >= tile_size) && (gl_WorkGroupID.y < tile_size)) {
+                uvs = vec2(gl_WorkGroupID.x - tile_size, gl_WorkGroupID.y) / denominator;
+                return texture(topright_collision, uvs);
+            }
+
+            // bottomleft tile
+            if ((gl_WorkGroupID.x < tile_size) && (gl_WorkGroupID.y >= tile_size)) {
+                uvs = vec2(gl_WorkGroupID.x, gl_WorkGroupID.y - tile_size) / denominator;
+                return texture(bottomleft_collision, uvs);
+            }
+
+            // bottomright tile
+            if ((gl_WorkGroupID.x >= tile_size) && (gl_WorkGroupID.y >= tile_size)) {
+                uvs = vec2(gl_WorkGroupID.x - tile_size, gl_WorkGroupID.y - tile_size) / denominator;
+                return texture(bottomright_collision, uvs);
+            }
+        }
 
         void main() {
             // get the collision texture value
             vec2 uvs = gl_WorkGroupID.xy / vec2(int(round(gl_NumWorkGroups.x - 1.0)), int(round(gl_NumWorkGroups.y - 1.0)));
-            f_color = texture(topright_collision, uvs);
+
+            vec4 texel_color = get_texel_collision(topleft_collision, topright_collision, bottomleft_collision, bottomright_collision, tile_size);
+
+            //vec4 f_color1 = texture(topleft_collision, uvs);
+            //vec4 f_color2 = texture(topright_collision, uvs);
+            //vec4 f_color3 = texture(bottomleft_collision, uvs);
+            //vec4 f_color4 = texture(bottomright_collision, uvs);
             
-            if (f_color.r != 0.0) {
+            if (texel_color.r != 0.0) {
                 atomicAdd(CollisionPosition.distance_from_ball, 1);
             }
         }
