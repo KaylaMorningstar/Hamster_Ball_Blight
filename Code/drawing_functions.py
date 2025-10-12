@@ -3128,11 +3128,6 @@ class ComputeWaterJet():
             vec2 uvs = gl_WorkGroupID.xy / vec2(int(round(gl_NumWorkGroups.x - 1.0)), int(round(gl_NumWorkGroups.y - 1.0)));
 
             vec4 texel_color = get_texel_collision(topleft_collision, topright_collision, bottomleft_collision, bottomright_collision, tile_size);
-
-            //vec4 f_color1 = texture(topleft_collision, uvs);
-            //vec4 f_color2 = texture(topright_collision, uvs);
-            //vec4 f_color3 = texture(bottomleft_collision, uvs);
-            //vec4 f_color4 = texture(bottomright_collision, uvs);
             
             if (texel_color.r != 0.0) {
                 atomicAdd(CollisionPosition.distance_from_ball, 1);
