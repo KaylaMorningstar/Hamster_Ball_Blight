@@ -313,6 +313,7 @@ IMAGE_PATHS = {
     ')': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\right_parentheses.png'],
     ';': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\semi_colon.png'],
     '_': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\underscore.png'],
+    '%': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\percent.png'],
     '#': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\pound.png'],
     '\\': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\back_slash.png'],
     '/': [[ALWAYS_LOADED], PATH + '\\Images\\always_loaded\\symbols\\forward_slash.png'],

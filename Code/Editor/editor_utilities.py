@@ -1805,8 +1805,39 @@ class HandTool(EditorTool):
 class BucketTool(EditorTool):
     NAME = 'Bucket'
     INDEX = 6
-    def __init__(self, active: bool):
+
+    BUCKET_TOLERANCE = 'Tolerance: '
+
+    _MIN_BUCKET_TOLERANCE = 0
+    _MAX_BUCKET_TOLERANCE = 100
+
+    def __init__(self, active: bool, render_instance, screen_instance, gl_context):
+        # attributes
+        self._bucket_tolerance: int = BucketTool._MIN_BUCKET_TOLERANCE  # tolerance for the bucket tool
+        # tool attribute word width
+        self.BUCKET_TOLERANCE_WIDTH = get_text_width(render_instance, BucketTool.BUCKET_TOLERANCE, BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        # text inputs for attributes
+        self.bucket_tolerance_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(bucket_tolerance) + '%', BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for bucket_tolerance in range(BucketTool._MIN_BUCKET_TOLERANCE, BucketTool._MAX_BUCKET_TOLERANCE + 1)]) + (2 * BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(BucketTool._MAX_BUCKET_TOLERANCE)) - 1) * BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], BucketTool._TEXT_BACKGROUND_COLOR, BucketTool._TEXT_COLOR, BucketTool._TEXT_HIGHLIGHT_COLOR, BucketTool._HIGHLIGHT_COLOR, BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE, BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [BucketTool._MIN_BUCKET_TOLERANCE, BucketTool._MAX_BUCKET_TOLERANCE], True, False, False, True, len(str(BucketTool._MAX_BUCKET_TOLERANCE)), True, str(self._bucket_tolerance), ending_characters='%')
+        self.update_bucket_tolerance(BucketTool._MIN_BUCKET_TOLERANCE)
         super().__init__(active)
+
+    @property
+    def bucket_tolerance(self):
+        return self._bucket_tolerance
+
+    def bucket_tolerance_is_valid(self, bucket_tolerance: Any):
+        try:
+            int(bucket_tolerance)
+        except:
+            return False
+        if not (BucketTool._MIN_BUCKET_TOLERANCE <= int(bucket_tolerance) <= BucketTool._MAX_BUCKET_TOLERANCE):
+            return False
+        if int(bucket_tolerance) == self._bucket_tolerance:
+            return False
+        return True
+
+    def update_bucket_tolerance(self, bucket_tolerance):
+        self._bucket_tolerance = int(bucket_tolerance)
 
 
 class LineTool(EditorTool):
@@ -2141,7 +2172,7 @@ class EditorMap():
             EraserTool(False, render_instance, screen_instance, gl_context),
             SprayTool(False, render_instance, screen_instance, gl_context),
             HandTool(True),
-            BucketTool(False),
+            BucketTool(False, render_instance, screen_instance, gl_context),
             LineTool(False, render_instance, screen_instance, gl_context),
             CurvyLineTool(False),
             RectangleEllipseTool(False, render_instance, screen_instance, gl_context),
@@ -2748,7 +2779,50 @@ class EditorMap():
                     pass
 
                 case BucketTool.INDEX:
-                    pass
+                    cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
+                    pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
+                    ltrb = self._get_ltrb_pixels_on_map()
+                    circle_outline_thickness = EditorMap.CIRCLE_OUTLINE_THICKNESS_ZOOMED_OUT if EditorMap._ZOOM[self.zoom_index][0] != 1 else EditorMap.CIRCLE_OUTLINE_THICKNESS_ZOOMED_IN
+
+                    bucket_size = 1
+
+                    if bucket_size % 2 == 0:
+                        half_bucket_size = bucket_size // 2
+                    else:
+                        half_bucket_size = (bucket_size + 1) // 2
+                    # get the leftest pixel that needs to be drawn
+                    pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
+                    if pixel_offset_x == 1:
+                        pixel_offset_x = 0
+                    pixel_offset_x *= self.pixel_scale
+                    leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
+                    leftest_bucket_pixel = pos_x - ((bucket_size - 1) // 2)
+                    pixel_x = leftest_pixel + ((pos_x + 1 - ltrb[0] - half_bucket_size) * self.pixel_scale) - circle_outline_thickness
+
+                    # get the topest pixel that needs to be drawn
+                    pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
+                    if pixel_offset_y == 1:
+                        pixel_offset_y = 0
+                    pixel_offset_y *= self.pixel_scale
+                    topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
+                    topest_bucket_pixel = pos_y - ((bucket_size - 1) // 2)
+                    pixel_y = topest_pixel + ((pos_y + 1 - ltrb[1] - half_bucket_size) * self.pixel_scale) - circle_outline_thickness
+
+                    ltwh = [pixel_x, pixel_y, int((bucket_size * self.pixel_scale) + (2 * circle_outline_thickness)), int((bucket_size * self.pixel_scale) + (2 * circle_outline_thickness))]
+
+                    # condition if cursor is on the map
+                    if cursor_on_map:
+                        cursors.add_cursor_this_frame('cursor_big_crosshair')
+                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': bucket_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale})
+                        self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
+
+                    # use the bucket this frame
+                    if keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
+                        reload_tiles = {}
+                        self.map_edits.append(self.PixelChange(new_rgba=current_color_rgba))
+                        map_edit = self.map_edits[-1].change_dict
+                        max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
+                        edited_pixels_this_loop = [(leftest_bucket_pixel, topest_bucket_pixel)]
 
                 case LineTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)

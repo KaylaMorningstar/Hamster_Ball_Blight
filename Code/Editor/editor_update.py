@@ -997,7 +997,18 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 footer_information.append(FooterInfo.MAP_SIZE)
 
             case BucketTool.INDEX:
-                pass
+                # jumble width
+                # text
+                Render.draw_string_of_characters(Screen, gl_context, string=BucketTool.BUCKET_TOLERANCE, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=BucketTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.BUCKET_TOLERANCE_WIDTH
+                # text input
+                current_tool.bucket_tolerance_text_input.background_ltwh[0] = tool_attribute_lt[0] + BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                current_tool.bucket_tolerance_text_input.background_ltwh[1] = tool_attribute_lt[1] + BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
+                current_tool.bucket_tolerance_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
+                new_bucket_tolerance = current_tool.bucket_tolerance_text_input.current_string
+                if current_tool.bucket_tolerance_is_valid(new_bucket_tolerance):
+                    current_tool.update_bucket_tolerance(new_bucket_tolerance)
+                tool_attribute_lt[0] += current_tool.bucket_tolerance_text_input.background_ltwh[2]
 
             case LineTool.INDEX:
                 # brush style

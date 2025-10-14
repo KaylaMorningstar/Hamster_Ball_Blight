@@ -4,6 +4,7 @@ from copy import deepcopy
 from Code.utilities import atan2, move_number_to_desired_range, difference_between_angles, angle_in_range, get_time
 from Code.Game.game_utilities import Map, get_vector_magnitude_in_direction, get_xy_vector_components
 from bresenham import bresenham
+from Code.utilities import COLORS
 
 
 # friction
@@ -651,7 +652,9 @@ class Player():
             if tool.being_used:
                 match type(tool).__name__:
                     case Player.WaterJet.__name__:
-                        Render.compute_water_jet(Screen, gl_context, map_object, self)
+                        distance_from_ball = Render.compute_water_jet(Screen, gl_context, map_object, self)
+                        Render.store_draw("abc", Render.draw_string_of_characters, {"string": str(distance_from_ball), "lt": [20, 20], "text_pixel_size": 4, "rgba": COLORS['RED']})
+                        stored_draws.add_draw("abc", Player.PRETTY_BALL_ORDER)
 
                         Render.store_draw(self.water_jet_reference, Render.draw_water_jet, {'object_name': 'black_pixel', 'ball_center': [self.screen_position_x + self.ball_radius, self.screen_position_y + self.ball_radius], 'ball_radius': self.ball_radius, 'max_length_from_center': self.ball_radius + Player.WaterJet.MAXIMUM_LENGTH, 'current_length_from_center': self.ball_radius + tool.length_float, 'rotation': self.spout.rotation, 'minimum_water_jet_thickness': Player.WaterJet.MINIMUM_WATER_JET_THICKNESS, 'moment_in_wave_period': ((get_time() - tool.started_being_used_time) % Player.WaterJet.WAVE_PERIOD_DURATION) / Player.WaterJet.WAVE_PERIOD_DURATION})
                         stored_draws.add_draw(self.water_jet_reference, Player.PRETTY_BALL_ORDER)

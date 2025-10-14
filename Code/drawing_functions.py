@@ -7,9 +7,9 @@ import numpy as np
 from typing import Callable, Iterable
 from Code.Editor.editor_utilities import LineTool, get_perfect_circle_edge_angles_for_drawing_lines, get_perfect_square_edge_angles_for_drawing_lines
 from Code.Game.game_utilities import Map
+from Code.utilities import COLORS
 from Code.Game.game_objects import Player
 import struct
-from time import sleep
 
 
 def initialize_display():
@@ -732,6 +732,7 @@ class RenderObjects():
         # get the collision values from the buffer
         distance_from_ball, distance_from_center_of_stream = struct.unpack('2i', counter_buffer.read())
         # print(distance_from_ball, distance_from_center_of_stream)
+        return str(distance_from_ball)
     #
     @staticmethod
     def clear_buffer(gl_context: moderngl.Context):
