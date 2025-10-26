@@ -1538,6 +1538,9 @@ class EditorTool(ABC):
     def __int__(self):
         return self.INDEX
 
+    def allow_for_commands(self):
+        return False
+
 
 class MarqueeRectangleTool(EditorTool):
     NAME = 'Marquee rectangle'
@@ -1545,12 +1548,18 @@ class MarqueeRectangleTool(EditorTool):
     def __init__(self, active: bool):
         super().__init__(active)
 
+    def allow_for_commands(self):
+        return False
+
 
 class LassoTool(EditorTool):
     NAME = 'Lasso'
     INDEX = 1
     def __init__(self, active: bool):
         super().__init__(active)
+
+    def allow_for_commands(self):
+        return False
 
 
 class PencilTool(EditorTool):
@@ -1589,6 +1598,9 @@ class PencilTool(EditorTool):
         self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(PencilTool._MAX_BRUSH_THICKNESS)) - 1) * PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], PencilTool._TEXT_BACKGROUND_COLOR, PencilTool._TEXT_COLOR, PencilTool._TEXT_HIGHLIGHT_COLOR, PencilTool._HIGHLIGHT_COLOR, PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE, PencilTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [PencilTool._MIN_BRUSH_THICKNESS, PencilTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(PencilTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
         self.last_xy: array = array('i', [0, 0])
         super().__init__(active)
+
+    def allow_for_commands(self):
+        return self.state == PencilTool.NOT_DRAWING
 
     @property
     def brush_thickness(self):
@@ -1672,6 +1684,9 @@ class EraserTool(EditorTool):
         self.update_eraser_size(render_instance, screen_instance, gl_context, EraserTool._MIN_ERASER_SIZE)
         self.last_xy: array = array('i', [0, 0])
         super().__init__(active)
+
+    def allow_for_commands(self):
+        return self.state == EraserTool.NOT_ERASING
 
     def update_eraser_style(self, render_instance, screen_instance, gl_context):
         self.eraser_style += 1
@@ -1820,6 +1835,9 @@ class SprayTool(EditorTool):
         self.time_since_last_drop = 0
         super().__init__(active)
 
+    def allow_for_commands(self):
+        return self.state == SprayTool.NOT_SPRAYING
+
     @property
     def spray_size(self):
         return self._spray_size
@@ -1939,6 +1957,9 @@ class HandTool(EditorTool):
     def __init__(self, active: bool):
         super().__init__(active)
 
+    def allow_for_commands(self):
+        return True
+
 
 class BucketTool(EditorTool):
     NAME = 'Bucket'
@@ -1958,6 +1979,9 @@ class BucketTool(EditorTool):
         self.bucket_tolerance_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(bucket_tolerance) + '%', BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for bucket_tolerance in range(BucketTool._MIN_BUCKET_TOLERANCE, BucketTool._MAX_BUCKET_TOLERANCE + 1)]) + (2 * BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(BucketTool._MAX_BUCKET_TOLERANCE)) - 1) * BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], BucketTool._TEXT_BACKGROUND_COLOR, BucketTool._TEXT_COLOR, BucketTool._TEXT_HIGHLIGHT_COLOR, BucketTool._HIGHLIGHT_COLOR, BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE, BucketTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [BucketTool._MIN_BUCKET_TOLERANCE, BucketTool._MAX_BUCKET_TOLERANCE], True, False, False, True, len(str(BucketTool._MAX_BUCKET_TOLERANCE)), True, str(self._bucket_tolerance), ending_characters='%')
         self.update_bucket_tolerance(BucketTool._MIN_BUCKET_TOLERANCE)
         super().__init__(active)
+
+    def allow_for_commands(self):
+        return True
 
     @property
     def bucket_tolerance(self):
@@ -2017,6 +2041,9 @@ class LineTool(EditorTool):
         self.start_xy: array = array('i', [0, 0])
         self.start_left_top_xy: array = array('i', [0, 0])
         super().__init__(active)
+
+    def allow_for_commands(self):
+        return self.state == LineTool.NOT_DRAWING
 
     @property
     def brush_thickness(self):
@@ -2098,6 +2125,9 @@ class CurvyLineTool(EditorTool):
     def __init__(self, active: bool):
         super().__init__(active)
 
+    def allow_for_commands(self):
+        return False
+
 
 class RectangleEllipseTool(EditorTool):
     NAME = 'Empty rectangle'
@@ -2133,6 +2163,9 @@ class RectangleEllipseTool(EditorTool):
         self.brush_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(brush_size) + 'px', RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(RectangleEllipseTool._MIN_BRUSH_THICKNESS, RectangleEllipseTool._MAX_BRUSH_THICKNESS + 1)]) + (2 * RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(RectangleEllipseTool._MAX_BRUSH_THICKNESS)) - 1) * RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], RectangleEllipseTool._TEXT_BACKGROUND_COLOR, RectangleEllipseTool._TEXT_COLOR, RectangleEllipseTool._TEXT_HIGHLIGHT_COLOR, RectangleEllipseTool._HIGHLIGHT_COLOR, RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE, RectangleEllipseTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [RectangleEllipseTool._MIN_BRUSH_THICKNESS, RectangleEllipseTool._MAX_BRUSH_THICKNESS], True, False, False, True, len(str(RectangleEllipseTool._MAX_BRUSH_THICKNESS)), True, str(self.brush_thickness), ending_characters='px')
         super().__init__(active)
 
+    def allow_for_commands(self):
+        return self.state == RectangleEllipseTool.NOT_DRAWING
+
     @property
     def brush_thickness(self):
         return self._brush_thickness
@@ -2162,6 +2195,9 @@ class BlurTool(EditorTool):
     INDEX = 10
     def __init__(self, active: bool):
         super().__init__(active)
+
+    def allow_for_commands(self):
+        return False
 
 
 class JumbleTool(EditorTool):
@@ -2196,6 +2232,9 @@ class JumbleTool(EditorTool):
         self.update_jumble_size(JumbleTool._MIN_JUMBLE_SIZE)
         super().__init__(active)
 
+    def allow_for_commands(self):
+        return self.state == JumbleTool.NOT_JUMBLING
+
     @property
     def jumble_size(self):
         return self._jumble_size
@@ -2222,6 +2261,9 @@ class EyedropTool(EditorTool):
     INDEX = 12
     def __init__(self, active: bool):
         super().__init__(active)
+
+    def allow_for_commands(self):
+        return True
 
 
 class CollisionSelector():
@@ -2272,6 +2314,8 @@ class EditorMap():
     _CHECKERBOARD_COLOR1 = COLORS['GREY']
     _CHECKERBOARD_COLOR2 = COLORS['WHITE']
 
+    _COMMANDS = ['CTRL_Z']
+
     def __init__(self,
                  PATH: str,
                  screen_instance,
@@ -2303,6 +2347,7 @@ class EditorMap():
         self.held: int = 0  # (0 = not held, 1 = held with hand tool, 2 = held with editor hand)
         self.window_resize_last_frame: bool = False
         # tools
+        self.can_use_commands: bool = True
         self.tools: list = [
             MarqueeRectangleTool(False),
             LassoTool(False),
@@ -2326,8 +2371,8 @@ class EditorMap():
       
     class PixelChange():
         def __init__(self, new_rgba: array):
-            self.change_dict: dict = {}
-            self.new_rgba: array = new_rgba
+            self.change_dict: dict[tuple[int, int], tuple[int, int, int, int]] = {}
+            self.new_rgba: array[int, int, int, int] = new_rgba
 
     class ObjectChange():
         def __init__(self, xy, object):
@@ -2535,15 +2580,57 @@ class EditorMap():
         current_color_glsl = editor_singleton.currently_selected_color.color
         current_color_rgba = percent_to_rgba(editor_singleton.currently_selected_color.color)
 
+        # get the current typed key in case a command was used (CTRL Z, etc)
+        currently_pressed_character = keys_class_instance.keyboard_key_to_character()
+        # check that the currently pressed character is a command
+        currently_pressed_character = currently_pressed_character if currently_pressed_character in EditorMap._COMMANDS else None
+        # check that commands are crrently allowed by the tool being used
+        currently_pressed_character = currently_pressed_character if self.current_tool.allow_for_commands() else None
+
         try:
-            match int(self.current_tool):
-                case MarqueeRectangleTool.INDEX:
+            match currently_pressed_character, int(self.current_tool):
+                case 'CTRL_Z', _:
+                    # don't attempt control Z if no edit has been made
+                    if len(self.map_edits) == 0:
+                        raise CaseBreak
+
+                    # get the last changes made to the level
+                    last_edit = self.map_edits[-1]
+
+                    print(type(last_edit).__name__)
+
+                    match type(last_edit).__name__:
+                        case EditorMap.PixelChange.__name__:
+                            print('p')
+                        case EditorMap.ObjectChange.__name__:
+                            print('o')
+
+                    for (edited_pixel_x, edited_pixel_y), previous_color in last_edit.change_dict.items():
+                        pass
+                        # # get the tile and pixel being edited
+                        # tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                        # tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                        # # don't try to draw outside of map bounds
+                        # if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                        #     tile = self.tile_array[tile_x][tile_y]
+                        #     # load the tile if it isn't loaded
+                        #     if tile.pg_image is None:
+                        #         tile.load(render_instance, screen_instance, gl_context)
+                        #     reload_tiles[tile.image_reference] = tile
+                        #     # make the edit
+                        #     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                        #     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
+                        #     tile.edits[(pixel_x, pixel_y)] = resulting_color
+                        #     # collision map edit
+                        #     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
+
+                case None, MarqueeRectangleTool.INDEX:
                     pass
 
-                case LassoTool.INDEX:
+                case None, LassoTool.INDEX:
                     pass
 
-                case PencilTool.INDEX:
+                case None, PencilTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
                     pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     ltrb = self._get_ltrb_pixels_on_map()
@@ -2670,7 +2757,7 @@ class EditorMap():
                     self.current_tool.last_xy[0] = leftest_brush_pixel
                     self.current_tool.last_xy[1] = topest_brush_pixel
                 
-                case EraserTool.INDEX:
+                case None, EraserTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
                     pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     ltrb = self._get_ltrb_pixels_on_map()
@@ -2802,7 +2889,7 @@ class EditorMap():
                     self.current_tool.last_xy[0] = leftest_eraser_pixel
                     self.current_tool.last_xy[1] = topest_eraser_pixel
 
-                case SprayTool.INDEX:
+                case None, SprayTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
                     pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     ltrb = self._get_ltrb_pixels_on_map()
@@ -2913,10 +3000,10 @@ class EditorMap():
                     except CaseBreak:
                         pass
 
-                case HandTool.INDEX:
+                case None, HandTool.INDEX:
                     pass
 
-                case BucketTool.INDEX:
+                case None, BucketTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
                     pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     ltrb = self._get_ltrb_pixels_on_map()
@@ -2962,7 +3049,7 @@ class EditorMap():
                         max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
                         edited_pixels_this_loop = [(leftest_bucket_pixel, topest_bucket_pixel)]
 
-                case LineTool.INDEX:
+                case None, LineTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
                     pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     ltrb = self._get_ltrb_pixels_on_map()
@@ -3113,10 +3200,10 @@ class EditorMap():
                             render_instance.store_draw(LineTool.LINE_REFERENCE, render_instance.draw_line, {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'thickness': self.current_tool.brush_thickness, 'rgba': editor_singleton.currently_selected_color.color if map_mode is MapModes.PRETTY else current_collision_color, 'pixel_size': self.pixel_scale, 'circle_for_line_drawing': self.current_tool.circle_for_line_drawing, 'brush_style': self.current_tool.brush_style})
                             self.stored_draw_keys.append(LineTool.LINE_REFERENCE)
 
-                case CurvyLineTool.INDEX:
+                case None, CurvyLineTool.INDEX:
                     pass
 
-                case RectangleEllipseTool.INDEX:
+                case None, RectangleEllipseTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
                     pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     ltrb = self._get_ltrb_pixels_on_map()
@@ -3297,10 +3384,10 @@ class EditorMap():
                                         render_instance.store_draw(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE, render_instance.draw_hollow_ellipse, {'ltwh': rectangle_ellipse_ltwh, 'ellipse_wh': ellipse_wh, 'pixel_size': self.pixel_scale, 'ellipse_thickness': self.current_tool.brush_thickness, 'rgba': rgba_to_glsl(current_color_rgba)})
                                         self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
 
-                case BlurTool.INDEX:
+                case None, BlurTool.INDEX:
                     pass
 
-                case JumbleTool.INDEX:
+                case None, JumbleTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
                     pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
                     ltrb = self._get_ltrb_pixels_on_map()
@@ -3400,7 +3487,7 @@ class EditorMap():
                     except CaseBreak:
                         pass
 
-                case EyedropTool.INDEX:
+                case None, EyedropTool.INDEX:
                     if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
                         raise CaseBreak
                     
