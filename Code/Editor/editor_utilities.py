@@ -2315,6 +2315,8 @@ class EditorMap():
     _CHECKERBOARD_COLOR2 = COLORS['WHITE']
 
     _COMMANDS = ['CTRL_Z']
+    _TIME_BETWEEN_1ST_AND_2ND_CTRL_Z = 0.8
+    _TIME_BETWEEN_2ND_ONWARD_CTRL_Z = 0.1
 
     def __init__(self,
                  PATH: str,
@@ -2347,7 +2349,10 @@ class EditorMap():
         self.held: int = 0  # (0 = not held, 1 = held with hand tool, 2 = held with editor hand)
         self.window_resize_last_frame: bool = False
         # tools
-        self.can_use_commands: bool = True
+        self.changed_command_this_frame: bool = False
+        self.last_character_pressed: str | None = None
+        self.time_when_command_was_last_changed: float = get_time()
+        self.last_ctrl_z_time: float = get_time()
         self.tools: list = [
             MarqueeRectangleTool(False),
             LassoTool(False),
@@ -2371,7 +2376,8 @@ class EditorMap():
       
     class PixelChange():
         def __init__(self, new_rgba: array):
-            self.change_dict: dict[tuple[int, int], tuple[int, int, int, int]] = {}
+            # (pixel_x, pixel_y): ((pygame_red, pygame_green, pygame_blue, pygame_alpha), collision)
+            self.change_dict: dict[tuple[int, int], tuple[tuple[int, int, int, int], int]] = {}
             self.new_rgba: array[int, int, int, int] = new_rgba
 
     class ObjectChange():
@@ -2587,6 +2593,12 @@ class EditorMap():
         # check that commands are crrently allowed by the tool being used
         currently_pressed_character = currently_pressed_character if self.current_tool.allow_for_commands() else None
 
+        # update when the current command was last changed
+        if self.last_character_pressed != currently_pressed_character:
+            self.time_when_command_was_last_changed = get_time()
+            self.changed_command_this_frame = True
+        self.last_character_pressed = currently_pressed_character
+
         try:
             match currently_pressed_character, int(self.current_tool):
                 case 'CTRL_Z', _:
@@ -2594,35 +2606,50 @@ class EditorMap():
                     if len(self.map_edits) == 0:
                         raise CaseBreak
 
-                    # get the last changes made to the level
-                    last_edit = self.map_edits[-1]
+                    # wait a long period after the first control Z to perform another
+                    time_since_ctrl_z_started = get_time() - self.time_when_command_was_last_changed
+                    if (time_since_ctrl_z_started < EditorMap._TIME_BETWEEN_1ST_AND_2ND_CTRL_Z) and not self.changed_command_this_frame:
+                        raise CaseBreak
 
-                    print(type(last_edit).__name__)
+                    # wait a short period of time to control Z from the second time onward
+                    time_since_last_ctrl_z = get_time() - self.last_ctrl_z_time
+                    if time_since_last_ctrl_z < EditorMap._TIME_BETWEEN_2ND_ONWARD_CTRL_Z:
+                        raise CaseBreak
+
+                    # guard clauses completed; will perform control Z
+                    self.last_ctrl_z_time = get_time()
+                    last_edit = self.map_edits[-1]
 
                     match type(last_edit).__name__:
                         case EditorMap.PixelChange.__name__:
-                            print('p')
-                        case EditorMap.ObjectChange.__name__:
-                            print('o')
+                            reload_tiles = {}
+                            max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
+                            for (edited_pixel_x, edited_pixel_y), (previous_color, previous_collision) in last_edit.change_dict.items():
+                                # get the tile and pixel being edited
+                                tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                # don't try to draw outside of map bounds
+                                if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
+                                    tile = self.tile_array[tile_x][tile_y]
+                                    # load the tile if it isn't loaded
+                                    if tile.pg_image is None:
+                                        tile.load(render_instance, screen_instance, gl_context)
+                                    reload_tiles[tile.image_reference] = tile
+                                    # make the edit
+                                    tile.pg_image.set_at((pixel_x, pixel_y), previous_color)
+                                    # collision map edit
+                                    tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = previous_collision
 
-                    for (edited_pixel_x, edited_pixel_y), previous_color in last_edit.change_dict.items():
-                        pass
-                        # # get the tile and pixel being edited
-                        # tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
-                        # tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
-                        # # don't try to draw outside of map bounds
-                        # if (0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y):
-                        #     tile = self.tile_array[tile_x][tile_y]
-                        #     # load the tile if it isn't loaded
-                        #     if tile.pg_image is None:
-                        #         tile.load(render_instance, screen_instance, gl_context)
-                        #     reload_tiles[tile.image_reference] = tile
-                        #     # make the edit
-                        #     original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                        #     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
-                        #     tile.edits[(pixel_x, pixel_y)] = resulting_color
-                        #     # collision map edit
-                        #     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
+                            # delete the undone map edit
+                            del self.map_edits[-1]
+
+                        case EditorMap.ObjectChange.__name__:
+                            pass
+
+                    for tile in reload_tiles.values():
+                        render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
+                        render_instance.write_pixels_from_bytearray(tile.collision_image_reference, tile.collision_bytearray)
+                        tile.save()
 
                 case None, MarqueeRectangleTool.INDEX:
                     pass
@@ -2699,9 +2726,10 @@ class EditorMap():
                                                     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # collision map edit
+                                                    original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                     # record what was edited for ctrl-Z
-                                                    map_edit[tile_name] = original_pixel_color
+                                                    map_edit[tile_name] = (original_pixel_color, original_collision)
                                         # draw bresenham pixels
                                         else:
                                             # stamp the point if bresenham isn't needed
@@ -2722,9 +2750,10 @@ class EditorMap():
                                                         tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                         # collision map edit
+                                                        original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                         tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                         # record what was edited for ctrl-Z
-                                                        map_edit[tile_name] = original_pixel_color
+                                                        map_edit[tile_name] = (original_pixel_color, original_collision)
                                                 continue
                                             # draw bresenham points if necessary
                                             for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.last_xy[0]+brush_offset_x, self.current_tool.last_xy[1]+brush_offset_y, leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y):
@@ -2744,9 +2773,10 @@ class EditorMap():
                                                         tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                         # collision map edit
+                                                        original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                         tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                         # record what was edited for ctrl-Z
-                                                        map_edit[tile_name] = original_pixel_color
+                                                        map_edit[tile_name] = (original_pixel_color, original_collision)
 
                             for tile in reload_tiles.values():
                                 render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
@@ -2831,9 +2861,10 @@ class EditorMap():
                                                     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := (0.0, 0.0, 0.0, 0.0))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # collision map edit
+                                                    original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = CollisionMode.NO_COLLISION
                                                     # record what was edited for ctrl-Z
-                                                    map_edit[tile_name] = original_pixel_color
+                                                    map_edit[tile_name] = (original_pixel_color, original_collision)
                                         # erase bresenham pixels
                                         else:
                                             # stamp the point if bresenham isn't needed
@@ -2854,9 +2885,10 @@ class EditorMap():
                                                         tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := (0.0, 0.0, 0.0, 0.0))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                         # collision map edit
+                                                        original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                         tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = CollisionMode.NO_COLLISION
                                                         # record what was edited for ctrl-Z
-                                                        map_edit[tile_name] = original_pixel_color
+                                                        map_edit[tile_name] = (original_pixel_color, original_collision)
                                                 continue
                                             # erase bresenham points if necessary
                                             for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.last_xy[0]+eraser_offset_x, self.current_tool.last_xy[1]+eraser_offset_y, leftest_eraser_pixel+eraser_offset_x, topest_eraser_pixel+eraser_offset_y):
@@ -2876,9 +2908,10 @@ class EditorMap():
                                                         tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := (0.0, 0.0, 0.0, 0.0))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                         # collision map edit
+                                                        original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                         tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = CollisionMode.NO_COLLISION
                                                         # record what was edited for ctrl-Z
-                                                        map_edit[tile_name] = original_pixel_color
+                                                        map_edit[tile_name] = (original_pixel_color, original_collision)
 
                             for tile in reload_tiles.values():
                                 render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
@@ -2985,9 +3018,10 @@ class EditorMap():
                                                 tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                 tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                 # collision map edit
+                                                original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                 tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                 # record what was edited for ctrl-Z
-                                                map_edit[tile_name] = original_pixel_color
+                                                map_edit[tile_name] = (original_pixel_color, original_collision)
 
                                 for tile in reload_tiles.values():
                                     render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
@@ -3131,9 +3165,10 @@ class EditorMap():
                                                     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # collision map edit
+                                                    original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                     # record what was edited for ctrl-Z
-                                                    map_edit[tile_name] = original_pixel_color
+                                                    map_edit[tile_name] = (original_pixel_color, original_collision)
                                     # draw bresenham pixels
                                     else:
                                         # stamp the point if bresenham isn't needed
@@ -3156,9 +3191,10 @@ class EditorMap():
                                                         tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                         tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                         # collision map edit
+                                                        original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                         tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                         # record what was edited for ctrl-Z
-                                                        map_edit[tile_name] = original_pixel_color
+                                                        map_edit[tile_name] = (original_pixel_color, original_collision)
                                             continue
                                         # draw bresenham points if necessary
                                         for edited_pixel_x, edited_pixel_y in bresenham(self.current_tool.start_left_top_xy[0]+brush_offset_x, self.current_tool.start_left_top_xy[1]+brush_offset_y, leftest_brush_pixel+brush_offset_x, topest_brush_pixel+brush_offset_y):
@@ -3178,9 +3214,10 @@ class EditorMap():
                                                     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # collision map edit
+                                                    original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                     # record what was edited for ctrl-Z
-                                                    map_edit[tile_name] = original_pixel_color
+                                                    map_edit[tile_name] = (original_pixel_color, original_collision)
 
                         for tile in reload_tiles.values():
                             render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
@@ -3271,9 +3308,10 @@ class EditorMap():
                                                 tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                 tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                 # collision map edit
+                                                original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                 tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                 # record what was edited for ctrl-Z
-                                                map_edit[tile_name] = original_pixel_color
+                                                map_edit[tile_name] = (original_pixel_color, original_collision)
                             case RectangleEllipseTool.HOLLOW_RECTANGLE:
                                 for edited_pixel_x in range(x1, x2 + 1):
                                     for edited_pixel_y in range(y1, y2 + 1):
@@ -3295,9 +3333,10 @@ class EditorMap():
                                                 tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                 tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                 # collision map edit
+                                                original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                 tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                 # record what was edited for ctrl-Z
-                                                map_edit[tile_name] = original_pixel_color
+                                                map_edit[tile_name] = (original_pixel_color, original_collision)
                             case RectangleEllipseTool.FULL_ELLIPSE:
                                 ellipse_center_x = (x1 + x2 + 1) / 2
                                 ellipse_center_y = (y1 + y2 + 1) / 2
@@ -3324,9 +3363,10 @@ class EditorMap():
                                                     tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), current_color_glsl)))
                                                     tile.edits[(pixel_x, pixel_y)] = resulting_color
                                                     # collision map edit
+                                                    original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
                                                     tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
                                                     # record what was edited for ctrl-Z
-                                                    map_edit[tile_name] = original_pixel_color
+                                                    map_edit[tile_name] = (original_pixel_color, original_collision)
                             case RectangleEllipseTool.HOLLOW_ELLIPSE:
                                 pass
 
@@ -3555,6 +3595,7 @@ class EditorMap():
 
         except CaseBreak:
             pass
+        self.changed_command_this_frame = False
 
     def get_color_of_pixel_on_map(self, keys_class_instance, render_instance, screen_instance, gl_context):
         if not point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh):
