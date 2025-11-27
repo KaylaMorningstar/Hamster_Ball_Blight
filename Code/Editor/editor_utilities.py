@@ -2193,11 +2193,81 @@ class RectangleEllipseTool(EditorTool):
 class BlurTool(EditorTool):
     NAME = 'Blur'
     INDEX = 10
-    def __init__(self, active: bool):
+
+    NOT_BLURRING = 0
+    BLURRING = 1
+
+    BLURRING_SIZE = 'Size: '
+    BLURRING_OPACITY = 'Opacity: '
+
+    _MIN_BLUR_SIZE = 1
+    _MAX_BLUR_SIZE = 64
+    _MIN_OPACITY = 0
+    _MAX_OPACITY = 100
+
+    SPEED_IS_MOVEMENT = 0
+    SPEED_IS_TIME = 1
+    _MIN_TIME_TYPE = 0
+    _MAX_TIME_TYPE = 1
+
+    def __init__(self, active: bool, render_instance, screen_instance, gl_context):
+        self.state = BlurTool.NOT_BLURRING  # (NOT_BLURRING = 0, BLURRING = 1)
+        # surfaces used while blurring
+        self.blur_circle_true_indexes: list[list[int, int]]
+        # attributes
+        self._blur_size: int = BlurTool._MIN_BLUR_SIZE  # width of the blur tool
+        self._opacity: int = BlurTool._MAX_OPACITY  # how much colors are spread (100% = spread evenly; 0% = no spread at all)
+        # tool attribute word width
+        self.BLUR_SIZE_WIDTH = get_text_width(render_instance, BlurTool.BLURRING_SIZE, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        self.OPACITY_WIDTH = get_text_width(render_instance, BlurTool.BLURRING_OPACITY, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
+        # text inputs for attributes
+        self.blur_size_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(blur_size) + 'px', BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for blur_size in range(BlurTool._MIN_BLUR_SIZE, BlurTool._MAX_BLUR_SIZE + 1)]) + (2 * BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(BlurTool._MAX_BLUR_SIZE)) - 1) * BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], BlurTool._TEXT_BACKGROUND_COLOR, BlurTool._TEXT_COLOR, BlurTool._TEXT_HIGHLIGHT_COLOR, BlurTool._HIGHLIGHT_COLOR, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [BlurTool._MIN_BLUR_SIZE, BlurTool._MAX_BLUR_SIZE], True, False, False, True, len(str(BlurTool._MAX_BLUR_SIZE)), True, str(self.blur_size), ending_characters='px')
+        self.opacity_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(opacity_percentage) + 'px', BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for opacity_percentage in range(BlurTool._MIN_OPACITY, BlurTool._MAX_OPACITY + 1)]) + (2 * BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(BlurTool._MAX_BLUR_SIZE)) - 1) * BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], BlurTool._TEXT_BACKGROUND_COLOR, BlurTool._TEXT_COLOR, BlurTool._TEXT_HIGHLIGHT_COLOR, BlurTool._HIGHLIGHT_COLOR, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [BlurTool._MIN_OPACITY, BlurTool._MAX_OPACITY], True, False, False, True, len(str(BlurTool._MAX_OPACITY)), True, str(self.opacity), ending_characters='%')
+        # update tool attribute values
+        self.max_blur_pixel: int
+        self.update_blur_size(BlurTool._MIN_BLUR_SIZE)
         super().__init__(active)
 
     def allow_for_commands(self):
-        return False
+        return self.state == BlurTool.NOT_BLURRING
+
+    @property
+    def blur_size(self):
+        return self._blur_size
+
+    @property
+    def opacity(self):
+        return self._opacity
+
+    def blur_size_is_valid(self, blur_size: Any):
+        try:
+            int(blur_size)
+        except:
+            return False
+        if not (BlurTool._MIN_BLUR_SIZE <= int(blur_size) <= BlurTool._MAX_BLUR_SIZE):
+            return False
+        if int(blur_size) == self._blur_size:
+            return False
+        return True
+
+    def opacity_is_valid(self, opacity: Any):
+        try:
+            int(opacity)
+        except:
+            return False
+        if not (BlurTool._MIN_OPACITY <= int(opacity) <= BlurTool._MAX_OPACITY):
+            return False
+        if int(opacity) == self._opacity:
+            return False
+        return True
+
+    def update_blur_size(self, blur_size):
+        self._blur_size = int(blur_size)
+        self.blur_circle_true_indexes = [tuple(indexes) for indexes in get_circle_tf_indexes(self._blur_size)]
+        self.max_blur_pixel = len(self.blur_circle_true_indexes) - 1
+
+    def update_opacity(self, opacity):
+        self._opacity = int(opacity)
 
 
 class JumbleTool(EditorTool):
@@ -2364,7 +2434,7 @@ class EditorMap():
             LineTool(False, render_instance, screen_instance, gl_context),
             CurvyLineTool(False),
             RectangleEllipseTool(False, render_instance, screen_instance, gl_context),
-            BlurTool(False),
+            BlurTool(False, render_instance, screen_instance, gl_context),
             JumbleTool(False, render_instance, screen_instance, gl_context),
             EyedropTool(False)
         ]
@@ -3425,7 +3495,40 @@ class EditorMap():
                                         self.stored_draw_keys.append(RectangleEllipseTool.RECTANGLE_ELLIPSE_REFERENCE)
 
                 case None, BlurTool.INDEX:
-                    pass
+                    cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
+                    pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
+                    ltrb = self._get_ltrb_pixels_on_map()
+                    circle_outline_thickness = EditorMap.CIRCLE_OUTLINE_THICKNESS_ZOOMED_OUT if EditorMap._ZOOM[self.zoom_index][0] != 1 else EditorMap.CIRCLE_OUTLINE_THICKNESS_ZOOMED_IN
+
+                    if self.current_tool.blur_size % 2 == 0:
+                        half_blur_size = self.current_tool.blur_size // 2
+                    else:
+                        half_blur_size = (self.current_tool.blur_size + 1) // 2
+                    # get the leftest pixel that needs to be drawn
+                    pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
+                    if pixel_offset_x == 1:
+                        pixel_offset_x = 0
+                    pixel_offset_x *= self.pixel_scale
+                    leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
+                    leftest_blur_pixel = pos_x - ((self.current_tool.blur_size - 1) // 2)
+                    pixel_x = leftest_pixel + ((pos_x + 1 - ltrb[0] - half_blur_size) * self.pixel_scale) - circle_outline_thickness
+
+                    # get the topest pixel that needs to be drawn
+                    pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
+                    if pixel_offset_y == 1:
+                        pixel_offset_y = 0
+                    pixel_offset_y *= self.pixel_scale
+                    topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
+                    topest_blur_pixel = pos_y - ((self.current_tool.blur_size - 1) // 2)
+                    pixel_y = topest_pixel + ((pos_y + 1 - ltrb[1] - half_blur_size) * self.pixel_scale) - circle_outline_thickness
+
+                    ltwh = [pixel_x, pixel_y, int((self.current_tool.blur_size * self.pixel_scale) + (2 * circle_outline_thickness)), int((self.current_tool.blur_size * self.pixel_scale) + (2 * circle_outline_thickness))]
+
+                    # condition if cursor is on the map
+                    if cursor_on_map:
+                        cursors.add_cursor_this_frame('cursor_big_crosshair')
+                        render_instance.store_draw(EditorMap.CIRCLE_OUTLINE_REFERENCE, render_instance.editor_circle_outline, {'ltwh': ltwh, 'circle_size': self.current_tool.blur_size, 'circle_outline_thickness': circle_outline_thickness, 'circle_pixel_size': self.pixel_scale})
+                        self.stored_draw_keys.append(EditorMap.CIRCLE_OUTLINE_REFERENCE)
 
                 case None, JumbleTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)

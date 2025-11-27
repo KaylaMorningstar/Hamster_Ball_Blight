@@ -1130,7 +1130,40 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 footer_information.append(FooterInfo.MAP_SIZE)
 
             case BlurTool.INDEX:
-                pass
+                # blur width
+                # text
+                Render.draw_string_of_characters(Screen, gl_context, string=BlurTool.BLURRING_SIZE, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=BlurTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.BLUR_SIZE_WIDTH
+                # text input
+                current_tool.blur_size_text_input.background_ltwh[0] = tool_attribute_lt[0] + BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                current_tool.blur_size_text_input.background_ltwh[1] = tool_attribute_lt[1] + BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
+                current_tool.blur_size_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
+                new_blur_size = current_tool.blur_size_text_input.current_string
+                if current_tool.blur_size_is_valid(new_blur_size):
+                    current_tool.update_blur_size(new_blur_size)
+                tool_attribute_lt[0] += current_tool.blur_size_text_input.background_ltwh[2]
+                # separate sections
+                SEPARATION_PIXELS = 6  # 2x on each side of a line
+                LINE_SEPARATOR_THICKNESS = 4
+                SEPARATOR_LINE_LTWH = [tool_attribute_lt[0] + SEPARATION_PIXELS, tool_attribute_lt[1], LINE_SEPARATOR_THICKNESS, Singleton.tool_attribute_ltwh[3]]
+                Render.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, object_name='black_pixel', ltwh=SEPARATOR_LINE_LTWH, rgba=COLORS['BLACK'])
+                tool_attribute_lt[0] += (2 * SEPARATION_PIXELS) + LINE_SEPARATOR_THICKNESS
+                # text
+                Render.draw_string_of_characters(Screen, gl_context, string=BlurTool.BLURRING_OPACITY, lt=[tool_attribute_lt[0], tool_attribute_lt[1] + center_text_offset_y], text_pixel_size=BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, rgba=BlurTool.ATTRIBUTE_TEXT_COLOR)
+                tool_attribute_lt[0] += current_tool.OPACITY_WIDTH
+                # text input
+                current_tool.opacity_text_input.background_ltwh[0] = tool_attribute_lt[0] + BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE
+                current_tool.opacity_text_input.background_ltwh[1] = tool_attribute_lt[1] + BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE - 1
+                current_tool.opacity_text_input.update(Screen, gl_context, Keys, Render, Cursor, enabled = True)
+                new_opacity = current_tool.opacity_text_input.current_string
+                if current_tool.opacity_is_valid(new_opacity):
+                    current_tool.update_opacity(new_opacity)
+                tool_attribute_lt[0] += current_tool.opacity_text_input.background_ltwh[2]
+                # information stuff in footer
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
+                    footer_information.append(FooterInfo.CURSOR_POSITION)
+                    footer_information.append(FooterInfo.SEPARATOR)
+                footer_information.append(FooterInfo.MAP_SIZE)
 
             case JumbleTool.INDEX:
                 # jumble width
