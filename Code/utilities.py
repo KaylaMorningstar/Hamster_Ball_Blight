@@ -142,6 +142,8 @@ def rgba_to_glsl(rgba: list[int, int, int, int] | tuple[int, int, int, int]):
 
 def get_blended_color(background_rgba: Iterable[float], foreground_rgba: Iterable[float]):
     alpha_output = foreground_rgba[3] + background_rgba[3] * (1 - foreground_rgba[3])
+    if alpha_output == 0:
+        return (1.0, 1.0, 1.0, 0.0)
     return (
         ((foreground_rgba[0] * foreground_rgba[3]) + ((background_rgba[0] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
         ((foreground_rgba[1] * foreground_rgba[3]) + ((background_rgba[1] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
