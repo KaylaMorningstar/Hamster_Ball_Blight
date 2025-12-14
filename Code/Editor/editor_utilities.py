@@ -28,12 +28,6 @@ class EditorModes(Enum):
     BLOCK = 2
     OBJECT = 3
 
-@unique
-class TextInputType(Enum):
-    INT = 1
-    FLOAT = 2
-    HEX = 3
-
 class CollisionMode:
     UTF_8 = 'utf-8'
     NEW_LINE = '\n'
@@ -61,95 +55,6 @@ class CollisionMode:
     GRAPPLEABLE_COLOR = COLORS['RED']
     PLATFORM_COLOR = COLORS['YELLOW']
     WATER_COLOR = COLORS['BLUE']
-
-
-class TextInputBuilder():
-    def __init__(self):
-        self.background_ltwh: list[int] = [0, 0, 10, 10]
-        self.background_color: list[float] = [0.0, 0.0, 0.0, 255.0]
-        self.text_color: list[float] = [255.0, 255.0, 255.0, 255.0]
-        self.highlighted_text_color: list[float] = [0.0, 0.0, 0.0, 255.0]
-        self.highlight_color: list[float] = [255.0, 255.0, 255.0, 255.0]
-        self.text_pixel_size: int = 1
-        self.text_padding: int = 1
-        self.allowable_range: list[float | int, float | int] = [-math.inf, math.inf]
-        self.is_a_float: bool = True
-        self.is_an_int: bool = False
-        self.is_a_hex: bool = False
-        self.show_front_zeros: bool = False
-        self.number_of_digits: int = 0
-        self.must_fit: bool = False
-        self.default_value: str = '0'
-        self.ending_characters: str = ''
-    
-    def set_background_rect(self, left: int, top: int, width: int, height: int):
-        self.background_ltwh = [left, top, width, height]
-
-    def set_background_color(self, red: float, green: float, blue: float, alpha: float):
-        self.background_color = [red, green, blue, alpha]
-
-    def set_text_color(self, red: float, green: float, blue: float, alpha: float):
-        self.text_color = [red, green, blue, alpha]
-    
-    def set_highlighted_text_color(self, red: float, green: float, blue: float, alpha: float):
-        self.highlighted_text_color = [red, green, blue, alpha]
-    
-    def set_highlight_color(self, red: float, green: float, blue: float, alpha: float):
-        self.highlight_color = [red, green, blue, alpha]
-
-    def set_text_pixel_size(self, scale: int):
-        self.text_pixel_size = scale
-
-    def set_text_paddng(self, pixels: int):
-        self.text_padding = pixels
-
-    def set_allowable_range(self, minimum: int | float = -math.inf, maximum: int | float = math.inf):
-        self.allowable_range = [minimum, maximum]
-
-    def set_input_type(self, type: TextInputType):
-        self.is_a_float = False
-        self.is_an_int = False
-        self.is_a_hex = False
-        match type:
-            case TextInputType.INT:
-                self.is_an_int = True
-            case TextInputType.FLOAT:
-                self.is_a_float = True
-            case TextInputType.HEX:
-                self.is_a_hex = True
-
-    def set_show_front_zeroes(self, value: bool = False):
-        self.show_front_zeros = value
-
-    def set_number_of_digits(self, number: int = 0):
-        self.number_of_digits = number
-
-    def set_must_fit(self, value: bool = False):
-        self.must_fit = value
-
-    def set_default_value(self, string: str = '0'):
-        self.default_value = string
-
-    def set_suffix(self, string: str = ''):
-        self.ending_characters = string
-
-    def create(self):
-        return TextInput(self.background_ltwh,
-                         self.background_color,
-                         self.text_color,
-                         self.highlighted_text_color,
-                         self.highlight_color,
-                         self.text_pixel_size,
-                         self.text_padding,
-                         self.allowable_range,
-                         self.is_an_int,
-                         self.is_a_float,
-                         self.is_a_hex,
-                         self.show_front_zeros,
-                         self.number_of_digits,
-                         self.must_fit,
-                         self.default_value,
-                         self.ending_characters)
 
 
 class TextInput():
@@ -1772,55 +1677,12 @@ class SprayTool(EditorTool):
         self.SPRAY_SIZE_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         self.SPRAY_THICKNESS_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_THICKNESS, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         self.SPRAY_SPEED_WIDTH = get_text_width(render_instance, SprayTool.SPRAY_SPEED, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
-        
-        # Create Text Inputs
-        # Default Values for Tool
-        builder = TextInputBuilder()
-        builder.set_background_color(*SprayTool._TEXT_BACKGROUND_COLOR)
-        builder.set_text_color(*SprayTool._TEXT_COLOR)
-        builder.set_highlight_color(*SprayTool._HIGHLIGHT_COLOR)
-        builder.set_highlighted_text_color(*SprayTool._TEXT_HIGHLIGHT_COLOR)
-        builder.set_text_pixel_size(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
-        builder.set_text_paddng(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
-        builder.set_input_type(TextInputType.INT)
-        builder.set_show_front_zeroes(True)
-        builder.set_must_fit(True)
-
-        # Create spray size input
-        spray_size_text_width = max([get_text_width(render_instance, str(spray_size) + 'px', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for spray_size in range(SprayTool._MIN_SPRAY_SIZE, SprayTool._MAX_SPRAY_SIZE + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SIZE)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
-        builder.set_background_rect(0,0,spray_size_text_width,get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE))
-        builder.set_allowable_range(SprayTool._MIN_SPRAY_SIZE, SprayTool._MAX_SPRAY_SIZE)
-        builder.set_number_of_digits(len(str(SprayTool._MAX_SPRAY_SIZE)))
-        builder.set_default_value(str(self.spray_size))
-        builder.set_suffix('px')    
-        self.spray_size_text_input = builder.create()
-        
-        # Create spray thickness input
-        spray_thickness_text_width = max([get_text_width(render_instance, str(spray_thickness) + 'px', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for spray_thickness in range(SprayTool._MIN_SPRAY_THICKNESS, SprayTool._MAX_SPRAY_THICKNESS + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_THICKNESS)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
-        builder.set_background_rect(0,0,spray_thickness_text_width,get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE))
-        builder.set_allowable_range(SprayTool._MIN_SPRAY_THICKNESS, SprayTool._MAX_SPRAY_THICKNESS)
-        builder.set_number_of_digits(len(str(SprayTool._MAX_SPRAY_THICKNESS)))
-        builder.set_default_value(str(self.spray_thickness))
-        self.spray_thickness_text_input = builder.create()
-
-        # Create spray speed input
+        # text inputs for attributes
+        self.spray_size_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(spray_size) + 'px', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for spray_size in range(SprayTool._MIN_SPRAY_SIZE, SprayTool._MAX_SPRAY_SIZE + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SIZE)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR, SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_SIZE, SprayTool._MAX_SPRAY_SIZE], True, False, False, True, len(str(SprayTool._MAX_SPRAY_SIZE)), True, str(self.spray_size), ending_characters='px')
+        self.spray_thickness_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(spray_thickness) + 'px', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for spray_thickness in range(SprayTool._MIN_SPRAY_THICKNESS, SprayTool._MAX_SPRAY_THICKNESS + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_THICKNESS)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR, SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_THICKNESS, SprayTool._MAX_SPRAY_THICKNESS], True, False, False, True, len(str(SprayTool._MAX_SPRAY_THICKNESS)), True, str(self.spray_thickness), ending_characters='px')
         speed_text_input_width = max(max([get_text_width(render_instance, str(spray_speed) + SprayTool.DROPS, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for spray_speed in range(SprayTool._MIN_SPRAY_SPEED, SprayTool._MAX_SPRAY_SPEED + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SPEED)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE), max([get_text_width(render_instance, str(brush_size) + ' drops/sec', SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for brush_size in range(SprayTool._MIN_SPRAY_TIME, SprayTool._MAX_SPRAY_TIME + 1)]) + (2 * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(SprayTool._MAX_SPRAY_SPEED)) - 1) * SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE))
-        builder.set_background_rect(0,0, speed_text_input_width, get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE))
-        builder.set_allowable_range(SprayTool._MIN_SPRAY_SPEED, SprayTool._MAX_SPRAY_SPEED)
-        builder.set_number_of_digits(len(str(SprayTool._MAX_SPRAY_SPEED)))
-        builder.set_default_value(str(self.spray_speed))
-        builder.set_suffix(SprayTool.DROPS)
-        self.spray_speed_text_input = builder.create()
-
-        # Create spray time input
-        builder.set_allowable_range(SprayTool._MIN_SPRAY_TIME, SprayTool._MAX_SPRAY_TIME)
-        builder.set_background_rect(0,0, speed_text_input_width, get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE))
-        builder.set_allowable_range(SprayTool._MIN_SPRAY_TIME, SprayTool._MAX_SPRAY_TIME)
-        builder.set_number_of_digits(len(str(SprayTool._MAX_SPRAY_TIME)))
-        builder.set_default_value(str(self.spray_time))
-        builder.set_suffix(' drops/sec')
-        self.spray_time_text_input = builder.create()
-      
+        self.spray_speed_text_input = TextInput([0, 0, speed_text_input_width, get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR, SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_SPEED, SprayTool._MAX_SPRAY_SPEED], True, False, False, True, len(str(SprayTool._MAX_SPRAY_SPEED)), True, str(self.spray_speed), ending_characters=SprayTool.DROPS)
+        self.spray_time_text_input = TextInput([0, 0, speed_text_input_width, get_text_height(SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], SprayTool._TEXT_BACKGROUND_COLOR, SprayTool._TEXT_COLOR,SprayTool._TEXT_HIGHLIGHT_COLOR, SprayTool._HIGHLIGHT_COLOR, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, SprayTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [SprayTool._MIN_SPRAY_TIME, SprayTool._MAX_SPRAY_TIME], True, False, False, True, len(str(SprayTool._MAX_SPRAY_TIME)), True, str(self.spray_time), ending_characters=' drops/sec')
         # update tool attribute values
         self.update_spray_size(SprayTool._MIN_SPRAY_SIZE)
         self.update_spray_thickness(SprayTool._MIN_SPRAY_THICKNESS)
