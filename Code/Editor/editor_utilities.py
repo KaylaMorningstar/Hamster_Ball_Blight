@@ -1,4 +1,4 @@
-from Code.utilities import CaseBreak, ONE_FRAME_AT_60_FPS, angle_in_range, atan2, rgba_to_glsl, get_blended_color, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, COLORS
+from Code.utilities import CaseBreak, ONE_FRAME_AT_60_FPS, angle_in_range, atan2, rgba_to_glsl, get_blended_color, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, get_smallest_possible_float, COLORS
 import pygame
 import math
 from copy import deepcopy
@@ -3405,6 +3405,21 @@ class EditorMap():
                         case BlurTool.NOT_BLURRING:
                             pass
                         case BlurTool.BLURRING:
+                            # performing gaussian blur with the following weights
+                            # [1, 2, 1]
+                            # [2, 4, 2]
+                            # [1, 2, 1]
+                            # assign weights
+                            topleft_base_weight = 1
+                            top_base_weight = 2
+                            topright_base_weight = 1
+                            left_base_weight = 2
+                            center_base_weight = 4
+                            right_base_weight = 2
+                            bottomleft_base_weight = 1
+                            bottom_base_weight = 2
+                            bottomright_base_weight = 1
+                            alpha_total_weight = topleft_base_weight + top_base_weight + topright_base_weight + left_base_weight + center_base_weight + right_base_weight + bottomleft_base_weight + bottom_base_weight + bottomright_base_weight
                             # setup for blurring
                             reload_tiles = {}
                             map_edit = self.map_edits[-1].change_dict
@@ -3417,176 +3432,226 @@ class EditorMap():
                                     # skip the pixel if it's outside of the map
                                     if not ((0 <= edited_pixel_x <= max_pixel_x) and (0 <= edited_pixel_y <= max_pixel_y)):
                                         continue
-                                    # get the pixel being blurred
-                                    tile_x, pixel_x = divmod(edited_pixel_x, self.initial_tile_wh[0])
-                                    tile_y, pixel_y = divmod(edited_pixel_y, self.initial_tile_wh[1])
-                                    tile = self.tile_array[tile_x][tile_y]
-                                    if tile.pg_image is None:
-                                        tile.load(render_instance, screen_instance, gl_context)
-                                    color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                    reload_tiles[tile.image_reference] = tile
-                                    # get surrounding colors in the following order
-                                    # [1, 2                  , 3]
-                                    # [4, COLOR_BEING_CHANGED, 5]
-                                    # [7, 8                  , 9]
-                                    #
-                                    # performing gaussian blur with the following weights
-                                    # [1, 2, 1]
-                                    # [2, 4, 2]
-                                    # [1, 2, 1]
-                                    weight_total = 16
-                                    # topleft pixel
+                                    # alpha weighting for this particular pixel
+                                    alpha_total_weight_for_pixel = alpha_total_weight
+                                    alpha_topleft_weight = topleft_base_weight
+                                    alpha_top_weight = top_base_weight
+                                    alpha_topright_weight = topright_base_weight
+                                    alpha_left_weight =  left_base_weight
+                                    alpha_center_weight = center_base_weight
+                                    alpha_right_weight = right_base_weight
+                                    alpha_bottomleft_weight = bottomleft_base_weight
+                                    alpha_bottom_weight = bottom_base_weight
+                                    alpha_bottomright_weight = bottomright_base_weight
+                                    # get pixel positions
                                     topleft_pixel_x, topleft_pixel_y = edited_pixel_x - 1, edited_pixel_y - 1
+                                    top_pixel_x, top_pixel_y = edited_pixel_x, edited_pixel_y - 1
+                                    topright_pixel_x, topright_pixel_y = edited_pixel_x + 1, edited_pixel_y - 1
+                                    left_pixel_x, left_pixel_y = edited_pixel_x - 1, edited_pixel_y
+                                    center_pixel_x, center_pixel_y = edited_pixel_x, edited_pixel_y
+                                    right_pixel_x, right_pixel_y = edited_pixel_x + 1, edited_pixel_y
+                                    bottomleft_pixel_x, bottomleft_pixel_y = edited_pixel_x - 1, edited_pixel_y + 1
+                                    bottom_pixel_x, bottom_pixel_y = edited_pixel_x, edited_pixel_y + 1
+                                    bottomright_pixel_x, bottomright_pixel_y = edited_pixel_x + 1, edited_pixel_y + 1
+                                    # attempt to get pixel cached pixel colors
                                     topleft_color = self.current_tool.original_colors_dict.get((topleft_pixel_x, topleft_pixel_y))
+                                    top_color = self.current_tool.original_colors_dict.get((top_pixel_x, top_pixel_y))
+                                    topright_color = self.current_tool.original_colors_dict.get((topright_pixel_x, topright_pixel_y))
+                                    left_color = self.current_tool.original_colors_dict.get((left_pixel_x, left_pixel_y))
+                                    center_color = self.current_tool.original_colors_dict.get((center_pixel_x, center_pixel_y))
+                                    right_color = self.current_tool.original_colors_dict.get((right_pixel_x, right_pixel_y))
+                                    bottomleft_color = self.current_tool.original_colors_dict.get((bottomleft_pixel_x, bottomleft_pixel_y))
+                                    bottom_color = self.current_tool.original_colors_dict.get((bottom_pixel_x, bottom_pixel_y))
+                                    bottomright_color = self.current_tool.original_colors_dict.get((bottomright_pixel_x, bottomright_pixel_y))
+                                    # if cache isn't available, then get the color
+                                    # topleft pixel
                                     if topleft_color is None:
-                                        topleft_tile_x, topleft_pixel_x = divmod(topleft_pixel_x, self.initial_tile_wh[0])
-                                        topleft_tile_y, topleft_pixel_y = divmod(topleft_pixel_y, self.initial_tile_wh[1])
+                                        topleft_tile_x, divmod_topleft_pixel_x = divmod(topleft_pixel_x, self.initial_tile_wh[0])
+                                        topleft_tile_y, divmod_topleft_pixel_y = divmod(topleft_pixel_y, self.initial_tile_wh[1])
                                         if (0 <= topleft_tile_x <= max_tile_x) and (0 <= topleft_tile_y <= max_tile_y):
                                             topleft_tile = self.tile_array[topleft_tile_x][topleft_tile_y]
                                             if topleft_tile.pg_image is None:
                                                 topleft_tile.load(render_instance, screen_instance, gl_context)
-                                            topleft_color = topleft_tile.pg_image.get_at((topleft_pixel_x, topleft_pixel_y))
+                                            topleft_color = topleft_tile.pg_image.get_at((divmod_topleft_pixel_x, divmod_topleft_pixel_y))
                                             self.current_tool.original_colors_dict[(topleft_pixel_x, topleft_pixel_y)] = topleft_color
                                             reload_tiles[topleft_tile.image_reference] = topleft_tile
                                         else:
-                                            topleft_color = None
+                                            alpha_topleft_weight = 0
+                                            topleft_color = [0, 0, 0, 0]
                                             self.current_tool.original_colors_dict[(topleft_pixel_x, topleft_pixel_y)] = None
-                                            weight_total -= 1
+                                            alpha_total_weight_for_pixel -= topleft_base_weight
                                     # top pixel
-                                    top_pixel_x, top_pixel_y = edited_pixel_x, edited_pixel_y - 1
-                                    top_color = self.current_tool.original_colors_dict.get((top_pixel_x, top_pixel_y))
                                     if top_color is None:
-                                        top_tile_x, top_pixel_x = divmod(top_pixel_x, self.initial_tile_wh[0])
-                                        top_tile_y, top_pixel_y = divmod(top_pixel_y, self.initial_tile_wh[1])
+                                        top_tile_x, divmod_top_pixel_x = divmod(top_pixel_x, self.initial_tile_wh[0])
+                                        top_tile_y, divmod_top_pixel_y = divmod(top_pixel_y, self.initial_tile_wh[1])
                                         if (0 <= top_tile_x <= max_tile_x) and (0 <= top_tile_y <= max_tile_y):
                                             top_tile = self.tile_array[top_tile_x][top_tile_y]
                                             if top_tile.pg_image is None:
                                                 top_tile.load(render_instance, screen_instance, gl_context)
-                                            top_color = top_tile.pg_image.get_at((top_pixel_x, top_pixel_y))
+                                            top_color = top_tile.pg_image.get_at((divmod_top_pixel_x, divmod_top_pixel_y))
                                             self.current_tool.original_colors_dict[(top_pixel_x, top_pixel_y)] = top_color
                                             reload_tiles[top_tile.image_reference] = top_tile
                                         else:
-                                            top_color = None
+                                            alpha_top_weight = 0
+                                            top_color = [0, 0, 0, 0]
                                             self.current_tool.original_colors_dict[(top_pixel_x, top_pixel_y)] = None
-                                            weight_total -= 2
+                                            alpha_total_weight_for_pixel -= top_base_weight
                                     # topright pixel
-                                    topright_pixel_x, topright_pixel_y = edited_pixel_x + 1, edited_pixel_y - 1
-                                    topright_color = self.current_tool.original_colors_dict.get((topright_pixel_x, topright_pixel_y))
                                     if topright_color is None:
-                                        topright_tile_x, topright_pixel_x = divmod(topright_pixel_x, self.initial_tile_wh[0])
-                                        topright_tile_y, topright_pixel_y = divmod(topright_pixel_y, self.initial_tile_wh[1])
+                                        topright_tile_x, divmod_topright_pixel_x = divmod(topright_pixel_x, self.initial_tile_wh[0])
+                                        topright_tile_y, divmod_topright_pixel_y = divmod(topright_pixel_y, self.initial_tile_wh[1])
                                         if (0 <= topright_tile_x <= max_tile_x) and (0 <= topright_tile_y <= max_tile_y):
                                             topright_tile = self.tile_array[topright_tile_x][topright_tile_y]
                                             if topright_tile.pg_image is None:
                                                 topright_tile.load(render_instance, screen_instance, gl_context)
-                                            topright_color = topright_tile.pg_image.get_at((topright_pixel_x, topright_pixel_y))
+                                            topright_color = topright_tile.pg_image.get_at((divmod_topright_pixel_x, divmod_topright_pixel_y))
                                             self.current_tool.original_colors_dict[(topright_pixel_x, topright_pixel_y)] = topright_color
                                             reload_tiles[topright_tile.image_reference] = topright_tile
                                         else:
-                                            topright_color = None
+                                            alpha_topright_weight = 0
+                                            topright_color = [0, 0, 0, 0]
                                             self.current_tool.original_colors_dict[(topright_pixel_x, topright_pixel_y)] = None
-                                            weight_total -= 1
+                                            alpha_total_weight_for_pixel -= topright_base_weight
                                     # left pixel
-                                    left_pixel_x, left_pixel_y = edited_pixel_x - 1, edited_pixel_y
-                                    left_color = self.current_tool.original_colors_dict.get((left_pixel_x, left_pixel_y))
                                     if left_color is None:
-                                        left_tile_x, left_pixel_x = divmod(left_pixel_x, self.initial_tile_wh[0])
-                                        left_tile_y, left_pixel_y = divmod(left_pixel_y, self.initial_tile_wh[1])
+                                        left_tile_x, divmod_left_pixel_x = divmod(left_pixel_x, self.initial_tile_wh[0])
+                                        left_tile_y, divmod_left_pixel_y = divmod(left_pixel_y, self.initial_tile_wh[1])
                                         if (0 <= left_tile_x <= max_tile_x) and (0 <= left_tile_y <= max_tile_y):
                                             left_tile = self.tile_array[left_tile_x][left_tile_y]
                                             if left_tile.pg_image is None:
                                                 left_tile.load(render_instance, screen_instance, gl_context)
-                                            left_color = left_tile.pg_image.get_at((left_pixel_x, left_pixel_y))
+                                            left_color = left_tile.pg_image.get_at((divmod_left_pixel_x, divmod_left_pixel_y))
                                             self.current_tool.original_colors_dict[(left_pixel_x, left_pixel_y)] = left_color
                                             reload_tiles[left_tile.image_reference] = left_tile
                                         else:
-                                            left_color = None
+                                            alpha_left_weight = 0
+                                            left_color = [0, 0, 0, 0]
                                             self.current_tool.original_colors_dict[(left_pixel_x, left_pixel_y)] = None
-                                            weight_total -= 2
+                                            alpha_total_weight_for_pixel -= left_base_weight
+                                    # center pixel
+                                    if center_color is None:
+                                        center_tile_x, divmod_center_pixel_x = divmod(center_pixel_x, self.initial_tile_wh[0])
+                                        center_tile_y, divmod_center_pixel_y = divmod(center_pixel_y, self.initial_tile_wh[1])
+                                        if (0 <= center_tile_x <= max_tile_x) and (0 <= center_tile_y <= max_tile_y):
+                                            center_tile = self.tile_array[center_tile_x][center_tile_y]
+                                            if center_tile.pg_image is None:
+                                                center_tile.load(render_instance, screen_instance, gl_context)
+                                            center_color = center_tile.pg_image.get_at((divmod_center_pixel_x, divmod_center_pixel_y))
+                                            self.current_tool.original_colors_dict[(center_pixel_x, center_pixel_y)] = center_color
+                                            reload_tiles[center_tile.image_reference] = center_tile
+                                        else:
+                                            alpha_center_weight = 0
+                                            center_color = [0, 0, 0, 0]
+                                            self.current_tool.original_colors_dict[(center_pixel_x, center_pixel_y)] = None
+                                            alpha_total_weight_for_pixel -= center_base_weight
                                     # right pixel
-                                    right_pixel_x, right_pixel_y = edited_pixel_x + 1, edited_pixel_y
-                                    right_color = self.current_tool.original_colors_dict.get((right_pixel_x, right_pixel_y))
                                     if right_color is None:
-                                        right_tile_x, right_pixel_x = divmod(right_pixel_x, self.initial_tile_wh[0])
-                                        right_tile_y, right_pixel_y = divmod(right_pixel_y, self.initial_tile_wh[1])
+                                        right_tile_x, divmod_right_pixel_x = divmod(right_pixel_x, self.initial_tile_wh[0])
+                                        right_tile_y, divmod_right_pixel_y = divmod(right_pixel_y, self.initial_tile_wh[1])
                                         if (0 <= right_tile_x <= max_tile_x) and (0 <= right_tile_y <= max_tile_y):
                                             right_tile = self.tile_array[right_tile_x][right_tile_y]
                                             if right_tile.pg_image is None:
                                                 right_tile.load(render_instance, screen_instance, gl_context)
-                                            right_color = right_tile.pg_image.get_at((right_pixel_x, right_pixel_y))
+                                            right_color = right_tile.pg_image.get_at((divmod_right_pixel_x, divmod_right_pixel_y))
                                             self.current_tool.original_colors_dict[(right_pixel_x, right_pixel_y)] = right_color
                                             reload_tiles[right_tile.image_reference] = right_tile
                                         else:
-                                            right_color = None
+                                            alpha_right_weight = 0
+                                            right_color = [0, 0, 0, 0]
                                             self.current_tool.original_colors_dict[(right_pixel_x, right_pixel_y)] = None
-                                            weight_total -= 2
+                                            alpha_total_weight_for_pixel -= right_base_weight
                                     # bottomleft pixel
-                                    bottomleft_pixel_x, bottomleft_pixel_y = edited_pixel_x - 1, edited_pixel_y + 1
-                                    bottomleft_color = self.current_tool.original_colors_dict.get((bottomleft_pixel_x, bottomleft_pixel_y))
                                     if bottomleft_color is None:
-                                        bottomleft_tile_x, bottomleft_pixel_x = divmod(bottomleft_pixel_x, self.initial_tile_wh[0])
-                                        bottomleft_tile_y, bottomleft_pixel_y = divmod(bottomleft_pixel_y, self.initial_tile_wh[1])
+                                        bottomleft_tile_x, divmod_bottomleft_pixel_x = divmod(bottomleft_pixel_x, self.initial_tile_wh[0])
+                                        bottomleft_tile_y, divmod_bottomleft_pixel_y = divmod(bottomleft_pixel_y, self.initial_tile_wh[1])
                                         if (0 <= bottomleft_tile_x <= max_tile_x) and (0 <= bottomleft_tile_y <= max_tile_y):
                                             bottomleft_tile = self.tile_array[bottomleft_tile_x][bottomleft_tile_y]
                                             if bottomleft_tile.pg_image is None:
                                                 bottomleft_tile.load(render_instance, screen_instance, gl_context)
-                                            bottomleft_color = bottomleft_tile.pg_image.get_at((bottomleft_pixel_x, bottomleft_pixel_y))
+                                            bottomleft_color = bottomleft_tile.pg_image.get_at((divmod_bottomleft_pixel_x, divmod_bottomleft_pixel_y))
                                             self.current_tool.original_colors_dict[(bottomleft_pixel_x, bottomleft_pixel_y)] = bottomleft_color
                                             reload_tiles[bottomleft_tile.image_reference] = bottomleft_tile
                                         else:
-                                            bottomleft_color = None
+                                            alpha_bottomleft_weight = 0
+                                            bottomleft_color = [0, 0, 0, 0]
                                             self.current_tool.original_colors_dict[(bottomleft_pixel_x, bottomleft_pixel_y)] = None
-                                            weight_total -= 1
+                                            alpha_total_weight_for_pixel -= bottomleft_base_weight
                                     # bottom pixel
-                                    bottom_pixel_x, bottom_pixel_y = edited_pixel_x, edited_pixel_y + 1
-                                    bottom_color = self.current_tool.original_colors_dict.get((bottom_pixel_x, bottom_pixel_y))
                                     if bottom_color is None:
-                                        bottom_tile_x, bottom_pixel_x = divmod(bottom_pixel_x, self.initial_tile_wh[0])
-                                        bottom_tile_y, bottom_pixel_y = divmod(bottom_pixel_y, self.initial_tile_wh[1])
+                                        bottom_tile_x, divmod_bottom_pixel_x = divmod(bottom_pixel_x, self.initial_tile_wh[0])
+                                        bottom_tile_y, divmod_bottom_pixel_y = divmod(bottom_pixel_y, self.initial_tile_wh[1])
                                         if (0 <= bottom_tile_x <= max_tile_x) and (0 <= bottom_tile_y <= max_tile_y):
                                             bottom_tile = self.tile_array[bottom_tile_x][bottom_tile_y]
                                             if bottom_tile.pg_image is None:
                                                 bottom_tile.load(render_instance, screen_instance, gl_context)
-                                            bottom_color = bottom_tile.pg_image.get_at((bottom_pixel_x, bottom_pixel_y))
+                                            bottom_color = bottom_tile.pg_image.get_at((divmod_bottom_pixel_x, divmod_bottom_pixel_y))
                                             self.current_tool.original_colors_dict[(bottom_pixel_x, bottom_pixel_y)] = bottom_color
                                             reload_tiles[bottom_tile.image_reference] = bottom_tile
                                         else:
-                                            bottom_color = None
+                                            alpha_bottom_weight = 0
+                                            bottom_color = [0, 0, 0, 0]
                                             self.current_tool.original_colors_dict[(bottom_pixel_x, bottom_pixel_y)] = None
-                                            weight_total -= 2
+                                            alpha_total_weight_for_pixel -= bottom_base_weight
                                     # bottomright pixel
-                                    bottomright_pixel_x, bottomright_pixel_y = edited_pixel_x + 1, edited_pixel_y + 1
-                                    bottomright_color = self.current_tool.original_colors_dict.get((bottomright_pixel_x, bottomright_pixel_y))
                                     if bottomright_color is None:
-                                        bottomright_tile_x, bottomright_pixel_x = divmod(bottomright_pixel_x, self.initial_tile_wh[0])
-                                        bottomright_tile_y, bottomright_pixel_y = divmod(bottomright_pixel_y, self.initial_tile_wh[1])
+                                        bottomright_tile_x, divmod_bottomright_pixel_x = divmod(bottomright_pixel_x, self.initial_tile_wh[0])
+                                        bottomright_tile_y, divmod_bottomright_pixel_y = divmod(bottomright_pixel_y, self.initial_tile_wh[1])
                                         if (0 <= bottomright_tile_x <= max_tile_x) and (0 <= bottomright_tile_y <= max_tile_y):
                                             bottomright_tile = self.tile_array[bottomright_tile_x][bottomright_tile_y]
                                             if bottomright_tile.pg_image is None:
                                                 bottomright_tile.load(render_instance, screen_instance, gl_context)
-                                            bottomright_color = bottomright_tile.pg_image.get_at((bottomright_pixel_x, bottomright_pixel_y))
+                                            bottomright_color = bottomright_tile.pg_image.get_at((divmod_bottomright_pixel_x, divmod_bottomright_pixel_y))
                                             self.current_tool.original_colors_dict[(bottomright_pixel_x, bottomright_pixel_y)] = bottomright_color
                                             reload_tiles[bottomright_tile.image_reference] = bottomright_tile
                                         else:
-                                            bottomright_color = None
+                                            alpha_bottomright_weight = 0
+                                            bottomright_color = [0, 0, 0, 0]
                                             self.current_tool.original_colors_dict[(bottomright_pixel_x, bottomright_pixel_y)] = None
-                                            weight_total -= 1
+                                            alpha_total_weight_for_pixel -= bottomright_base_weight
+                                    # compute color weights
+                                    topleft_weight = topleft_base_weight * topleft_color[3]
+                                    top_weight = top_base_weight * top_color[3]
+                                    topright_weight = topright_base_weight * topright_color[3]
+                                    left_weight = left_base_weight * left_color[3]
+                                    center_weight = center_base_weight * center_color[3]
+                                    right_weight = right_base_weight * right_color[3]
+                                    bottomleft_weight = bottomleft_base_weight * bottomleft_color[3]
+                                    bottom_weight = bottom_base_weight * bottom_color[3]
+                                    bottomright_weight = bottomright_base_weight * bottomright_color[3]
+                                    # compute total weight
+                                    total_weight = topleft_weight + top_weight + topright_weight + left_weight + center_weight + right_weight + bottomleft_weight + bottom_weight + bottomright_weight
+                                    if total_weight == 0.0:
+                                        total_weight = 1.0
+                                    # compute scaled weights
+                                    scaled_topleft_weight = topleft_weight / total_weight
+                                    scaled_top_weight = top_weight / total_weight
+                                    scaled_topright_weight = topright_weight / total_weight
+                                    scaled_left_weight = left_weight / total_weight
+                                    scaled_center_weight = center_weight / total_weight
+                                    scaled_right_weight = right_weight / total_weight
+                                    scaled_bottomleft_weight = bottomleft_weight / total_weight
+                                    scaled_bottom_weight = bottom_weight / total_weight
+                                    scaled_bottomright_weight = bottomright_weight / total_weight
                                     # combine the colors
-                                    resulting_red = (1 * topleft_color[0] / weight_total) + (2 * top_color[0] / weight_total) + (1 * topright_color[0] / weight_total) + (2 * left_color[0] / weight_total) + (4 * color[0] / weight_total) + (2 * right_color[0] / weight_total) + (1 * bottomleft_color[0] / weight_total) + (2 * bottom_color[0] / weight_total) + (1 * bottomright_color[0] / weight_total)
-                                    resulting_green = (1 * topleft_color[1] / weight_total) + (2 * top_color[1] / weight_total) + (1 * topright_color[1] / weight_total) + (2 * left_color[1] / weight_total) + (4 * color[1] / weight_total) + (2 * right_color[1] / weight_total) + (1 * bottomleft_color[1] / weight_total) + (2 * bottom_color[1] / weight_total) + (1 * bottomright_color[1] / weight_total)
-                                    resulting_blue = (1 * topleft_color[2] / weight_total) + (2 * top_color[2] / weight_total) + (1 * topright_color[2] / weight_total) + (2 * left_color[2] / weight_total) + (4 * color[2] / weight_total) + (2 * right_color[2] / weight_total) + (1 * bottomleft_color[2] / weight_total) + (2 * bottom_color[2] / weight_total) + (1 * bottomright_color[2] / weight_total)
-                                    resulting_alpha = (1 * topleft_color[3] / weight_total) + (2 * top_color[3] / weight_total) + (1 * topright_color[3] / weight_total) + (2 * left_color[3] / weight_total) + (4 * color[3] / weight_total) + (2 * right_color[3] / weight_total) + (1 * bottomleft_color[3] / weight_total) + (2 * bottom_color[3] / weight_total) + (1 * bottomright_color[3] / weight_total)
-                                    pygame_rgba = [resulting_red, resulting_green, resulting_blue, resulting_alpha]
-                                    resulting_color_glsl = rgba_to_glsl(pygame_rgba)
-                                    # make the edit
-                                    original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                                    tile.pg_image.set_at((pixel_x, pixel_y), resulting_color := percent_to_rgba(get_blended_color(rgba_to_glsl(original_pixel_color), resulting_color_glsl)))
-                                    tile.edits[(pixel_x, pixel_y)] = resulting_color
+                                    resulting_red =   round((topleft_color[0] * scaled_topleft_weight) + (top_color[0] * scaled_top_weight) + (topright_color[0] * scaled_topright_weight) + (left_color[0] * scaled_left_weight) + (center_color[0] * scaled_center_weight) + (right_color[0] * scaled_right_weight) + (bottomleft_color[0] * scaled_bottomleft_weight) + (bottom_color[0] * scaled_bottom_weight) + (bottomright_color[0] * scaled_bottomright_weight))
+                                    resulting_green = round((topleft_color[1] * scaled_topleft_weight) + (top_color[1] * scaled_top_weight) + (topright_color[1] * scaled_topright_weight) + (left_color[1] * scaled_left_weight) + (center_color[1] * scaled_center_weight) + (right_color[1] * scaled_right_weight) + (bottomleft_color[1] * scaled_bottomleft_weight) + (bottom_color[1] * scaled_bottom_weight) + (bottomright_color[1] * scaled_bottomright_weight))
+                                    resulting_blue =  round((topleft_color[2] * scaled_topleft_weight) + (top_color[2] * scaled_top_weight) + (topright_color[2] * scaled_topright_weight) + (left_color[2] * scaled_left_weight) + (center_color[2] * scaled_center_weight) + (right_color[2] * scaled_right_weight) + (bottomleft_color[2] * scaled_bottomleft_weight) + (bottom_color[2] * scaled_bottom_weight) + (bottomright_color[2] * scaled_bottomright_weight))
+                                    resulting_alpha = round((topleft_color[3] * (alpha_topleft_weight / alpha_total_weight_for_pixel)) + (top_color[3] * (alpha_top_weight / alpha_total_weight_for_pixel)) + (topright_color[3] * (alpha_topright_weight / alpha_total_weight_for_pixel)) + (left_color[3] * (alpha_left_weight / alpha_total_weight_for_pixel)) + (center_color[3] * (alpha_center_weight / alpha_total_weight_for_pixel)) + (right_color[3] * (alpha_right_weight / alpha_total_weight_for_pixel)) + (bottomleft_color[3] * (alpha_bottomleft_weight / alpha_total_weight_for_pixel)) + (bottom_color[3] * (alpha_bottom_weight / alpha_total_weight_for_pixel)) + (bottomright_color[3] * (alpha_bottomright_weight / alpha_total_weight_for_pixel)))
+                                    resulting_color = [resulting_red, resulting_green, resulting_blue, resulting_alpha]
+                                    # get the tile of the pixel being changed
+                                    center_tile_x, divmod_center_pixel_x = divmod(center_pixel_x, self.initial_tile_wh[0])
+                                    center_tile_y, divmod_center_pixel_y = divmod(center_pixel_y, self.initial_tile_wh[1])
+                                    center_tile = self.tile_array[center_tile_x][center_tile_y]
+                                    if center_tile.pg_image is None:
+                                        center_tile.load(render_instance, screen_instance, gl_context)
+                                    # set the resulting blended color
+                                    center_tile.pg_image.set_at((divmod_center_pixel_x, divmod_center_pixel_y), resulting_color)
+                                    center_tile.edits[(divmod_center_pixel_x, divmod_center_pixel_y)] = resulting_color
                                     # collision map edit
-                                    original_collision = tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x]
-                                    tile.collision_bytearray[(pixel_y * EditorMap.TILE_WH) + pixel_x] = current_collision
+                                    original_collision = center_tile.collision_bytearray[(divmod_center_pixel_y * EditorMap.TILE_WH) + divmod_center_pixel_x]
+                                    center_tile.collision_bytearray[(divmod_center_pixel_y * EditorMap.TILE_WH) + divmod_center_pixel_x] = current_collision
                                     # record what was edited for ctrl-Z
-                                    map_edit[tile_name] = (original_pixel_color, original_collision)
+                                    map_edit[tile_name] = (center_color, original_collision)
 
                             for tile in reload_tiles.values():
                                 render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
@@ -3711,7 +3776,6 @@ class EditorMap():
                         tile.load(render_instance, screen_instance, gl_context)
                     # make the edit
                     eyedrop_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
-                    eyedrop_pixel_color[3] = 255
 
                     if keys_class_instance.editor_primary.newly_pressed:
                         # update text input rgba and hex

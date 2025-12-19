@@ -7,6 +7,7 @@ from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 import pygame
 from typing import Iterable
+import math
 
 ONE_FRAME_AT_60_FPS = 1 / 60
 OFF_SCREEN = -99999
@@ -64,6 +65,10 @@ def str_can_be_hex(string):
         return True
     except:
         return False
+
+
+def get_smallest_possible_float():
+    math.ulp(0.0)
 
 
 def angle_in_range(lower: float, theta: float, upper: float):
@@ -141,9 +146,8 @@ def rgba_to_glsl(rgba: list[int, int, int, int] | tuple[int, int, int, int]):
 
 
 def get_blended_color(background_rgba: Iterable[float], foreground_rgba: Iterable[float]):
+    #print(background_rgba, foreground_rgba)
     alpha_output = foreground_rgba[3] + background_rgba[3] * (1 - foreground_rgba[3])
-    if alpha_output == 0:
-        return (1.0, 1.0, 1.0, 0.0)
     return (
         ((foreground_rgba[0] * foreground_rgba[3]) + ((background_rgba[0] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
         ((foreground_rgba[1] * foreground_rgba[3]) + ((background_rgba[1] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
