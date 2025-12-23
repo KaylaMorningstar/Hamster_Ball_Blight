@@ -147,7 +147,7 @@ def rgba_to_glsl(rgba: list[int, int, int, int] | tuple[int, int, int, int]):
 
 def get_blended_color(background_rgba: Iterable[float], foreground_rgba: Iterable[float]):
     alpha_output = foreground_rgba[3] + background_rgba[3] * (1 - foreground_rgba[3])
-    # no alpha in the resulting blended color; 
+    # completely transparent and foreground and background colors
     if alpha_output == 0.0:
         return (
             (background_rgba[0] + foreground_rgba[0]) / 2,
@@ -155,6 +155,7 @@ def get_blended_color(background_rgba: Iterable[float], foreground_rgba: Iterabl
             (background_rgba[2] + foreground_rgba[2]) / 2,
             0.0
         )
+    # at least partially opaque foreground or background color
     else:
         return (
             ((foreground_rgba[0] * foreground_rgba[3]) + ((background_rgba[0] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,

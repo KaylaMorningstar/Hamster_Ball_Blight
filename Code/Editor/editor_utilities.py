@@ -3397,9 +3397,9 @@ class EditorMap():
                     if (self.current_tool.state == BlurTool.NOT_BLURRING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
                         self.current_tool.state = BlurTool.BLURRING
                         self.map_edits.append(self.PixelChange(new_rgba=current_color_rgba))
-                        self.current_tool.original_colors_dict = {}
                     elif (self.current_tool.state == BlurTool.BLURRING) and keys_class_instance.editor_primary.released:
                         self.current_tool.state = BlurTool.NOT_BLURRING
+                        self.current_tool.original_colors_dict = {}
 
                     match self.current_tool.state:
                         case BlurTool.NOT_BLURRING:
@@ -3714,42 +3714,48 @@ class EditorMap():
                                 outline_left, outline_top = pos_x - ((self.current_tool.jumble_size - 1) // 2), pos_y - ((self.current_tool.jumble_size - 1) // 2)
 
                                 for (jumble_offset_x, jumble_offset_y) in self.current_tool.jumble_circle_true_indexes:
-                                    if map_edit.get(tile_name := (edited_pixel_x := leftest_jumble_pixel+jumble_offset_x, edited_pixel_y := topest_jumble_pixel+jumble_offset_y)) is None:
-                                        # skip the pixel if it's outside of the map
-                                        if not ((0 <= edited_pixel_x <= max_pixel_x) and (0 <= edited_pixel_y <= max_pixel_y)):
-                                            continue
-                                        # get a pixel position for (edited_pixel_x, edited_pixel_y) to swap with
-                                        while True:
-                                            new_offset_x, new_offset_y = self.current_tool.jumble_circle_true_indexes[randint(0, self.current_tool.max_jumble_pixel)]
-                                            new_location_x, new_location_y = leftest_jumble_pixel+new_offset_x, topest_jumble_pixel+new_offset_y
-                                            if (0 <= new_location_x <= max_pixel_x) and (0 <= new_location_y <= max_pixel_y):
-                                                break
-                                        # get information about the first pixel
-                                        tile_x1, pixel_x1 = divmod(edited_pixel_x, self.initial_tile_wh[0])
-                                        tile_y1, pixel_y1 = divmod(edited_pixel_y, self.initial_tile_wh[1])
-                                        tile1 = self.tile_array[tile_x1][tile_y1]
-                                        if tile1.pg_image is None:
-                                            tile1.load(render_instance, screen_instance, gl_context)
-                                        color1 = tile1.pg_image.get_at((pixel_x1, pixel_y1))
-                                        collision_index1 = (pixel_y1 * EditorMap.TILE_WH) + pixel_x1
-                                        collision1 = tile1.collision_bytearray[collision_index1]
-                                        reload_tiles[tile1.image_reference] = tile1
-                                        # get information about the second pixel
-                                        tile_x2, pixel_x2 = divmod(new_location_x, self.initial_tile_wh[0])
-                                        tile_y2, pixel_y2 = divmod(new_location_y, self.initial_tile_wh[1])
-                                        tile2 = self.tile_array[tile_x2][tile_y2]
-                                        if tile2.pg_image is None:
-                                            tile2.load(render_instance, screen_instance, gl_context)
-                                        color2 = tile2.pg_image.get_at((pixel_x2, pixel_y2))
-                                        collision_index2 = (pixel_y2 * EditorMap.TILE_WH) + pixel_x2
-                                        collision2 = tile2.collision_bytearray[collision_index2]
-                                        reload_tiles[tile2.image_reference] = tile2
-                                        # make the swap
-                                        tile1.pg_image.set_at((pixel_x1, pixel_y1), color2)
-                                        tile1.collision_bytearray[collision_index1] = collision2
-                                        tile2.pg_image.set_at((pixel_x2, pixel_y2), color1)
-                                        tile2.collision_bytearray[collision_index2] = collision1
-                                        # record what was edited for ctrl-Z
+                                    edited_pixel_x = leftest_jumble_pixel+jumble_offset_x
+                                    edited_pixel_y = topest_jumble_pixel+jumble_offset_y
+                                    tile_name1 = (edited_pixel_x, edited_pixel_y)
+                                    # skip the pixel if it's outside of the map
+                                    if not ((0 <= edited_pixel_x <= max_pixel_x) and (0 <= edited_pixel_y <= max_pixel_y)):
+                                        continue
+                                    # get a pixel position for (edited_pixel_x, edited_pixel_y) to swap with
+                                    while True:
+                                        new_offset_x, new_offset_y = self.current_tool.jumble_circle_true_indexes[randint(0, self.current_tool.max_jumble_pixel)]
+                                        new_location_x, new_location_y = leftest_jumble_pixel+new_offset_x, topest_jumble_pixel+new_offset_y
+                                        if (0 <= new_location_x <= max_pixel_x) and (0 <= new_location_y <= max_pixel_y):
+                                            break
+                                    # get information about the first pixel
+                                    tile_x1, pixel_x1 = divmod(edited_pixel_x, self.initial_tile_wh[0])
+                                    tile_y1, pixel_y1 = divmod(edited_pixel_y, self.initial_tile_wh[1])
+                                    tile1 = self.tile_array[tile_x1][tile_y1]
+                                    if tile1.pg_image is None:
+                                        tile1.load(render_instance, screen_instance, gl_context)
+                                    color1 = tile1.pg_image.get_at((pixel_x1, pixel_y1))
+                                    collision_index1 = (pixel_y1 * EditorMap.TILE_WH) + pixel_x1
+                                    collision1 = tile1.collision_bytearray[collision_index1]
+                                    reload_tiles[tile1.image_reference] = tile1
+                                    # get information about the second pixel
+                                    tile_x2, pixel_x2 = divmod(new_location_x, self.initial_tile_wh[0])
+                                    tile_y2, pixel_y2 = divmod(new_location_y, self.initial_tile_wh[1])
+                                    tile2 = self.tile_array[tile_x2][tile_y2]
+                                    if tile2.pg_image is None:
+                                        tile2.load(render_instance, screen_instance, gl_context)
+                                    color2 = tile2.pg_image.get_at((pixel_x2, pixel_y2))
+                                    collision_index2 = (pixel_y2 * EditorMap.TILE_WH) + pixel_x2
+                                    collision2 = tile2.collision_bytearray[collision_index2]
+                                    reload_tiles[tile2.image_reference] = tile2
+                                    # record what was edited for ctrl-Z
+                                    if map_edit.get(tile_name1) is None:
+                                        map_edit[tile_name1] = (color1, collision1)
+                                    if map_edit.get((new_location_x, new_location_y)) is None:
+                                        map_edit[(new_location_x, new_location_y)] = (color2, collision2)
+                                    # make the swap
+                                    tile1.pg_image.set_at((pixel_x1, pixel_y1), color2)
+                                    tile1.collision_bytearray[collision_index1] = collision2
+                                    tile2.pg_image.set_at((pixel_x2, pixel_y2), color1)
+                                    tile2.collision_bytearray[collision_index2] = collision1
 
                                 for tile in reload_tiles.values():
                                     render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
