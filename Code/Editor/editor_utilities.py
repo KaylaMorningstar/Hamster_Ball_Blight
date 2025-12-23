@@ -3658,8 +3658,6 @@ class EditorMap():
                                 render_instance.write_pixels_from_bytearray(tile.collision_image_reference, tile.collision_bytearray)
                                 tile.save()
 
-
-
                 case None, JumbleTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
                     pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)

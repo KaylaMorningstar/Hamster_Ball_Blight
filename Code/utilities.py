@@ -146,14 +146,22 @@ def rgba_to_glsl(rgba: list[int, int, int, int] | tuple[int, int, int, int]):
 
 
 def get_blended_color(background_rgba: Iterable[float], foreground_rgba: Iterable[float]):
-    #print(background_rgba, foreground_rgba)
     alpha_output = foreground_rgba[3] + background_rgba[3] * (1 - foreground_rgba[3])
-    return (
-        ((foreground_rgba[0] * foreground_rgba[3]) + ((background_rgba[0] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
-        ((foreground_rgba[1] * foreground_rgba[3]) + ((background_rgba[1] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
-        ((foreground_rgba[2] * foreground_rgba[3]) + ((background_rgba[2] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
-        alpha_output
+    # no alpha in the resulting blended color; 
+    if alpha_output == 0.0:
+        return (
+            (background_rgba[0] + foreground_rgba[0]) / 2,
+            (background_rgba[1] + foreground_rgba[1]) / 2,
+            (background_rgba[2] + foreground_rgba[2]) / 2,
+            0.0
         )
+    else:
+        return (
+            ((foreground_rgba[0] * foreground_rgba[3]) + ((background_rgba[0] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
+            ((foreground_rgba[1] * foreground_rgba[3]) + ((background_rgba[1] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
+            ((foreground_rgba[2] * foreground_rgba[3]) + ((background_rgba[2] * background_rgba[3]) * (1 - foreground_rgba[3]))) / alpha_output,
+            alpha_output
+            )
 
 
 def percent_to_rgba(rgba: list[float, float, float, float] | tuple[float, float, float, float]):
