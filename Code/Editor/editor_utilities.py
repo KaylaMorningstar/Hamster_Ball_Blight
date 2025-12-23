@@ -2065,7 +2065,7 @@ class BlurTool(EditorTool):
     _MIN_BLUR_SIZE = 1
     _MAX_BLUR_SIZE = 64
     _MIN_OPACITY = 0
-    _MAX_OPACITY = 100
+    MAX_OPACITY = 100
 
     SPEED_IS_MOVEMENT = 0
     SPEED_IS_TIME = 1
@@ -2079,13 +2079,13 @@ class BlurTool(EditorTool):
         self.original_colors_dict: dict[tuple[int, int], tuple[int, int, int, int]] = {}
         # attributes
         self._blur_size: int = BlurTool._MIN_BLUR_SIZE  # width of the blur tool
-        self._opacity: int = BlurTool._MAX_OPACITY  # how much colors are spread (100% = spread evenly; 0% = no spread at all)
+        self._opacity: int = BlurTool.MAX_OPACITY  # how much colors are spread (100% = spread evenly; 0% = no spread at all)
         # tool attribute word width
         self.BLUR_SIZE_WIDTH = get_text_width(render_instance, BlurTool.BLURRING_SIZE, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         self.OPACITY_WIDTH = get_text_width(render_instance, BlurTool.BLURRING_OPACITY, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE)
         # text inputs for attributes
         self.blur_size_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(blur_size) + 'px', BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for blur_size in range(BlurTool._MIN_BLUR_SIZE, BlurTool._MAX_BLUR_SIZE + 1)]) + (2 * BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(BlurTool._MAX_BLUR_SIZE)) - 1) * BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], BlurTool._TEXT_BACKGROUND_COLOR, BlurTool._TEXT_COLOR, BlurTool._TEXT_HIGHLIGHT_COLOR, BlurTool._HIGHLIGHT_COLOR, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [BlurTool._MIN_BLUR_SIZE, BlurTool._MAX_BLUR_SIZE], True, False, False, True, len(str(BlurTool._MAX_BLUR_SIZE)), True, str(self.blur_size), ending_characters='px')
-        self.opacity_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(opacity_percentage) + 'px', BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for opacity_percentage in range(BlurTool._MIN_OPACITY, BlurTool._MAX_OPACITY + 1)]) + (2 * BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(BlurTool._MAX_BLUR_SIZE)) - 1) * BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], BlurTool._TEXT_BACKGROUND_COLOR, BlurTool._TEXT_COLOR, BlurTool._TEXT_HIGHLIGHT_COLOR, BlurTool._HIGHLIGHT_COLOR, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [BlurTool._MIN_OPACITY, BlurTool._MAX_OPACITY], True, False, False, True, len(str(BlurTool._MAX_OPACITY)), True, str(self.opacity), ending_characters='%')
+        self.opacity_text_input = TextInput([0, 0, max([get_text_width(render_instance, str(opacity_percentage) + 'px', BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE) for opacity_percentage in range(BlurTool._MIN_OPACITY, BlurTool.MAX_OPACITY + 1)]) + (2 * BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE) + ((len(str(BlurTool._MAX_BLUR_SIZE)) - 1) * BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE), get_text_height(BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE)], BlurTool._TEXT_BACKGROUND_COLOR, BlurTool._TEXT_COLOR, BlurTool._TEXT_HIGHLIGHT_COLOR, BlurTool._HIGHLIGHT_COLOR, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, BlurTool.ATTRIBUTE_TEXT_PIXEL_SIZE, [BlurTool._MIN_OPACITY, BlurTool.MAX_OPACITY], True, False, False, True, len(str(BlurTool.MAX_OPACITY)), True, str(self.opacity), ending_characters='%')
         # update tool attribute values
         self.max_blur_pixel: int
         self.update_blur_size(BlurTool._MIN_BLUR_SIZE)
@@ -2118,7 +2118,7 @@ class BlurTool(EditorTool):
             int(opacity)
         except:
             return False
-        if not (BlurTool._MIN_OPACITY <= int(opacity) <= BlurTool._MAX_OPACITY):
+        if not (BlurTool._MIN_OPACITY <= int(opacity) <= BlurTool.MAX_OPACITY):
             return False
         if int(opacity) == self._opacity:
             return False
@@ -3014,7 +3014,63 @@ class EditorMap():
                         self.map_edits.append(self.PixelChange(new_rgba=current_color_rgba))
                         map_edit = self.map_edits[-1].change_dict
                         max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
-                        edited_pixels_this_loop = [(leftest_bucket_pixel, topest_bucket_pixel)]
+                        current_pixel_x = leftest_bucket_pixel
+                        current_pixel_y = topest_bucket_pixel
+                        # get the color and collision at the starting pixel
+                        tile_x, pixel_x = divmod(current_pixel_x, self.initial_tile_wh[0])
+                        tile_y, pixel_y = divmod(current_pixel_y, self.initial_tile_wh[1])
+                        tile = self.tile_array[tile_x][tile_y]
+                        if tile.pg_image is None:
+                            tile.load(render_instance, screen_instance, gl_context)
+                        reload_tiles[tile.image_reference] = tile
+                        color_at_starting_pixel = tile.pg_image.get_at((pixel_x, pixel_y))
+
+                        # create a list of all pixels that need to be checked for whether they need to change
+                        attempt_bucket_on_these_pixels = [(current_pixel_x, current_pixel_y)]
+                        
+                        while attempt_bucket_on_these_pixels != []:
+                            # get the current pixel being considered and remove it from the pixels being checked
+                            current_pixel_x, current_pixel_y = attempt_bucket_on_these_pixels[0]
+                            del attempt_bucket_on_these_pixels[0]
+                            # get the tile and pixel being edited
+                            tile_x, pixel_x = divmod(current_pixel_x, self.initial_tile_wh[0])
+                            tile_y, pixel_y = divmod(current_pixel_y, self.initial_tile_wh[1])
+                            # don't try to draw outside of map bounds
+                            if not ((0 <= tile_x <= max_tile_x) and (0 <= tile_y <= max_tile_y)):
+                                continue
+                            # get the tile object
+                            tile = self.tile_array[tile_x][tile_y]
+                            # load the tile if it isn't loaded
+                            if tile.pg_image is None:
+                                tile.load(render_instance, screen_instance, gl_context)
+                            reload_tiles[tile.image_reference] = tile
+                            # get the current color at the specified pixel
+                            original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                            collision_index = (pixel_y * EditorMap.TILE_WH) + pixel_x
+                            original_collision = tile.collision_bytearray[collision_index]
+                            # check that the color is within the acceptable tolerance to change
+                            if original_pixel_color != color_at_starting_pixel:
+                                continue
+                            # all checks passed; change the current pixel values
+                            tile.pg_image.set_at((pixel_x, pixel_y), current_color_rgba)
+                            collision_index = (pixel_y * EditorMap.TILE_WH) + pixel_x
+                            tile.collision_bytearray[collision_index] = current_collision
+                            # record what was edited for ctrl-Z
+                            map_edit[(current_pixel_x, current_pixel_y)] = (original_pixel_color, original_collision)
+                            # get the positions of the surrounding pixels
+                            if map_edit.get(up := (current_pixel_x, current_pixel_y - 1)) is None:
+                                attempt_bucket_on_these_pixels.append(up)
+                            if map_edit.get(right := (current_pixel_x + 1, current_pixel_y)) is None:
+                                attempt_bucket_on_these_pixels.append(right)
+                            if map_edit.get(down := (current_pixel_x, current_pixel_y + 1)) is None:
+                                attempt_bucket_on_these_pixels.append(down)
+                            if map_edit.get(left := (current_pixel_x - 1, current_pixel_y)) is None:
+                                attempt_bucket_on_these_pixels.append(left)
+
+                        for tile in reload_tiles.values():
+                            render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
+                            render_instance.write_pixels_from_bytearray(tile.collision_image_reference, tile.collision_bytearray)
+                            tile.save()
 
                 case None, LineTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
@@ -3420,6 +3476,8 @@ class EditorMap():
                             bottom_base_weight = 2
                             bottomright_base_weight = 1
                             alpha_total_weight = topleft_base_weight + top_base_weight + topright_base_weight + left_base_weight + center_base_weight + right_base_weight + bottomleft_base_weight + bottom_base_weight + bottomright_base_weight
+                            # get opacity (between 0 and 1)
+                            opacity = self.current_tool.opacity / BlurTool.MAX_OPACITY
                             # setup for blurring
                             reload_tiles = {}
                             map_edit = self.map_edits[-1].change_dict
