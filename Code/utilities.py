@@ -9,6 +9,8 @@ import pygame
 from typing import Iterable
 import math
 
+
+MAX_PYGAME_COLOR = 255
 ONE_FRAME_AT_60_FPS = 1 / 60
 OFF_SCREEN = -99999
 FILE_TYPES = {
@@ -134,6 +136,16 @@ def move_number_to_desired_range(low: (float | int), value: (float | int), high:
 
 def atan2(x: (float | int), y: (float | int)):
     return math.degrees(math.atan2(y, x)) % 360
+
+
+def calculate_percentage_difference_between_pygame_colors(color1: list[int, int, int, int], color2: list[int, int, int, int]):
+    # get the difference between the two colors in all four color channels
+    red_difference = abs(color1[0] - color2[0])
+    green_difference = abs(color1[1] - color2[1])
+    blue_difference = abs(color1[2] - color2[2])
+    alpha_difference = abs(color1[3] - color2[3])
+    # return the difference between colors
+    return ((red_difference / MAX_PYGAME_COLOR) + (green_difference / MAX_PYGAME_COLOR) + (blue_difference / MAX_PYGAME_COLOR) + (alpha_difference / MAX_PYGAME_COLOR)) / 4
 
 
 def rgba_to_glsl(rgba: list[int, int, int, int] | tuple[int, int, int, int]):

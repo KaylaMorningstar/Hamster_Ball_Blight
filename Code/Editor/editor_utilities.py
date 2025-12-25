@@ -1,4 +1,4 @@
-from Code.utilities import CaseBreak, ONE_FRAME_AT_60_FPS, angle_in_range, atan2, rgba_to_glsl, get_blended_color, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, get_smallest_possible_float, COLORS
+from Code.utilities import CaseBreak, ONE_FRAME_AT_60_FPS, angle_in_range, atan2, rgba_to_glsl, get_blended_color, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, get_smallest_possible_float, calculate_percentage_difference_between_pygame_colors, COLORS
 import pygame
 import math
 from copy import deepcopy
@@ -3016,6 +3016,7 @@ class EditorMap():
                         max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
                         current_pixel_x = leftest_bucket_pixel
                         current_pixel_y = topest_bucket_pixel
+                        allowable_tolerance = self.current_tool.bucket_tolerance / 100
                         # get the color and collision at the starting pixel
                         tile_x, pixel_x = divmod(current_pixel_x, self.initial_tile_wh[0])
                         tile_y, pixel_y = divmod(current_pixel_y, self.initial_tile_wh[1])
@@ -3031,6 +3032,7 @@ class EditorMap():
                         while attempt_bucket_on_these_pixels != []:
                             # get the current pixel being considered and remove it from the pixels being checked
                             current_pixel_x, current_pixel_y = attempt_bucket_on_these_pixels[0]
+                            print(len(attempt_bucket_on_these_pixels), len(map_edit), (current_pixel_x, current_pixel_y))
                             del attempt_bucket_on_these_pixels[0]
                             # get the tile and pixel being edited
                             tile_x, pixel_x = divmod(current_pixel_x, self.initial_tile_wh[0])
@@ -3045,15 +3047,18 @@ class EditorMap():
                                 tile.load(render_instance, screen_instance, gl_context)
                             reload_tiles[tile.image_reference] = tile
                             # get the current color at the specified pixel
-                            original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
                             collision_index = (pixel_y * EditorMap.TILE_WH) + pixel_x
-                            original_collision = tile.collision_bytearray[collision_index]
+                            if map_edit.get((current_pixel_x, current_pixel_y)) is None:
+                                original_pixel_color = tile.pg_image.get_at((pixel_x, pixel_y))
+                                original_collision = tile.collision_bytearray[collision_index]
+                            else:
+                                original_pixel_color = map_edit.get((current_pixel_x, current_pixel_y))[0]
+                                original_collision = map_edit.get((current_pixel_x, current_pixel_y))[1]
                             # check that the color is within the acceptable tolerance to change
-                            if original_pixel_color != color_at_starting_pixel:
+                            if allowable_tolerance < calculate_percentage_difference_between_pygame_colors(original_pixel_color, color_at_starting_pixel):
                                 continue
                             # all checks passed; change the current pixel values
                             tile.pg_image.set_at((pixel_x, pixel_y), current_color_rgba)
-                            collision_index = (pixel_y * EditorMap.TILE_WH) + pixel_x
                             tile.collision_bytearray[collision_index] = current_collision
                             # record what was edited for ctrl-Z
                             map_edit[(current_pixel_x, current_pixel_y)] = (original_pixel_color, original_collision)
