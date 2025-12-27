@@ -3028,11 +3028,13 @@ class EditorMap():
 
                         # create a list of all pixels that need to be checked for whether they need to change
                         attempt_bucket_on_these_pixels = [(current_pixel_x, current_pixel_y)]
+                        set_of_pixels_already_being_attempted = set()
+                        set_of_pixels_already_being_attempted.add((current_pixel_x, current_pixel_y))
                         
                         while attempt_bucket_on_these_pixels != []:
                             # get the current pixel being considered and remove it from the pixels being checked
                             current_pixel_x, current_pixel_y = attempt_bucket_on_these_pixels[0]
-                            print(len(attempt_bucket_on_these_pixels), len(map_edit), (current_pixel_x, current_pixel_y))
+                            # print(len(attempt_bucket_on_these_pixels), len(map_edit), (current_pixel_x, current_pixel_y))
                             del attempt_bucket_on_these_pixels[0]
                             # get the tile and pixel being edited
                             tile_x, pixel_x = divmod(current_pixel_x, self.initial_tile_wh[0])
@@ -3063,14 +3065,18 @@ class EditorMap():
                             # record what was edited for ctrl-Z
                             map_edit[(current_pixel_x, current_pixel_y)] = (original_pixel_color, original_collision)
                             # get the positions of the surrounding pixels
-                            if map_edit.get(up := (current_pixel_x, current_pixel_y - 1)) is None:
+                            if (up := (current_pixel_x, current_pixel_y - 1)) not in set_of_pixels_already_being_attempted:
                                 attempt_bucket_on_these_pixels.append(up)
-                            if map_edit.get(right := (current_pixel_x + 1, current_pixel_y)) is None:
+                                set_of_pixels_already_being_attempted.add(up)
+                            if (right := (current_pixel_x + 1, current_pixel_y)) not in set_of_pixels_already_being_attempted:
                                 attempt_bucket_on_these_pixels.append(right)
-                            if map_edit.get(down := (current_pixel_x, current_pixel_y + 1)) is None:
+                                set_of_pixels_already_being_attempted.add(right)
+                            if (down := (current_pixel_x, current_pixel_y + 1)) not in set_of_pixels_already_being_attempted:
                                 attempt_bucket_on_these_pixels.append(down)
-                            if map_edit.get(left := (current_pixel_x - 1, current_pixel_y)) is None:
+                                set_of_pixels_already_being_attempted.add(down)
+                            if (left := (current_pixel_x - 1, current_pixel_y)) not in set_of_pixels_already_being_attempted:
                                 attempt_bucket_on_these_pixels.append(left)
+                                set_of_pixels_already_being_attempted.add(left)
 
                         for tile in reload_tiles.values():
                             render_instance.write_pixels_from_pg_surface(tile.image_reference, tile.pg_image)
