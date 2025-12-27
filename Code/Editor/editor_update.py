@@ -1009,6 +1009,11 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 if current_tool.bucket_tolerance_is_valid(new_bucket_tolerance):
                     current_tool.update_bucket_tolerance(new_bucket_tolerance)
                 tool_attribute_lt[0] += current_tool.bucket_tolerance_text_input.background_ltwh[2]
+                # information stuff in footer
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
+                    footer_information.append(FooterInfo.CURSOR_POSITION)
+                    footer_information.append(FooterInfo.SEPARATOR)
+                footer_information.append(FooterInfo.MAP_SIZE)
 
             case LineTool.INDEX:
                 # brush style
