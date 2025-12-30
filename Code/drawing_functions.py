@@ -669,6 +669,28 @@ class RenderObjects():
         if coloring_inside:
             self.basic_rect_ltwh_with_color_to_quad(Screen, gl_context, 'blank_pixel', (ltwh[0] + border_thickness, ltwh[1] + border_thickness, ltwh[2] - (2 * border_thickness), ltwh[3] - (2 * border_thickness)), inner_color)
     #
+    def draw_highlight_selected_pixel_for_lasso(self, Screen: ScreenObject, gl_context: moderngl.Context, pixel_ltwh: list[int, int, int, int], line_thickness: int, line_length: int):
+        # draws this shape around the pixel being touched by the mouse
+        #  |  |
+        # —    —
+        #
+        # —    —
+        #  |  |
+        # draw in this order
+        #  2  4
+        # 1    3
+        #
+        # 5    7
+        #  6  8
+        self.invert_white(Screen, gl_context, 'white_pixel', (pixel_ltwh[0] - line_length, pixel_ltwh[1] - line_thickness, line_length, line_thickness))
+        self.invert_white(Screen, gl_context, 'white_pixel', (pixel_ltwh[0] - line_thickness, pixel_ltwh[1] - line_length, line_thickness, line_length - line_thickness))
+        self.invert_white(Screen, gl_context, 'white_pixel', (pixel_ltwh[0] + pixel_ltwh[2], pixel_ltwh[1] - line_thickness, line_length, line_thickness))
+        self.invert_white(Screen, gl_context, 'white_pixel', (pixel_ltwh[0] + pixel_ltwh[2], pixel_ltwh[1] - line_length, line_thickness, line_length - line_thickness))
+        self.invert_white(Screen, gl_context, 'white_pixel', (pixel_ltwh[0] - line_length, pixel_ltwh[1] + pixel_ltwh[3], line_length, line_thickness))
+        self.invert_white(Screen, gl_context, 'white_pixel', (pixel_ltwh[0] - line_thickness, pixel_ltwh[1] + pixel_ltwh[3] + line_thickness, line_thickness, line_length - line_thickness))
+        self.invert_white(Screen, gl_context, 'white_pixel', (pixel_ltwh[0] + pixel_ltwh[2], pixel_ltwh[1] + pixel_ltwh[3], line_length, line_thickness))
+        self.invert_white(Screen, gl_context, 'white_pixel', (pixel_ltwh[0] + pixel_ltwh[2], pixel_ltwh[1] + pixel_ltwh[3] + line_thickness, line_thickness, line_length - line_thickness))
+    #
     def draw_water_jet(self, Screen: ScreenObject, gl_context: moderngl.Context, object_name, ball_center: Iterable[float], ball_radius: float, max_length_from_center: float, current_length_from_center: float, rotation: float, minimum_water_jet_thickness: float, moment_in_wave_period: float):
         # 'draw_water_jet', DrawWaterJet
         ltwh = [ball_center[0] - current_length_from_center, ball_center[1] - current_length_from_center, 2 * current_length_from_center, 2 * current_length_from_center]

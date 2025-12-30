@@ -1460,11 +1460,16 @@ class MarqueeRectangleTool(EditorTool):
 class LassoTool(EditorTool):
     NAME = 'Lasso'
     INDEX = 1
+
+    NOT_LASSOING = 0
+    LASSOING = 1
+
     def __init__(self, active: bool):
+        self.state = LassoTool.NOT_LASSOING  # (NOT_LASSOING = 0, LASSOING = 1)
         super().__init__(active)
 
     def allow_for_commands(self):
-        return False
+        return self.state == LassoTool.NOT_LASSOING
 
 
 class PencilTool(EditorTool):
@@ -2234,7 +2239,26 @@ class EditorMap():
     CIRCLE_OUTLINE_THICKNESS_ZOOMED_IN = 1
     CIRCLE_OUTLINE_THICKNESS_ZOOMED_OUT = 2
     CIRCLE_OUTLINE_REFERENCE = 'editor_circle_outline'
+    CURSOR_LASSO_REFERENCE = 'cursor_lasso_reference'
     _MAX_LOAD_TIME = 0.02
+
+    _PIXEL_SIZE_TO_LASSO_DRAWING = {
+        # this dictionary is for drawing this shape
+        #  |  |
+        # —    —
+        #
+        # —    —
+        #  |  |
+        # pixel_size : (line_thickness, line_length)
+        1: (2, 8),
+        2: (2, 8),
+        4: (2, 8),
+        8: (2, 8),
+        16: (2, 8),
+        32: (2, 8),
+        64: (2, 8),
+        128: (2, 8),
+    }
 
     _NOT_HELD = 0
     _HAND_TOOL_HELD = 1
@@ -2588,7 +2612,54 @@ class EditorMap():
                     pass
 
                 case None, LassoTool.INDEX:
-                    pass
+                    cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
+                    pos_x, pos_y = self.get_cursor_position_on_map(keys_class_instance)
+                    ltrb = self._get_ltrb_pixels_on_map()
+                    single_pixel_wh = EditorMap._ZOOM[self.zoom_index][1]
+                    line_thickness, line_length = EditorMap._PIXEL_SIZE_TO_LASSO_DRAWING[single_pixel_wh]
+
+                    lasso_size = 1
+                    if lasso_size % 2 == 0:
+                        half_lasso_size = lasso_size // 2
+                    else:
+                        half_lasso_size = (lasso_size + 1) // 2
+
+                    # get the leftest pixel that needs to be drawn
+                    pixel_offset_x = 1 - ((self.map_offset_xy[0] / self.pixel_scale) % 1)
+                    if pixel_offset_x == 1:
+                        pixel_offset_x = 0
+                    pixel_offset_x *= self.pixel_scale
+                    leftest_pixel = self.image_space_ltwh[0] - pixel_offset_x
+                    leftest_lasso_pixel = pos_x - ((lasso_size - 1) // 2)
+                    pixel_x = leftest_pixel + ((leftest_lasso_pixel - ltrb[0]) * self.pixel_scale)
+
+                    # get the topest pixel that needs to be drawn
+                    pixel_offset_y = 1 - ((self.map_offset_xy[1] / self.pixel_scale) % 1)
+                    if pixel_offset_y == 1:
+                        pixel_offset_y = 0
+                    pixel_offset_y *= self.pixel_scale
+                    topest_pixel = self.image_space_ltwh[1] - pixel_offset_y
+                    topest_lasso_pixel = pos_y - ((lasso_size - 1) // 2)
+                    pixel_y = topest_pixel + ((topest_lasso_pixel - ltrb[1]) * self.pixel_scale)
+
+                    # condition if cursor is on the map
+                    if cursor_on_map:
+                        cursors.add_cursor_this_frame('cursor_big_crosshair')
+                        render_instance.store_draw(EditorMap.CURSOR_LASSO_REFERENCE, render_instance.draw_highlight_selected_pixel_for_lasso, {'pixel_ltwh': (int(pixel_x), int(pixel_y), single_pixel_wh, single_pixel_wh), 'line_thickness': line_thickness, 'line_length': line_length})
+                        self.stored_draw_keys.append(EditorMap.CURSOR_LASSO_REFERENCE)
+
+                    # change drawing state
+                    if (self.current_tool.state == LassoTool.NOT_LASSOING) and keys_class_instance.editor_primary.newly_pressed and cursor_on_map:
+                        self.current_tool.state = LassoTool.LASSOING
+                    elif (self.current_tool.state == LassoTool.LASSOING) and keys_class_instance.editor_primary.released:
+                        self.current_tool.state = LassoTool.NOT_LASSOING
+                    
+
+
+
+
+
+
 
                 case None, PencilTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
