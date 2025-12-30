@@ -2653,13 +2653,6 @@ class EditorMap():
                         self.current_tool.state = LassoTool.LASSOING
                     elif (self.current_tool.state == LassoTool.LASSOING) and keys_class_instance.editor_primary.released:
                         self.current_tool.state = LassoTool.NOT_LASSOING
-                    
-
-
-
-
-
-
 
                 case None, PencilTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
