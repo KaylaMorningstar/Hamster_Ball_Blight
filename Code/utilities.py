@@ -351,6 +351,7 @@ IMAGE_PATHS = {
     'cursor_nesw': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_nesw.png'],
     'cursor_eyedrop': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_eyedrop.png'],
     'cursor_i_beam': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_i_beam.png'],
+    'cursor_dot': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\cursors\\cursor_dot.png'],
     # common
     'editor_circle': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\common\\circle.png'],
     'level_dimensions': [[LOADED_IN_EDITOR], PATH + '\\Images\\not_always_loaded\\editor\\common\\level_dimensions.png'],

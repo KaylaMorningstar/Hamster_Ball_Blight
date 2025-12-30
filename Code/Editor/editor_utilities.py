@@ -2644,7 +2644,7 @@ class EditorMap():
 
                     # condition if cursor is on the map
                     if cursor_on_map:
-                        cursors.add_cursor_this_frame('cursor_big_crosshair')
+                        cursors.add_cursor_this_frame('cursor_dot')
                         render_instance.store_draw(EditorMap.CURSOR_LASSO_REFERENCE, render_instance.draw_highlight_selected_pixel_for_lasso, {'pixel_ltwh': (int(pixel_x), int(pixel_y), single_pixel_wh, single_pixel_wh), 'line_thickness': line_thickness, 'line_length': line_length})
                         self.stored_draw_keys.append(EditorMap.CURSOR_LASSO_REFERENCE)
 

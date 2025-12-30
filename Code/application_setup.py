@@ -108,6 +108,7 @@ class CursorClass():
             'cursor_nesw': Cursor(name='cursor_nesw', offset_x=-13, offset_y=-13, priority=99, images=['cursor_nesw'], render_functions=[Render.basic_rect_ltwh_to_quad]),
             'cursor_eyedrop': Cursor(name='cursor_eyedrop', offset_x=0, offset_y=-21, priority=6, images=['cursor_eyedrop'], render_functions=[Render.basic_rect_ltwh_to_quad]),
             'cursor_i_beam': Cursor(name='cursor_i_beam', offset_x=-6, offset_y=-9, priority=2, images=['cursor_i_beam'], render_functions=[Render.invert_white]),
+            'cursor_dot': Cursor(name='cursor_dot', offset_x=-2, offset_y=-2, priority=2, images=['cursor_dot'], render_functions=[Render.invert_white]),
             # game cursors
             'classic_cursor': Cursor(name='classic_cursor', offset_x=-8, offset_y=-8, priority=1, images=['classic_cursor1', 'classic_cursor2'], render_functions=[Render.basic_rect_ltwh_to_quad, Render.invert_white])
             }
