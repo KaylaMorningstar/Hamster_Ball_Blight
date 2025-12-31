@@ -1466,6 +1466,8 @@ class LassoTool(EditorTool):
 
     def __init__(self, active: bool):
         self.state = LassoTool.NOT_LASSOING  # (NOT_LASSOING = 0, LASSOING = 1)
+        self.xy_positions_on_map_list: list = []
+        self.xy_positions_on_map_set: set = set()
         super().__init__(active)
 
     def allow_for_commands(self):
@@ -2653,6 +2655,15 @@ class EditorMap():
                         self.current_tool.state = LassoTool.LASSOING
                     elif (self.current_tool.state == LassoTool.LASSOING) and keys_class_instance.editor_primary.released:
                         self.current_tool.state = LassoTool.NOT_LASSOING
+                        self.xy_positions_on_map_list = []
+                        self.xy_positions_on_map_set = set()
+
+                    # execute the lasso
+                    match self.current_tool.state:
+                        case LassoTool.NOT_LASSOING:
+                            pass
+                        case LassoTool.LASSOING:
+                            max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
 
                 case None, PencilTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)

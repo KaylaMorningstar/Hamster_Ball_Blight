@@ -777,7 +777,11 @@ def update_tool_attributes(Singleton, Api, PATH, Screen, gl_context, Render, Tim
                 pass
 
             case LassoTool.INDEX:
-                pass
+                # information stuff in footer
+                if point_is_in_ltwh(Keys.cursor_x_pos.value, Keys.cursor_y_pos.value, Singleton.map.image_space_ltwh):
+                    footer_information.append(FooterInfo.CURSOR_POSITION)
+                    footer_information.append(FooterInfo.SEPARATOR)
+                footer_information.append(FooterInfo.MAP_SIZE)
 
             case PencilTool.INDEX:
                 # brush style
