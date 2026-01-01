@@ -1461,14 +1461,32 @@ class LassoTool(EditorTool):
     NAME = 'Lasso'
     INDEX = 1
 
+    _PYGAME_WHITE_PIXEL = (255, 255, 255, 255)
+
     NOT_LASSOING = 0
     LASSOING = 1
 
     def __init__(self, active: bool):
         self.state = LassoTool.NOT_LASSOING  # (NOT_LASSOING = 0, LASSOING = 1)
         self.xy_positions_on_map_list: list = []
-        self.xy_positions_on_map_set: set = set()
+        # leftest, rightest, topest, bottomest pixels that have been lassoed
+        self.leftest_pixel: int | None = None
+        self.rightest_pixel: int | None = None
+        self.topest_pixel: int | None = None
+        self.bottomest_pixel: int | None = None
+        # image while drawing the lasso outline
+        self.lasso_outline: pygame.Surface | None = None
         super().__init__(active)
+
+        # pygame.transform.smoothscale()
+
+    def update_lasso_highlight_image(self):
+        lasso_width = (self.rightest_pixel - self.leftest_pixel) + 1
+        lasso_height = (self.bottomest_pixel - self.topest_pixel) + 1
+        if self.lasso_outline is None:
+            self.lasso_outline = pygame.Surface((lasso_width, lasso_height), pygame.SRCALPHA)
+        self.lasso_outline = pygame.transform.smoothscale(self.lasso_outline, (lasso_width, lasso_height))
+        print(self.lasso_outline, self.lasso_outline.get_at((0, 0)))
 
     def allow_for_commands(self):
         return self.state == LassoTool.NOT_LASSOING
@@ -2655,15 +2673,46 @@ class EditorMap():
                         self.current_tool.state = LassoTool.LASSOING
                     elif (self.current_tool.state == LassoTool.LASSOING) and keys_class_instance.editor_primary.released:
                         self.current_tool.state = LassoTool.NOT_LASSOING
-                        self.xy_positions_on_map_list = []
-                        self.xy_positions_on_map_set = set()
+                        self.current_tool.xy_positions_on_map_list = []
+                        self.current_tool.lasso_outline = None
+                        self.current_tool.leftest_pixel = None
+                        self.current_tool.rightest_pixel = None
+                        self.current_tool.topest_pixel = None
+                        self.current_tool.bottomest_pixel = None
 
                     # execute the lasso
-                    match self.current_tool.state:
-                        case LassoTool.NOT_LASSOING:
-                            pass
-                        case LassoTool.LASSOING:
-                            max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
+                    try:
+                        match self.current_tool.state:
+                            case LassoTool.NOT_LASSOING:
+                                pass
+                            case LassoTool.LASSOING:
+                                update_lasso_outline_image = False
+                                max_tile_x, max_tile_y = self.tile_array_shape[0] - 1, self.tile_array_shape[1] - 1
+                                current_xy_position_on_map = (pos_x, pos_y)
+                                last_xy_position_on_map = self.current_tool.xy_positions_on_map_list[-1] if len(self.current_tool.xy_positions_on_map_list) >= 1 else None
+                                if current_xy_position_on_map == last_xy_position_on_map:
+                                    raise CaseBreak
+                                # passed all checks; pixel will be added to
+                                self.current_tool.xy_positions_on_map_list.append(current_xy_position_on_map)
+                                if (self.current_tool.leftest_pixel is None) or (self.current_tool.leftest_pixel > pos_x):
+                                    self.current_tool.leftest_pixel = pos_x
+                                    update_lasso_outline_image = True
+                                if (self.current_tool.rightest_pixel is None) or (self.current_tool.rightest_pixel < pos_x):
+                                    self.current_tool.rightest_pixel = pos_x
+                                    update_lasso_outline_image = True
+                                if (self.current_tool.topest_pixel is None) or (self.current_tool.topest_pixel > pos_y):
+                                    self.current_tool.topest_pixel = pos_y
+                                    update_lasso_outline_image = True
+                                if (self.current_tool.bottomest_pixel is None) or (self.current_tool.bottomest_pixel < pos_y):
+                                    self.current_tool.bottomest_pixel = pos_y
+                                    update_lasso_outline_image = True
+                                # update the lasso outline image if necessary
+                                if update_lasso_outline_image:
+                                    self.current_tool.update_lasso_highlight_image()
+                                
+
+                    except CaseBreak:
+                        pass
 
                 case None, PencilTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
