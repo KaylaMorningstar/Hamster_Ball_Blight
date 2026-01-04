@@ -1461,6 +1461,8 @@ class LassoTool(EditorTool):
     NAME = 'Lasso'
     INDEX = 1
 
+    LASSO_OUTLINE_REFERENCE = 'lasso_outline_reference'
+
     _HIGHLIGHTED_PIXEL_COLOR = (255, 255, 255, 255)
     _UNHIGHLIGHTED_PIXEL_COLOR = (255, 255, 255, 0)
 
@@ -1488,15 +1490,18 @@ class LassoTool(EditorTool):
 
         # pygame.transform.smoothscale()
 
-    def update_lasso_highlight_image(self):
-        # get the current position being touched by the cursor
-        current_cursor_pixel_x, current_cursor_pixel_y = self.xy_positions_on_map_list[-1]
+    def update_lasso_highlight_image(self, render_instance, gl_context, screen_instance):
+        # get the absolute position being touched by the cursor
+        absolute_pixel_x, absolute_pixel_y = self.xy_positions_on_map_list[-1]
+        # get the relative position being touched by the cursor
+        relative_pixel_x, relative_pixel_y = absolute_pixel_x - self.leftest_pixel, absolute_pixel_y - self.topest_pixel
         # get the old size of the lasso outline
         last_lasso_width = (self.last_rightest_pixel - self.last_leftest_pixel) + 1
         last_lasso_height = (self.last_bottomest_pixel - self.last_topest_pixel) + 1
         # get the new size of the lasso outline
         lasso_width = (self.rightest_pixel - self.leftest_pixel) + 1
         lasso_height = (self.bottomest_pixel - self.topest_pixel) + 1
+
         # create a 1x1 pygame surface where the cursor is if none exists
         if self.lasso_outline is None:
             self.lasso_outline = pygame.Surface((lasso_width, lasso_height), pygame.SRCALPHA)
@@ -1504,21 +1509,23 @@ class LassoTool(EditorTool):
         # create a new surface with the correct size
         new_lasso_surface = pygame.transform.smoothscale(LassoTool._UNHIGHLIGHTED_SURFACE, (lasso_width, lasso_height))
 
-
         # put the old, smaller lasso outline onto the new, bigger lasso outline
         new_lasso_surface.blit(self.lasso_outline, (self.last_leftest_pixel - self.leftest_pixel, self.last_topest_pixel - self.topest_pixel, self.lasso_outline.get_width(), self.lasso_outline.get_height()))
-
         # add new pixels to the lasso based on where the cursor is
-        new_lasso_surface.set_at((current_cursor_pixel_x, current_cursor_pixel_y), LassoTool._HIGHLIGHTED_PIXEL_COLOR)
-
+        new_lasso_surface.set_at((relative_pixel_x, relative_pixel_y), LassoTool._HIGHLIGHTED_PIXEL_COLOR)
         # copy the surface in the lasso object
         self.lasso_outline = new_lasso_surface.copy()
 
+        # update the pygame surface on the GPU
+        try:
+            render_instance.remove_moderngl_texture_from_renderable_objects_dict(LassoTool.LASSO_OUTLINE_REFERENCE)
+        except:
+            pass
+        render_instance.add_moderngl_texture_with_surface(screen_instance, gl_context, self.lasso_outline, LassoTool.LASSO_OUTLINE_REFERENCE)
 
-        # print((self.leftest_pixel, self.last_leftest_pixel), (self.last_leftest_pixel - self.leftest_pixel, self.last_topest_pixel - self.topest_pixel, self.lasso_outline.get_width(), self.lasso_outline.get_height()))
         for x in range(lasso_width):
             for y in range(lasso_height):
-                print((self.leftest_pixel + x, self.topest_pixel + y), (x, y), new_lasso_surface.get_at((x, y)), (current_cursor_pixel_x, current_cursor_pixel_y))
+                print((self.leftest_pixel + x, self.topest_pixel + y), (x, y), new_lasso_surface.get_at((x, y)), (absolute_pixel_x, absolute_pixel_y))
         print("")
 
     def allow_for_commands(self):
@@ -2293,6 +2300,7 @@ class EditorMap():
     CIRCLE_OUTLINE_THICKNESS_ZOOMED_OUT = 2
     CIRCLE_OUTLINE_REFERENCE = 'editor_circle_outline'
     CURSOR_LASSO_REFERENCE = 'cursor_lasso_reference'
+    OUTLINE_LASSO_REFERENCE = 'outline_lasso_reference'
     _MAX_LOAD_TIME = 0.02
 
     _PIXEL_SIZE_TO_LASSO_DRAWING = {
@@ -2729,7 +2737,8 @@ class EditorMap():
                                 last_xy_position_on_map = self.current_tool.xy_positions_on_map_list[-1] if len(self.current_tool.xy_positions_on_map_list) >= 1 else None
                                 if current_xy_position_on_map == last_xy_position_on_map:
                                     raise CaseBreak
-                                # passed all checks; pixel will be added to
+
+                                # passed all checks; pixels will be added to lasso edges
                                 self.current_tool.xy_positions_on_map_list.append(current_xy_position_on_map)
                                 if (self.current_tool.leftest_pixel is None) or (self.current_tool.leftest_pixel > pos_x):
                                     self.current_tool.last_leftest_pixel = self.current_tool.leftest_pixel if self.current_tool.leftest_pixel is not None else pos_x
@@ -2760,11 +2769,19 @@ class EditorMap():
                                     self.current_tool.bottomest_pixel = pos_y
                                     update_lasso_outline_image = True
                                 # update the lasso outline image if necessary
-                                self.current_tool.update_lasso_highlight_image()
+                                self.current_tool.update_lasso_highlight_image(render_instance, gl_context, screen_instance)
+
+                                # draw the 
                                 
 
                     except CaseBreak:
                         pass
+
+                    # draw the lasso tool
+                    if self.current_tool.lasso_outline is not None:
+                        # print(int(pixel_x), int(pixel_y), self.current_tool.lasso_outline.get_width() * single_pixel_wh, self.current_tool.lasso_outline.get_height() * single_pixel_wh)
+                        render_instance.store_draw(EditorMap.OUTLINE_LASSO_REFERENCE, render_instance.invert_white, {'object_name': LassoTool.LASSO_OUTLINE_REFERENCE, 'ltwh': (int(pixel_x), int(pixel_y), self.current_tool.lasso_outline.get_width() * single_pixel_wh, self.current_tool.lasso_outline.get_height() * single_pixel_wh)})
+                        self.stored_draw_keys.append(EditorMap.OUTLINE_LASSO_REFERENCE)
 
                 case None, PencilTool.INDEX:
                     cursor_on_map = point_is_in_ltwh(keys_class_instance.cursor_x_pos.value, keys_class_instance.cursor_y_pos.value, self.image_space_ltwh)
