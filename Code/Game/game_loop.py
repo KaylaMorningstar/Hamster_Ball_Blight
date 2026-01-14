@@ -13,7 +13,8 @@ class GameSingleton():
         # map
         #self.map: Map = Map(Screen, gl_context, Render, PATH, "C:\\Users\\Kayle\\Desktop\\Blight\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\")
         self.map: Map = Map()
-        self.map.load_level(self, Render, gl_context, Screen, Time, Keys, Cursor, "C:\\Users\\Kayle\\Desktop\\Blight\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\", self.player.position_x, self.player.position_y)
+        level_path = PATH + "/Projects/Project1/Level1/"
+        self.map.load_level(self, Render, gl_context, Screen, Time, Keys, Cursor, level_path, self.player.position_x, self.player.position_y)
         #
         # drawing
         self.stored_draws: StoredDraws = StoredDraws()

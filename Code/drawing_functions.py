@@ -406,6 +406,7 @@ class RenderObjects():
         #gl_context.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
         #gl_context.blend_func = (moderngl.ONE_MINUS_DST_COLOR, moderngl.ZERO, moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
         program = self.programs['invert_white'].program
+        
         renderable_object = self.renderable_objects[object_name]
         topleft_x = (-1.0 + ((2 * ltwh[0]) / Screen.width)) * Screen.aspect
         topleft_y = 1.0 - ((2 * ltwh[1]) / Screen.height)
@@ -1546,7 +1547,7 @@ class DrawInvertWhite():
         '''
         self.FRAGMENT_SHADER = '''
         #version 460 core
-        #extension GL_EXT_shader_framebuffer_fetch : require
+       
 
         uniform sampler2D tex;
 
@@ -1554,7 +1555,7 @@ class DrawInvertWhite():
         out vec4 f_color;
 
         void main() {
-            vec3 destination_color = gl_LastFragData[0].rgb;
+            vec3 destination_color = vec3(0.0, 0.0, 0.0);
             float luminosity = dot(destination_color, vec3(0.299, 0.587, 0.114));
             f_color = vec4(texture(tex, uvs).rgba);
             if (luminosity < 0.5) {
@@ -1588,7 +1589,7 @@ class DrawCircleOutline():
         '''
         self.FRAGMENT_SHADER = '''
         #version 460 core
-        #extension GL_EXT_shader_framebuffer_fetch : require
+
 
         const vec3 BLACK = vec3(0.0, 0.0, 0.0);
         const vec3 WHITE = vec3(1.0, 1.0, 1.0);
@@ -1607,7 +1608,7 @@ class DrawCircleOutline():
         out vec4 f_color;
 
         void main() {
-            vec3 destination_color = gl_LastFragData[0].rgb;
+            vec3 destination_color = vec3(0.0, 0.0, 0.0);
             float luminosity = dot(destination_color, vec3(0.299, 0.587, 0.114));
             f_color = vec4(texture(tex, uvs).rgba);
             f_color.rgb = destination_color;

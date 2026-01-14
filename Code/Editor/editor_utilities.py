@@ -1,3 +1,4 @@
+import os
 from Code.utilities import CaseBreak, ONE_FRAME_AT_60_FPS, angle_in_range, atan2, rgba_to_glsl, get_blended_color, percent_to_rgba, point_is_in_ltwh, move_number_to_desired_range, get_text_width, get_text_height, get_time, str_can_be_int, str_can_be_float, str_can_be_hex, switch_to_base10, base10_to_hex, add_characters_to_front_of_string, get_rect_minus_borders, get_smallest_possible_float, calculate_percentage_difference_between_pygame_colors, COLORS
 import pygame
 import math
@@ -2343,7 +2344,11 @@ class EditorMap():
                  render_instance,
                  base_path: str):
 
-        self.base_path: str = "C:\\Users\\Kayle\\Desktop\\Blight\\Hamster_Ball_Blight\\Projects\\Project1\\Level1\\"
+        self.base_path = PATH + "/Projects/Project1/Level1/"
+        if not os.path.exists(f"{self.base_path}t0_0.png"):
+            blank_tile_surface = pygame.Surface((EditorMap.TILE_WH, EditorMap.TILE_WH), pygame.SRCALPHA)
+            pygame.image.save(blank_tile_surface, f"{self.base_path}t0_0.png")
+
         self.initial_tile_wh: list[int, int] = list(pygame.image.load(f"{self.base_path}t0_0.png").get_size())
         self.tile_wh: list[int, int] = deepcopy(self.initial_tile_wh)
         # internal
